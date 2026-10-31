@@ -1,12 +1,20 @@
-# Contributor instructions
+# 开发与贡献指南
 
-- Keep GPU-server and BCM-client roles separate.
-- Runtime code uses Python 3.10+ standard library only.
-- Use Bash launchers and a project virtualenv for optional development tools.
-- Planning with supplied inventory must not probe hardware or write files.
-- Never infer client CPU architecture from a GPU profile.
-- Reject occupied GPUs, conflicting ports, wrong images and spec drift.
-- Preserve per-user state and owned SSH-tunnel cleanup.
-- Do not commit weights, binaries, caches, credentials or raw infrastructure logs.
-- Run unittest, Ruff check/format checks and git diff --check.
-- GPU validation requires an allocated device set; never launch it from CI.
+- 保持 GPU 服务端与 BCM 客户端职责分离。
+- 运行时代码仅依赖 Python 3.10+ 标准库。
+- 使用 Bash 启动脚本；可选开发工具安装到项目虚拟环境。
+- 使用给定硬件清单生成计划时，不得探测硬件或写入文件。
+- 不得从 GPU 配置推断客户端 CPU 架构。
+- 拒绝占用中的 GPU、端口冲突、错误镜像和实际规格偏离配置的情况。
+- 保留每用户独立状态，退出时清理本次会话拥有的 SSH 隧道。
+- 不提交权重、二进制、缓存、凭据或基础设施原始日志。
+- 修改后运行 unittest、Ruff 规则及格式检查，以及 git diff --check。
+- GPU 验证须使用已分配设备，不得从 CI 启动。
+
+## 文档语言
+
+中文是项目的主要开发和文档语言。默认 README 及完整部署、架构、开发、离线和验证材料均使用中文；英文版供其他地区读者使用，放在独立文件，通过中文文末链接进入。行为或命令变更时同步更新两种语言，并保留相同验证边界。
+
+---
+
+[English version](docs/en/contributor-instructions.md)

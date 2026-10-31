@@ -1,86 +1,80 @@
-# Architecture and design decisions
+# 架构与设计逻辑
 
-## Roles are independent
+## 两端职责独立
 
-The GPU host owns Docker, CUDA, weights, image provenance, GPU allocation and
-vLLM. BCM owns OpenCode, project files, shell/git/SSH tools, user credentials,
-history and transcripts. Tool calls returned by the model are executed on BCM
-with the current user's permissions.
+GPU 服务器负责 Docker、CUDA、权重、镜像身份、GPU 分配和 vLLM。
+BCM 负责 OpenCode、项目文件、Shell/Git/SSH 工具、用户凭据、历史和日志。
+模型返回工具调用后，由 BCM 客户端以当前用户权限执行，再把结果交给模型。
 
-These identities are independent:
-1. GPU/model policy: B300 TP4, GB300 TP4 or GB300 TP2.
-2. Server CPU/image platform: AMD64 or ARM64.
-3. Client binary: selected from the BCM host CPU, never from the GPU profile.
+必须分别确定三个配置，不能互相代替：
 
-## Module boundaries
+1. GPU 与模型策略：B300 TP4、GB300 TP4 或 GB300 TP2。
+2. 服务端 CPU 与镜像平台：AMD64 或 ARM64。
+3. 客户端程序：按 BCM 自身的 CPU 架构选择，不能由服务端 GPU 型号推断。
 
-| Module | Responsibility |
+## 模块边界
+
+| 模块 | 职责 |
 |---|---|
-| profiles.py / profiles.json | Hardware policy; pure vLLM argument generation |
-| server.py | Inventory, plans, selected-GPU checks and instance lifecycle |
-| images.py | Image platform/provenance, model download, offline image transport |
-| artifacts.py | Native client integrity/architecture and public asset exports |
-| tunnel.py | Owned loopback SSH forward, startup checks and cleanup |
-| client.py | Private user state, local tools, config and full transcripts |
-| cli.py | Explicit role/operation dispatch |
+| `profiles.py` / `profiles.json` | 硬件策略及纯粹的 vLLM 参数生成 |
+| `server.py` | 发现硬件、生成计划、检查 GPU、管理实例 |
+| `images.py` | 镜像平台与身份校验、模型下载、离线镜像传输 |
+| `artifacts.py` | 客户端完整性与架构检查、公共资源导出 |
+| `tunnel.py` | 单次连接拥有的本机 SSH 隧道、就绪检查和退出清理 |
+| `client.py` | 用户私有状态、本地工具、连接配置和完整日志 |
+| `cli.py` | 解析参数并显式分派操作 |
 
-No module launches a process at import. Chat never invokes GPU deployment.
+导入模块不会启动进程。聊天操作不会隐式部署 GPU 服务。
 
-## Server flow
+## 服务端执行顺序
 
 ```mermaid
 flowchart TD
-    Inputs[Profile + GPU selectors] --> Inventory
-    Inventory --> Policy[CPU / GPU count / HBM validation]
-    Policy --> Plan[Pure spec + Docker argv]
-    Plan --> Start[Explicit start]
-    Start --> Checks[Weights / image / CDI / occupancy / port]
-    Checks --> Lock[Serialized creation + drift checks]
-    Lock --> Container[Container started]
-    Container --> Warm[Load weights + compile kernels]
-    Warm --> Ready[Health + real API request]
+    Inputs[配置与 GPU 选择] --> Inventory[发现本机硬件]
+    Inventory --> Policy[CPU / GPU 数量 / 显存检查]
+    Policy --> Plan[生成纯配置与 Docker 参数]
+    Plan --> Start[显式启动]
+    Start --> Checks[权重 / 镜像 / CDI / 占用 / 端口]
+    Checks --> Lock[串行创建与配置漂移检查]
+    Lock --> Container[容器启动]
+    Container --> Warm[载入权重并编译内核]
+    Warm --> Ready[API 健康与真实请求验收]
 ```
 
-Host GPU indices resolve to UUIDs before launch. CDI exposes only selected GPUs;
-CUDA_VISIBLE_DEVICES fixes local ordering. A container being running is not a
-readiness signal.
+启动前将宿主机 GPU 编号解析成 UUID。CDI 只暴露选中的设备，
+`CUDA_VISIBLE_DEVICES` 固定进程内的设备顺序。容器运行状态不能代替就绪检查。
 
-The managed spec hash covers runtime location, image, platform, profile, GPU
-UUIDs, API port and engine arguments. Existing instances cannot silently adopt
-different specs or edited args.json. Stop/remove/recreate is explicit and
-retains host logs. Unrelated GPU processes are never killed.
+实例配置摘要覆盖数据目录、镜像、平台、配置名、GPU UUID、API 端口和引擎参数。
+同名实例不能静默采用不同配置或被编辑过的 `args.json`。
+停止、删除、重建由操作者显式执行，宿主机日志保留，不会杀掉无关 GPU 进程。
 
-## Image identity
+## 镜像身份
 
-Profiles pin a manifest-list digest and record platform child digests.
-Locally selected images must match the server CPU architecture.
-Offline exports carry archive SHA256 plus the image's config/layer fingerprint.
-Imports require both checks; a mutable tag alone cannot establish identity.
-The fingerprint permits equivalent content after Docker export/import changes
-the local image-reference representation.
+平台配置固定多架构清单摘要，并记录各平台子摘要；本地镜像必须匹配服务端 CPU。
+离线导出同时保存归档 SHA256 和镜像配置/层指纹，导入时两者都要通过。
+仅有相同 tag 不足以证明镜像相同；指纹允许 Docker 导入后引用表示改变，但要求内容等价。
 
-## Connection and user state
+## 连接与用户状态
 
-Each chat invocation owns one SSH forward bound to 127.0.0.1. Authentication
-and host-key verification use existing OpenSSH configuration. The process is
-closed on normal exit, startup failure and Python exception unwinding.
+每次聊天拥有一个绑定在 `127.0.0.1` 的 SSH 转发进程。
+认证和主机密钥校验使用现有 OpenSSH 配置；正常退出、启动失败或 Python 异常退出时关闭隧道。
 
-History is keyed by logical SSH target and SSH/API ports, or the direct endpoint.
-It is not keyed by the temporary forwarding port, so reconnecting preserves
-history. Each invocation has a separate config file so two sessions cannot
-overwrite one another's temporary port. State/config use 0700/0600; OS
-administrators can still access them.
+历史按逻辑 SSH 目标及 SSH/API 端口，或直接 API 地址区分，不按临时转发端口区分，
+因此重新连接不会丢失历史。每次连接使用独立配置文件，避免两个终端覆盖临时端口。
+状态目录和配置权限分别为 0700、0600；系统管理员仍可访问。
 
-The API remains loopback-only. SSH provides remote transport/access control.
-This is not a tenant gateway, per-user quota engine or load balancer.
+API 保持本机监听，SSH 提供远程传输和接入控制。
+当前不提供租户网关、用户配额或负载均衡。
 
-## Performance policy
+## 性能配置的依据
 
-The B300 reference's eager/CPU-offload baseline decoded about 5.2 tokens/s.
-GPU-resident Engram plus decode CUDA Graphs reached about 222 tokens/s at TP4;
-TP8 was comparable for one request. This combined-profile comparison does not
-isolate each optimization's contribution or predict concurrent-user throughput.
+B300 参考配置中，eager 与 CPU Engram 基线约为 5.2 token/s；
+GPU 常驻 Engram 加解码 CUDA Graph 后，TP4 约为 222 token/s，TP8 单请求速度相近。
+这是组合配置对比，不能分别归因于某项优化，也不能据此预测多人并发吞吐。
 
-GB300 has a different host-memory/interconnect architecture. Its TP2 profile
-intentionally uses upstream-style CPU Engram offload. B300 speed is not a GB300
-performance claim. GB300 profiles remain unverified on hardware.
+GB300 的主存和互联架构不同，TP2 按上游方式采用 CPU Engram offload。
+B300 的速度不代表 GB300；GB300 配置仍等待实机验证。
+
+---
+
+[English version](en/architecture.md)

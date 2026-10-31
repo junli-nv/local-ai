@@ -165,3 +165,7 @@ BCM 需要 Python3、Bash、git、ssh、rg 和 script；离线时提前准备这
 代码如何划分、为何这么设计：见 [架构](architecture.md)。
 如何新增平台、改模型、运行测试和提交代码：见 [开发指南](development.md)。
 已验证内容和未验证范围：见 [验证记录](validation.md)。
+
+---
+
+[English version](en/deployment.md)

@@ -1,68 +1,58 @@
 # local-ai
 
-Containerized GPU inference with per-user OpenCode clients on a BCM headnode.
+在 GPU 服务器上运行容器化推理服务，在 BCM 头节点上运行每位用户自己的 OpenCode 客户端。
 
-The GPU server runs the model. The headnode runs OpenCode and its tools: file
-edits, shell commands, git, and SSH to other cluster nodes. A client does not need
-a local GPU, CUDA, Docker, Node.js, or npm.
+GPU 服务器负责模型推理；BCM 客户端负责文件编辑、Shell、Git 和到其他集群节点的 SSH。
+客户端不需要本地 GPU、CUDA、Docker、Node.js 或 npm。
 
-[中文部署指南](docs/deployment.zh-CN.md) · [Architecture](docs/architecture.md) ·
-[Development](docs/development.md) · [Offline deployment](docs/offline.md) ·
-[Validation](docs/validation.md)
+[部署指南](docs/deployment.zh-CN.md) · [架构设计](docs/architecture.md) ·
+[开发指南](docs/development.md) · [离线部署](docs/offline.md) · [验证记录](docs/validation.md)
 
 ```mermaid
 flowchart LR
-    User[User on BCM] --> Client[Per-user OpenCode client]
-    Client <-->|OpenAI-compatible API| Tunnel[Owned loopback SSH tunnel]
-    Tunnel <--> GPU[vLLM container on GPU server]
-    Client --> Tools[Headnode files / bash / git / SSH]
-    Tools --> Nodes[Other cluster nodes]
+    User[BCM 上的用户] --> Client[独立 OpenCode 客户端]
+    Client <-->|OpenAI 兼容 API| Tunnel[本机 SSH 隧道]
+    Tunnel <--> GPU[GPU 服务器上的 vLLM 容器]
+    Client --> Tools[BCM 文件 / Shell / Git / SSH]
+    Tools --> Nodes[其他集群节点]
 ```
 
-## Supported deployment profiles
+## 平台与验证状态
 
-| Profile | GPU-server CPU / image | Local GPUs | Engram placement | Project validation |
+| 配置 | 服务端 CPU / 镜像平台 | 本机 GPU 数 | Engram 存放位置 | 验证状态 |
 |---|---|---:|---|---|
-| `b300-tp4` | AMD64 / `linux/amd64` | 4 B300 | GPU | Hardware settings verified |
-| `gb300-tp4` | ARM64 / `linux/arm64` | 4 GB300/B300 | GPU | Experimental; no GB300 hardware test |
-| `gb300-tp2` | ARM64 / `linux/arm64` | 2 GB300/B300 | CPU | Upstream-recipe-derived; no hardware test |
+| `b300-tp4` | AMD64 / `linux/amd64` | 4 张 B300 | GPU | 已实机验证 |
+| `gb300-tp4` | ARM64 / `linux/arm64` | 4 张 GB300/B300 | GPU | 实验配置，尚未实机验证 |
+| `gb300-tp2` | ARM64 / `linux/arm64` | 2 张 GB300/B300 | CPU | 依据上游配方，尚未实机验证 |
 
-A GB300 server's ARM64 architecture does **not** change the BCM client's
-architecture. Client assets are selected independently on the headnode.
+**服务端和客户端的架构独立选择。** GB300 服务端使用 ARM64，不代表 BCM 客户端也要使用 ARM64。
 
-These are single-host profiles: selected GPUs must be visible to the same OS.
-A two-GPU GB300 host cannot use the four-GPU profile by naming GPUs on another
-host. This project does not implement multi-node tensor parallelism or an
-NVL72-wide scheduler.
+这些配置仅支持同一 OS 可见的本地 GPU。两卡 GB300 主机不能通过填写其他主机的 GPU 编号使用四卡配置。
+当前不提供跨主机张量并行或整柜 NVL72 调度。
 
-The pinned vLLM `0.32.0-ubuntu2404` image is a multi-platform manifest. Both
-AMD64 and ARM64 child digests were checked; CPU/image mismatches are rejected.
-The model is `deepseek-ai/DeepSeek-V4.1-Flash`, pinned to revision
-`314113f8a7dadb388215396ba5fbee2c610a04d6`. It is not silently updated to another variant.
+固定的 vLLM `0.32.0-ubuntu2404` 镜像同时提供 AMD64 和 ARM64 版本，配置记录了清单及各平台摘要，
+启动前检查 CPU 与镜像是否匹配。模型固定为 `deepseek-ai/DeepSeek-V4.1-Flash`，
+revision 为 `314113f8a7dadb388215396ba5fbee2c610a04d6`，不会自动更换模型变体。
 
-## Prerequisites
+## 环境要求
 
-**GPU server:** Linux, Python 3.10+, compatible NVIDIA driver, Docker with CDI
-support (Docker API 1.49+), NVIDIA Container Toolkit, sufficient local GPUs/HBM/RAM/storage, and an
-operator-approved GPU allocation. Known baseline: Ubuntu 24.04, driver
-580.126.20, Docker 29.2.1, Toolkit 1.19.1.
+**GPU 服务器：** Linux、Python 3.10+、兼容的 NVIDIA 驱动、支持 CDI 且 API 至少为 1.49 的 Docker、
+NVIDIA Container Toolkit，以及足够的 GPU 显存、主存和磁盘。使用前须取得 GPU 资源分配。
+已验证基线为 Ubuntu 24.04、驱动 580.126.20、Docker 29.2.1、Toolkit 1.19.1。
 
-**BCM headnode:** Linux AMD64 or ARM64, Python 3.10+, Bash, git, OpenSSH,
-ripgrep (`rg`), and util-linux `script`. OpenCode 1.19.5 is installed into the
-user's private state directory. Existing SSH login and host-key verification to
-the GPU node must work. GitHub/source access is needed only during online setup.
+**BCM 头节点：** Linux AMD64 或 ARM64、Python 3.10+、Bash、Git、OpenSSH、ripgrep（`rg`）
+和 util-linux 的 `script`。OpenCode 1.19.5 安装在当前用户的私有目录。
+应先完成 GPU 节点的 SSH 登录和主机密钥确认。在线准备阶段才需要访问代码与软件下载源。
 
-The four-card B300 reference uses about 125.7 GiB/card for weights and about
-218 GiB/card including reserved KV/runtime memory. Model files occupy about
-510.3 GB once and can be shared read-only between instances. Leave additional
-space for images, caches, and offline exports. GB300 TP2 offloads roughly
-189 GiB of Engram tables to host RAM, before loading/runtime/OS overhead.
-A conservative 256 GiB MemAvailable guard is enforced for that experimental profile;
-it is not a measured minimum RAM requirement.
+B300 四卡参考配置的权重约占 125.7 GiB/卡，包含预留 KV 缓存及运行开销后约占 218 GiB/卡。
+模型文件约 510.3 GB，可供多个实例只读共享；还需预留镜像、缓存和离线导出的空间。
+GB300 TP2 的 Engram offload 本身约占 189 GiB 主存，另需加载和系统空间。
+该实验配置检查 `MemAvailable` 至少 256 GiB；这是保守保护值，不是实测最低需求。
 
-## GPU server: prepare and start
+## GPU 服务器：准备并启动
 
-Run these commands **on the GPU server**, not on BCM:
+以下命令在 **GPU 服务器** 执行：
+
 ```bash
 git clone https://github.com/junli-nv/local-ai.git
 cd local-ai
@@ -74,17 +64,16 @@ cd local-ai
 curl --fail http://127.0.0.1:18000/health
 ```
 
-`server plan` is read-only. `server start` validates weights, native CPU/image
-architecture, selected GPU UUIDs, CDI aliases, active processes, assignments, and
-the API port. It never kills another workload or changes Slurm.
+`server plan` 只生成计划。`server start` 检查权重、CPU/镜像平台、GPU UUID、CDI、
+GPU 进程占用、实例分配和端口，不会终止其他作业或修改 Slurm。
 
-For a GB300 host with four local GPUs, select `--profile gb300-tp4`. With two
-local GPUs and sufficient host memory, select `--profile gb300-tp2 --gpus 0,1`.
-GB300 profiles require hardware acceptance testing before production.
+四卡 GB300 使用 `--profile gb300-tp4`；两卡 GB300 使用 `--profile gb300-tp2 --gpus 0,1`。
+GB300 配置用于生产前须完成实机验收。容器处于 running 状态不代表 API 已就绪。
 
-## BCM headnode: install and chat
+## BCM 头节点：安装并聊天
 
-Run these commands **on BCM**, as the user who should execute tools:
+以下命令在 **BCM** 执行，使用实际需要执行工具的用户账户：
+
 ```bash
 git clone https://github.com/junli-nv/local-ai.git
 cd local-ai
@@ -94,62 +83,61 @@ ssh gpu-a hostname
 ./local-ai chat --server gpu-a --project /path/to/project
 ```
 
-Replace `gpu-a` with the actual GPU hostname. `chat` opens an authenticated SSH
-tunnel, waits for the model API, launches OpenCode locally, and closes the tunnel
-on exit. No headnode Docker daemon or global Python package installation is required.
+将 `gpu-a` 替换为实际服务节点。客户端自动建立 SSH 隧道、检查 API、在 BCM 启动 OpenCode，
+退出时关闭隧道。不需要在头节点运行 Docker，也不需要向系统 Python 安装项目依赖。
 
-Options:
+常用选项：
+
 ```bash
 ./local-ai chat --server user@gpu-a --port 18001 --project /path/to/project
 ./local-ai chat --server gpu-a --check
 ./local-ai chat --server gpu-a --run 'Use bash to run hostname and report its output.'
 ```
 
-For an existing tunnel or compatible local proxy:
+已有隧道或本地兼容代理时，可直接指定 API：
+
 ```bash
 ./local-ai chat --endpoint http://127.0.0.1:28000/v1
 ```
 
-Tools execute on the **client host** with that user's permissions. Inference
-remains in the GPU container. The client receives neither the GPU server's root
-credentials nor MyTerm tools automatically.
+工具在 **客户端所在主机** 上执行，使用当前用户权限。推理仍在 GPU 容器中；
+客户端不会自动获得 GPU 服务端的 root 凭据或 MyTerm 工具。
 
-## Two instances and multiple users
+## 单机双实例与多人使用
 
-On an eight-card B300 server:
+八卡 B300 可部署两套独立服务：
+
 ```bash
 ./local-ai server start --profile b300-tp4 --name a --gpus 0,1,2,3 --port 18000
 ./local-ai server start --profile b300-tp4 --name b --gpus 4,5,6,7 --port 18001
 ```
 
-Instances share only read-only model files; caches, logs, KV, ports, and GPU
-assignments are separate. Clients choose an instance with `chat --port`.
-There is no automatic load balancer or per-user quota service.
+两套服务只共享只读权重，GPU、显存、KV、端口、缓存和日志分别独立。
+客户端通过 `chat --port` 选择实例；当前不提供自动负载均衡或用户配额服务。
 
-Users share inference, not their OpenCode database or SSH keys. Private client
-state defaults to `~/.local/state/local-ai/` (or `$XDG_STATE_HOME/local-ai/`).
-Different logical servers/ports have different histories. Concurrent sessions
-use separate connection-config files. Four active sequences per engine is a
-scheduling limit, not a four-user registration limit; additional work queues.
+多人共享推理服务，各自保留会话数据库和 SSH 凭据。
+默认私有状态目录为 `~/.local/state/local-ai/`，也可使用 `$XDG_STATE_HOME/local-ai/`。
+不同逻辑服务/端口使用不同历史记录，每次连接配置单独保存。
+每引擎四个活动序列是调度上限，不是只能有四名用户；更多请求会排队。
 
-## Runtime data stays outside git
+## 运行数据与源码分开
 
-| Location | Contents |
+| 位置 | 内容 |
 |---|---|
-| GPU `/raid/local-ai/models/` | Pinned weights and model metadata |
-| GPU `/raid/local-ai/images/` | Architecture-specific image locks |
-| GPU `/raid/local-ai/instances/NAME/` | Spec, args, launch command, cache, full server log |
-| BCM private `clients/ARCH/` | Client binary, public cache seed, asset manifest |
-| BCM private `services/ID/` | User history/cache and per-session complete logs |
+| GPU `/raid/local-ai/models/` | 固定模型权重及元数据 |
+| GPU `/raid/local-ai/images/` | 按 CPU 架构保存的镜像锁定信息 |
+| GPU `/raid/local-ai/instances/NAME/` | 实例配置、参数、启动命令、缓存及完整服务日志 |
+| BCM 私有 `clients/ARCH/` | 客户端程序、公共缓存种子及资源清单 |
+| BCM 私有 `services/ID/` | 用户历史、缓存及每次会话完整日志 |
 
-No credentials, binaries, model weights, or chat histories belong in this
-repository. See [offline deployment](docs/offline.md) for separate client/server
-exports, platform selection, integrity checks, and first-start acceptance.
+凭据、二进制、模型权重和聊天历史不进入 Git。
+离线时分别携带源码、服务端资源和 BCM 客户端资源，具体步骤见 [离线部署](docs/offline.md)。
 
-## Developing
+## 开发与扩展
 
-Runtime Python code uses the standard library only. Running from the checkout
-does not require pip. Optional developer tools go in a project virtualenv:
+运行时仅依赖 Python 标准库，从源码目录运行不需要 pip。
+可选开发工具安装在项目虚拟环境中：
+
 ```bash
 python3 -m venv .venv
 .venv/bin/python -m pip install -e '.[dev]'
@@ -158,6 +146,11 @@ python3 -m venv .venv
 .venv/bin/ruff format --check src tests
 ```
 
-Read [the design and development workflow](docs/development.md) before adding a
-profile, model, endpoint, or runtime option. GitHub Actions runs CPU-only tests;
-GPU hardware acceptance is a separate, explicitly documented step.
+新增硬件配置、模型或参数前，请阅读 [开发指南](docs/development.md)。
+GitHub Actions 运行 CPU 单元测试；GPU 实机验收单独执行并记录。
+
+---
+
+英文版本：[English README](README.en.md) · [Deployment](docs/en/deployment.md) · [Architecture](docs/en/architecture.md) ·
+[Development](docs/en/development.md) · [Offline deployment](docs/en/offline.md) ·
+[Validation](docs/en/validation.md)

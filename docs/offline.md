@@ -1,17 +1,13 @@
-# Offline deployment
+# 离线部署
 
-Prepare three independent artifact sets: source, GPU-server image/weights, and
-BCM-native client assets. A GB300 server usually needs ARM64 images while its BCM
-client may still need AMD64. Never choose client architecture from the GPU name.
+分别准备三类材料：项目源码、GPU 服务端镜像与权重、BCM 原生客户端。GB300 服务端通常使用 ARM64 镜像，但 BCM 客户端仍可能是 AMD64；必须分别判断。
 
-The target OS must already have the required tools: compatible GPU driver,
-Docker/CDI/Toolkit on the server; Python/Bash/git/SSH/rg/script on BCM. Host driver
-and OS packages are not included inside vLLM. Plan offline installation packages
-for the actual distro/kernel. Linux ELF architecture is not an entire ABI check.
+目标系统须预装兼容的 GPU 驱动，以及服务端的 Docker、CDI、NVIDIA Container Toolkit。BCM 需要 Python、Bash、git、SSH、rg 和 script。vLLM 镜像不包含宿主机驱动和系统依赖，应按目标发行版及内核准备离线安装包。ELF 架构匹配也不等于完整 ABI 兼容。
 
-## 1. Source snapshot
+## 1. 打包源码
 
-From a reviewed commit:
+在已审查的提交上执行：
+
 ```bash
 mkdir -p dist
 git archive --format=tar.gz --output=dist/local-ai-source.tar.gz HEAD
@@ -20,27 +16,24 @@ sha256sum local-ai-source.tar.gz > local-ai-source.tar.gz.sha256
 cd ..
 ```
 
-Do not package the whole working directory: ignored files may include raw logs
-and personal state. Source does not include 510 GB model weights or native binaries.
+不要直接打包整个工作目录，其中可能含被忽略的原始日志和个人状态。源码包不包含约 510 GB 的模型权重或原生二进制文件。
 
-## 2. GPU image and weights
+## 2. 准备 GPU 镜像和权重
 
-On a connected Docker preparation host:
+在联网的 Docker 准备机上执行：
+
 ```bash
 ./local-ai image pull --profile b300-tp4 --data-dir /data/local-ai
 ./local-ai image export --profile b300-tp4 --data-dir /data/local-ai \
   --output /data/export/vllm-amd64.tar
 ```
 
-For GB300 replace the profile with gb300-tp4 (or gb300-tp2) and use a distinct
-vllm-arm64.tar. Pull/inspect/save explicitly select the image platform. Preparing
-an ARM64 image archive on AMD64 does not require executing ARM64 code.
-Cross-platform image handling requires Docker API 1.49+; Docker 29 is the tested baseline.
+GB300 改用 gb300-tp4 或 gb300-tp2，并使用独立的 vllm-arm64.tar。拉取、检查和导出均显式指定平台；AMD64 准备机打包 ARM64 镜像无需执行 ARM64 代码。跨平台镜像操作要求 Docker API 1.49+，已验证基线为 Docker 29。
 
-Export writes a companion `.lock.json` with the archive SHA256 and selected image
-config/layer fingerprint. Carry both files. No mutable-tag-only fallback is used.
+导出时生成配套 `.lock.json`，记录归档 SHA256 和选定镜像的配置、层指纹。归档与锁文件须一起携带，不允许只凭可变标签回退。
 
-Download model weights on a preparation host using a native-CPU profile:
+使用与准备机 CPU 相符的配置下载权重：
+
 ```bash
 ./local-ai model download --profile b300-tp4 --data-dir /data/local-ai
 rsync -a /data/local-ai/models/ /data/export/models/
@@ -48,11 +41,10 @@ cd /data/export
 find models -type f -print0 | sort -z | xargs -0 sha256sum > MODELS.sha256
 ```
 
-Model files are CPU-architecture independent; copies must include configuration,
-tokenizer, index and all shards. The same model copy can serve two instances.
+权重不依赖 CPU 架构，必须完整复制配置、分词器、索引及全部分片；同一份权重可供两个实例使用。
 
-On the offline GPU host, extract source, verify/copy weights, regenerate local
-CDI if needed, then import:
+离线 GPU 节点解压源码、校验并复制权重，必要时重新生成本机 CDI，然后导入和启动：
+
 ```bash
 cd /media/export
 sha256sum -c MODELS.sha256
@@ -66,25 +58,22 @@ cd /path/to/local-ai
 curl --fail http://127.0.0.1:18000/health
 ```
 
-Use the ARM64 archive/profile on GB300. Local image identity can be represented
-differently after Docker import; equivalent config/layer content and matching
-platform are required. Cached CUDA kernels are not assumed portable; first start
-may compile locally using the pinned image.
+GB300 使用对应 ARM64 归档和配置。Docker 导入后的镜像身份表示可能不同，但配置、层内容和平台必须一致。CUDA 内核缓存不保证跨机器可用，首次启动可能使用固定镜像在本机编译。
 
-## 3. BCM client assets
+## 3. 准备 BCM 客户端
 
-On a connected headnode with the same target CPU/compatible Linux environment:
+在与目标 CPU 相同、Linux 环境兼容的联网头节点执行：
+
 ```bash
 ./local-ai client install
 ./local-ai client doctor
 ./local-ai client export --output /data/export/client-amd64.tar.gz
 ```
 
-The export contains `client/bin/opencode`, a public `seed-cache`, and an asset
-manifest. It excludes histories, auth databases and SSH keys.
-Matching architecture matters for cached executables too.
+导出包包含 `client/bin/opencode`、公共 `seed-cache` 和材料清单，不包含历史记录、认证数据库或 SSH 密钥。缓存中的可执行文件也须匹配目标架构。
 
-On offline BCM:
+离线 BCM 上执行：
+
 ```bash
 cd /media/export
 sha256sum -c client-amd64.tar.gz.sha256
@@ -99,23 +88,22 @@ cd /path/to/local-ai
 ./local-ai chat --server gpu-a --run 'Use bash to run hostname and report the result.'
 ```
 
-No Node/npm/Docker is required on BCM. Use `--sha256` with the exported manifest's
-binary checksum when importing a standalone binary outside the checked archive.
-Verify network-free operation after any new client release or plugin change.
+BCM 不需要 Node、npm 或 Docker。在已校验归档之外单独导入二进制时，使用清单中的校验值指定 `--sha256`。客户端升级或插件变更后，应重新验证无外网运行。
 
-## 4. Acceptance
+## 4. 验收
 
-With internet unavailable but internal SSH intact:
-1. Cold-start the image and complete model locally; check API readiness.
-2. Start a fresh user's client, not just an administrator's already-warm account.
-3. Verify search/read/edit/test tools and that hostname is the BCM host.
-4. Check complete private logs, selected GPU UUIDs, HBM and absence of stray tunnels.
-5. Test representative input lengths and concurrency; do not extrapolate decode speed.
+断开外网、保留内部 SSH 后，逐项检查：
 
-HF/Transformers offline flags are enabled in the server. Client updates, model
-catalog fetch, default external plugins and LSP downloads are disabled.
-Explicit project plugins, external MCP/search, git clone or pip/npm/apt downloads
-can still require internet; prepare project dependencies and tools in advance.
+1. 仅使用本地完整权重和镜像冷启动，确认 API 就绪。
+2. 使用新用户启动客户端，不能只验证管理员已预热的环境。
+3. 验证搜索、读取、编辑和测试工具，确认 hostname 返回 BCM 主机名。
+4. 检查完整私有日志、GPU UUID、显存和遗留隧道。
+5. 测试实际输入长度及并发，不能将解码速度直接视为整体性能。
 
-See validation.md for what was actually tested. Network-isolated client tests
-do not by themselves establish a fresh GPU-server cold start on another platform.
+服务端启用 HF/Transformers 离线标志；客户端禁用更新、模型目录获取、默认外部插件和 LSP 下载。显式配置的项目插件、外部 MCP、搜索及 git/pip/npm/apt 下载仍可能需要外网，须预先准备项目依赖和工具。
+
+实际验证范围见[验证记录](validation.md)。客户端网络隔离测试不能证明另一平台的全新 GPU 服务端可以离线冷启动。
+
+---
+
+[English version](en/offline.md)

@@ -1,9 +1,9 @@
-# Development workflow
+# 开发与扩展流程
 
-## Setup and checks
+## 准备环境与执行检查
 
-Runtime code uses Python's standard library only. Optional developer tools belong
-in a project virtualenv, not OS-managed Python:
+运行时代码仅使用 Python 标准库。可选开发工具安装在项目虚拟环境，不写入系统 Python：
+
 ```bash
 python3 -m venv .venv
 .venv/bin/python -m pip install -e '.[dev]'
@@ -13,68 +13,59 @@ python3 -m venv .venv
 git diff --check
 ```
 
-CPU-only CI tests policy and failure boundaries. It cannot establish CUDA kernel
-compatibility, hardware memory requirements, topology or throughput.
+CPU CI 检查策略与失败边界，无法证明 CUDA 内核兼容性、硬件最低内存、互联拓扑或吞吐。
 
-## Add a hardware profile
+## 新增硬件配置
 
-1. Check the upstream model recipe and actual local GPU count, HBM, server CPU
-   architecture, interconnect and host RAM.
-2. Verify the container manifest contains that platform. Record the pinned
-   manifest-list digest and selected platform child digest.
-3. Add policy to `src/local_ai/profiles.json`: architecture/platform, local TP,
-   Engram placement, GPU family, conservative HBM guard and validation level.
-4. Keep engine argument generation in profiles.py. Never add GPU branches to the
-   BCM client or derive its binary architecture from the server.
-5. Test valid and invalid GPU selection, duplicate indices/UUID aliases, missing
-   devices, wrong CPU/image and insufficient memory.
-6. Plan with `server plan --inventory FIXTURE.json`. Inventory fixtures are
-   accepted only by plan; start always probes the actual GPU host.
-7. On allocated hardware: prepare the pinned image/weights, start, wait for API
-   health, test streaming and a native tool roundtrip, then an actual BCM
-   edit/test/hostname task. Inspect memory and logs, then stop.
-8. Record exact versions, methodology, results and limits in validation.md.
-   Never upgrade a profile to hardware-verified based only on unit tests.
+1. 核对上游模型配方，以及目标 OS 实际可见的 GPU 数、显存、CPU 架构、互联和主存。
+2. 确认镜像清单提供目标平台，记录固定的清单摘要及平台子摘要。
+3. 在 `src/local_ai/profiles.json` 添加架构、平台、本地 TP 数、Engram 位置、
+   GPU 类型、保守显存保护值和验证级别。
+4. 引擎参数统一在 `profiles.py` 生成；不在 BCM 客户端加入 GPU 分支，也不从服务端推断客户端架构。
+5. 测试有效与无效选择、编号/UUID 重复、缺失设备、CPU/镜像不匹配和内存不足。
+6. 使用 `server plan --inventory FIXTURE.json` 检查计划。
+   只有 plan 接受测试清单，start 必须发现真实硬件。
+7. 在已分配硬件上准备固定镜像和权重，启动后等待 API，测试流式输出和原生工具往返，
+   再从 BCM 执行真实的编辑、测试和 hostname 任务；检查内存及日志，最后停止实例。
+8. 将版本、方法、结果及限制写入 [验证记录](validation.md)。
+   不能仅凭单元测试把配置标记为实机验证通过。
 
-A two-GPU GB300 OS instance needs a TP2 profile and enough host RAM. Tensor
-parallelism across OS instances is a separate orchestration feature, not just a
-new profile JSON entry.
+同一 OS 只有两张 GPU 的 GB300 需要 TP2 配置和足够主存。
+跨 OS 的张量并行属于新的编排能力，不能只修改配置 JSON 来实现。
 
-## Add or upgrade a model
+## 新增或升级模型
 
-Change repository/revision, tokenizer/parsers, model directory and client
-capabilities together. Test streaming termination, reasoning transport,
-tool-call/result roundtrips and an actual file-edit/test task.
-Never silently point an existing served-model name at a different revision.
-Record thinking/quantization changes separately from runtime optimizations.
+同时修改固定仓库/revision、分词器/解析器、模型目录和客户端能力声明。
+验证流式结束、思考内容传输、工具调用/结果往返，以及真实文件编辑和测试。
+不能把已有服务模型名静默指向另一个 revision。
+思考预算或量化变更要与运行时优化分别记录。
 
-## Client and offline artifacts
+## 客户端与离线资源
 
-Select the native binary on BCM, independently of the server platform.
-An online installation uses an exact NPM package release and verifies SHA256 or
-SHA512 integrity before extracting/executing the allowlisted binary.
-Imported binaries require matching ELF architecture, optional SHA256 and the
-requested version. CPU architecture alone is not an entire ABI compatibility
-test: check target distro/shared libraries and CPU instruction support.
+原生程序按 BCM 的架构选择，与服务端平台独立。
+在线安装固定 NPM 版本，并在提取、执行允许的二进制前校验 SHA256/SHA512。
+导入程序需检查 ELF 架构、可选 SHA256 和请求的版本。
+CPU 架构一致不等于完整 ABI 兼容，还需检查发行版、共享库和 CPU 指令支持。
 
-Asset exports include only the installed binary, allowlisted public cache and
-manifest. They exclude histories, auth files and SSH keys.
-Model weights are architecture-independent; images, client binaries and cached
-executables are architecture-specific. Never reuse AMD64 caches on ARM64.
+资源包只包含程序、允许的公共缓存和清单，不包含历史、认证文件或 SSH 密钥。
+模型权重与 CPU 架构无关；镜像、原生程序及缓存中的可执行文件与架构有关，
+不能混用 AMD64 与 ARM64 缓存。
 
-## Testing and review rules
+## 测试与评审原则
 
-- Keep plan generation deterministic and free of subprocesses/writes.
-- Test rejected states and cleanup, not just a happy-path command.
-- Require image config/layer identity after import; a tag alone is insufficient.
-- Test two sessions keep stable history but separate temporary tunnel configs.
-- Verify execution location with hostname, not merely a successful model reply.
-- Keep raw logs and customer infrastructure identifiers under ignored runtime
-  paths. Commit sanitized aggregate validation records only.
-- CI must not start GPU work or change Slurm, firmware or networking.
-- Preserve production service state while refactoring and publishing code.
+- 计划生成应确定、无子进程和文件写入。
+- 测试拒绝状态及退出清理，不只检查正常命令。
+- 导入镜像后核对配置/层身份，不能只核对 tag。
+- 验证两个会话的历史稳定、临时隧道配置独立。
+- 用 hostname 验证工具在 BCM 执行，不能只看模型回复成功。
+- 原始日志及实际基础设施标识保存在被忽略的运行目录，只提交脱敏汇总。
+- CI 不得启动 GPU 工作或修改 Slurm、固件、网络。
+- 重构与发布时保留现有生产服务状态。
 
-Before pushing, inspect staged files for models, binaries, caches, credentials
-or private paths. Run all checks. Commit source, tests, docs and CI together.
-Use small changes when adding a new profile; include its acceptance evidence
-before changing its advertised validation status.
+推送前检查暂存文件，排除权重、二进制、缓存、凭据和私有路径，并执行全部检查。
+源码、测试、文档与 CI 一并提交；新增平台尽量保持变更集中，
+具备验收证据后才提高其验证级别。
+
+---
+
+[English version](en/development.md)
