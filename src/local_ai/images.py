@@ -4,6 +4,7 @@ import json
 import subprocess
 from pathlib import Path
 
+from . import installlog
 from .common import arch, atomic_json, fingerprint, run, sha256
 
 
@@ -41,42 +42,67 @@ def save_lock(root, policy, image):
     return value
 
 
-def resolve_image(root, policy):
+def resolve_image(root, policy, allow_missing=False):
     image = inspect_image(policy["image"], policy["platform"])
     if image:
         validate_image(image, policy)
         return policy["image"]
     path = lock_path(root, policy)
     if not path.is_file():
+        if allow_missing:
+            return None
         raise RuntimeError("Pinned image absent; run image pull or import its image lock")
     lock = json.loads(path.read_text())
     if lock["reference"] != policy["image"] or lock["platform"] != policy["platform"]:
         raise ValueError("Image lock belongs to a different version/platform")
+    found = False
     for ref in [lock["id"], lock["tag"]]:
         image = inspect_image(ref, policy["platform"])
         if image:
+            found = True
             validate_image(image, policy)
             if image_identity(image) == lock["content_identity"]:
                 return image["Id"]
+    if allow_missing and not found:
+        return None
     raise RuntimeError("Imported image content does not match its saved lock")
 
 
-def pull(root, policy):
+def download_command(command, log):
+    if installlog.active():
+        return run(command, check=False, timeout=None)
+    with Path(log).open("a") as stream:
+        return subprocess.run(command, stdout=stream, stderr=subprocess.STDOUT)
+
+
+def pull(root, policy, force=False):
     root = Path(root)
     (root / "logs").mkdir(parents=True, exist_ok=True)
-    log = root / "logs" / ("image-pull-" + policy["arch"] + ".log")
-    with log.open("a") as f:
-        r = subprocess.run(
-            ["docker", "pull", "--platform", policy["platform"], policy["image"]],
-            stdout=f,
-            stderr=subprocess.STDOUT,
-        )
+    log = installlog.path() or root / "logs" / ("image-pull-" + policy["arch"] + ".log")
+    installlog.event(
+        "CHECK local image; platform=" + policy["platform"] + "; reference=" + policy["image"]
+    )
+    image = None
+    if not force:
+        image = inspect_image(policy["image"], policy["platform"])
+        if image is None and lock_path(root, policy).is_file():
+            reference = resolve_image(root, policy, allow_missing=True)
+            if reference is not None:
+                image = inspect_image(reference, policy["platform"])
+            else:
+                installlog.event("LOCAL IMAGE ABSENT despite saved lock; fetch pinned image")
+    if image is not None:
+        value = save_lock(root, policy, image)
+        installlog.event("REUSE verified local image; no registry access")
+        return dict(value, status="already-present", network=False, log=str(log))
+    installlog.event("DOWNLOAD image; no reusable local image or --force requested")
+    r = download_command(["docker", "pull", "--platform", policy["platform"], policy["image"]], log)
     if r.returncode:
         raise RuntimeError("Image pull failed; complete output: " + str(log))
     image = inspect_image(policy["image"], policy["platform"])
     if image is None:
         raise RuntimeError("Pull completed without a locally inspectable image")
-    return save_lock(root, policy, image)
+    return dict(save_lock(root, policy, image), status="downloaded", network=True, log=str(log))
 
 
 def export_image(root, policy, output):
@@ -111,7 +137,55 @@ def export_image(root, policy, output):
     return {"image_archive": str(output), "lock": str(output) + ".lock.json"}
 
 
-def download_model(root, policy):
+def cached_model(root, policy):
+    from .server import validate_model
+
+    root = Path(root)
+    model = root / "models" / policy["model_directory"]
+    if not model.is_dir():
+        installlog.event("LOCAL MODEL ABSENT: " + str(model))
+        return None
+    lockfile = root / "models/model.lock.json"
+    verified = False
+    if lockfile.is_file():
+        lock = json.loads(lockfile.read_text())
+        if lock.get("repo") != policy["repo"] or lock.get("revision") != policy["revision"]:
+            raise ValueError(
+                "Local model revision conflicts with profile; inspect provenance or explicitly use --force"
+            )
+        verified = True
+    try:
+        validate_model(root, policy)
+    except ValueError as error:
+        if str(error).startswith(
+            ("Missing model file:", "Missing weight shard:", "Expected one safetensors index")
+        ):
+            installlog.event("LOCAL MODEL INCOMPLETE: " + str(error), "WARNING")
+            return None
+        raise
+    if not verified:
+        installlog.event(
+            "Local model complete; revision lock absent, revision is UNVERIFIED. Reusing files without network.",
+            "WARNING",
+        )
+    installlog.event("REUSE complete local model; repo=" + policy["repo"] + "; network=False")
+    return {
+        "model": str(model),
+        "status": "already-present",
+        "network": False,
+        "revision_verified": verified,
+        "log": str(installlog.path()) if installlog.path() else None,
+    }
+
+
+def download_model(root, policy, force=False):
+    installlog.event("CHECK local model files and revision; expected=" + policy["revision"])
+    if not force:
+        cached = cached_model(root, policy)
+        if cached is not None:
+            return cached
+    installlog.event("DOWNLOAD model: missing files or --force requested; repo=" + policy["repo"])
+
     if arch() != policy["arch"]:
         raise ValueError(
             "Run model download with a native-CPU profile; weights themselves are portable"
@@ -121,8 +195,8 @@ def download_model(root, policy):
         (root / name).mkdir(parents=True, exist_ok=True)
     image = resolve_image(root, policy)
     code = (
-        "from huggingface_hub import snapshot_download; snapshot_download(repo_id=%r,revision=%r,local_dir=%r)"
-        % (policy["repo"], policy["revision"], "/models/" + policy["model_directory"])
+        "from huggingface_hub import snapshot_download; snapshot_download(repo_id=%r,revision=%r,local_dir=%r,force_download=%r)"
+        % (policy["repo"], policy["revision"], "/models/" + policy["model_directory"], force)
     )
     command = [
         "docker",
@@ -142,15 +216,26 @@ def download_model(root, policy):
         "-c",
         code,
     ]
-    log = root / "logs/model-download.log"
-    with log.open("a") as f:
-        r = subprocess.run(command, stdout=f, stderr=subprocess.STDOUT)
+    log = installlog.path() or root / "logs/model-download.log"
+    r = download_command(command, log)
     if r.returncode:
         raise RuntimeError("Model download failed; complete output: " + str(log))
+    from .server import validate_model
+
+    validate_model(root, policy)
+    installlog.event(
+        "VERIFY downloaded model: configuration, tokenizer, index and all shard lengths passed"
+    )
     atomic_json(
         root / "models/model.lock.json", {"repo": policy["repo"], "revision": policy["revision"]}
     )
-    return {"model": str(root / "models" / policy["model_directory"]), "log": str(log)}
+    return {
+        "model": str(root / "models" / policy["model_directory"]),
+        "log": str(log),
+        "status": "downloaded",
+        "network": True,
+        "revision_verified": True,
+    }
 
 
 def import_image(root, policy, archive, lock_file):
@@ -167,9 +252,10 @@ def import_image(root, policy, archive, lock_file):
     )
     root = Path(root)
     (root / "logs").mkdir(parents=True, exist_ok=True)
-    (root / "logs" / ("image-import-" + policy["arch"] + ".log")).write_text(
-        result.stdout + result.stderr
-    )
+    if not installlog.active():
+        (root / "logs" / ("image-import-" + policy["arch"] + ".log")).write_text(
+            result.stdout + result.stderr
+        )
     for ref in [lock["id"], lock["tag"], policy["image"]]:
         image = inspect_image(ref, policy["platform"])
         if image:

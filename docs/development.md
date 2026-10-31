@@ -1,5 +1,21 @@
 # 开发与扩展流程
 
+## 项目配置文件
+
+`pyproject.toml` 是 Python 项目的构建和开发配置，日常运行源码中的 `./local-ai` 无需修改它。
+
+| 配置节 | 本项目的用途 |
+|---|---|
+| `build-system` | 使用 setuptools>=68 构建安装包 |
+| `project` | 包名 cluster-local-ai、版本 0.1.0、Python>=3.10；运行时第三方依赖为空 |
+| `project.scripts` | 安装后的 local-ai 命令调用 local_ai.cli:main |
+| `tool.setuptools` | 从 src 查找模块，并将 profiles.json 包含到安装包 |
+| `project.optional-dependencies` | dev 组包含 Ruff 0.14.2，仅开发时安装 |
+| `tool.ruff` | Python 3.10 兼容目标、100 字符行宽和静态检查规则 |
+
+仓库根目录的 Bash 脚本 `local-ai` 将 src 加入 PYTHONPATH 后运行同一入口。
+模型、GPU 及 vLLM 参数由 profiles.json/profiles.py 管理；使用者查[命令手册](commands.md)。
+
 ## 准备环境与执行检查
 
 运行时代码仅使用 Python 标准库。可选开发工具安装在项目虚拟环境，不写入系统 Python：
@@ -13,7 +29,38 @@ python3 -m venv .venv
 git diff --check
 ```
 
+`pip install -e '.[dev]'` 以可编辑方式安装当前项目及 dev 工具；代码改动无需重复安装。
+`unittest -s tests` 从 tests 目录发现测试，`-v` 显示测试名；`ruff check` 检查规则，
+`ruff format --check` 只检查格式不改文件；`git diff --check` 检查补丁空白错误。
+
 CPU CI 检查策略与失败边界，无法证明 CUDA 内核兼容性、硬件最低内存、互联拓扑或吞吐。
+
+## 接手开发与提交约定
+
+1. 先读 README 的拓扑和使用手册，再读架构及验证记录；真实环境信息和原始日志保留在忽略目录，不能带进提交。
+2. 命令入口集中在 cli.py；新增命令须提供逐级 --help、参数含义、默认值、执行位置，并同步中英文手册。
+3. GPU/CPU/镜像平台与客户端架构独立；新增型号优先添加 profiles.json 配置和测试清单，不写真实主机名或 GPU UUID 到逻辑中。
+4. 引擎参数只从 profiles.py 生成；固定模型 revision、镜像清单与平台摘要，不能用可变标签代替版本身份。
+5. plan 在使用给定硬件清单时不得运行子进程或写文件；启动前再检查真实占用、CDI 和平台。
+6. 安装诊断经 installlog.py 集中记录，JSON 标准输出与进度标准错误分离；不能把预期的缺失探测误标为安装失败。
+7. 本地复用必须验证完整性并区分版本已核实/未核实；不得伪造版本锁。离线导入同时保留归档校验和内容身份检查。
+8. 修改后运行本页的 unittest、Ruff 和 diff 检查；测试失败先修复，不能通过删改既有验收用例来“通过”。
+9. 新平台和 GPU 测试写明来源、分配设备、版本、方法、结果、限制；CPU 测试不能提高硬件验证等级。
+10. 发布前审查暂存文件，记录提交、依赖版本和验收结果；确认临时容器、隧道和资源已清理，再推送并查看 CI。
+
+新增 GPU 的标准流程见下一节。B200 或后续型号拿到硬件后再新增并验收，不能修改已验证配置来冒充新型号支持。
+
+## 没有 GPU 时也能开发
+
+复制已有[硬件清单样本](../tests/fixtures/b300-tp4.json)编写脱敏测试数据，先验证参数生成与拒绝条件。
+以下命令不探测真实 GPU，不启动容器，也不创建数据目录：
+
+```bash
+./local-ai server plan --profile b300-tp4 --gpus 0,1,2,3 --inventory tests/fixtures/b300-tp4.json --data-dir /tmp/local-ai-plan
+```
+
+配置入口：[profiles.json](../src/local_ai/profiles.json)；引擎参数：[profiles.py](../src/local_ai/profiles.py)；
+策略边界测试：[test_policy.py](../tests/test_policy.py)；安装、缓存和文档约定测试：[test_installation.py](../tests/test_installation.py)。
 
 ## 新增硬件配置
 
@@ -59,7 +106,7 @@ CPU 架构一致不等于完整 ABI 兼容，还需检查发行版、共享库�
 - 验证两个会话的历史稳定、临时隧道配置独立。
 - 用 hostname 验证工具在 BCM 执行，不能只看模型回复成功。
 - 原始日志及实际基础设施标识保存在被忽略的运行目录，只提交脱敏汇总。
-- CI 不得启动 GPU 工作或修改 Slurm、固件、网络。
+- CI 不得启动 GPU 工作或修改集群状态、固件、网络。
 - 重构与发布时保留现有生产服务状态。
 
 推送前检查暂存文件，排除权重、二进制、缓存、凭据和私有路径，并执行全部检查。

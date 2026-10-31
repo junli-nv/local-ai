@@ -9,9 +9,11 @@ import re
 import shutil
 import tarfile
 import tempfile
+import time
 import urllib.request
 from pathlib import Path
 
+from . import installlog
 from .common import arch, atomic_json, private_dir, run, sha256, verify_elf
 
 VERSION = "1.19.5"
@@ -34,7 +36,28 @@ def fetch(url, destination):
         raise ValueError("Download URL must use HTTPS")
     req = urllib.request.Request(url, headers={"User-Agent": "cluster-local-ai/0.1"})
     with urllib.request.urlopen(req, timeout=60) as response, Path(destination).open("wb") as out:
-        shutil.copyfileobj(response, out, 1024 * 1024)
+        total = int(response.headers.get("Content-Length", 0))
+        received = 0
+        started = last = time.monotonic()
+        while True:
+            chunk = response.read(1024 * 1024)
+            if not chunk:
+                break
+            out.write(chunk)
+            received += len(chunk)
+            now = time.monotonic()
+            if now - last >= 15:
+                progress = (" percent=%.1f" % (100 * received / total)) if total else ""
+                installlog.event(
+                    "DOWNLOAD RUNNING bytes=%d total=%s elapsed=%.1fs%s"
+                    % (received, total or "unknown", now - started, progress)
+                )
+                last = now
+        if total and received != total:
+            raise OSError("Incomplete download: received %d of %d bytes" % (received, total))
+        installlog.event(
+            "DOWNLOAD DONE bytes=%d elapsed=%.2fs" % (received, time.monotonic() - started)
+        )
 
 
 def extract_binary(archive, destination):
@@ -80,12 +103,25 @@ def install(root, binary=None, seed=None, version=VERSION, expected_sha256=None)
         raise ValueError("Use an explicit numeric OpenCode release")
     root = private_dir(root)
     cpu = arch()
+    installlog.event("CHECK native client; architecture=" + cpu + "; expected_version=" + version)
+    if binary is None and seed is None and (root / "manifest.json").is_file():
+        existing = validate(root)
+        if existing["version"] == version:
+            installlog.event("REUSE verified native client; no NPM access")
+            return {
+                "client_dir": str(root),
+                "manifest": existing,
+                "status": "already-present",
+                "network": False,
+            }
+
     (root / "bin").mkdir(exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="install-", dir=root) as directory:
         temp = Path(directory)
         target = temp / "opencode"
         source = "imported"
         if binary:
+            installlog.event("IMPORT local client binary: " + str(binary))
             if expected_sha256 and sha256(binary) != expected_sha256:
                 raise ValueError("Imported binary SHA256 mismatch")
             shutil.copy2(binary, target)
@@ -93,15 +129,19 @@ def install(root, binary=None, seed=None, version=VERSION, expected_sha256=None)
             package = "opencode-linux-" + ("x64" if cpu == "amd64" else "arm64")
             metadata = "https://registry.npmjs.org/" + package + "/" + version
             req = urllib.request.Request(metadata, headers={"User-Agent": "cluster-local-ai/0.1"})
+            installlog.event("DOWNLOAD NPM metadata: " + metadata)
             with urllib.request.urlopen(req, timeout=30) as response:
                 info = json.load(response)
             if info["name"] != package or info["version"] != version:
                 raise ValueError("NPM package identity mismatch")
             archive = temp / "client.tgz"
+            installlog.event("DOWNLOAD client archive: " + info["dist"]["tarball"])
             fetch(info["dist"]["tarball"], archive)
+            installlog.event("VERIFY NPM integrity; bytes=" + str(archive.stat().st_size))
             verify_integrity(archive, info["dist"]["integrity"])
             extract_binary(archive, target)
             source = {"registry": metadata, "integrity": info["dist"]["integrity"]}
+        installlog.event("VERIFY ELF architecture and requested binary version")
         verify_elf(target, cpu)
         target.chmod(0o755)
         if run([str(target), "--version"]).stdout.strip() != version:
@@ -118,6 +158,7 @@ def install(root, binary=None, seed=None, version=VERSION, expected_sha256=None)
         "source": source,
     }
     atomic_json(root / "manifest.json", value)
+    installlog.event("INSTALL native client complete; SHA256=" + value["sha256"])
     return {"client_dir": str(root), "manifest": value}
 
 

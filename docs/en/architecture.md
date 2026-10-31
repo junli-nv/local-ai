@@ -86,3 +86,15 @@ isolate each optimization's contribution or predict concurrent-user throughput.
 GB300 has a different host-memory/interconnect architecture. Its TP2 profile
 intentionally uses upstream-style CPU Engram offload. B300 speed is not a GB300
 performance claim. GB300 profiles remain unverified on hardware.
+
+## Installation observability
+
+cli.py establishes an installlog.py session only for installation/deployment actions. Within that session,
+common.run records actual subprocess commands and streams their output; outside it, execution remains ordinary.
+Progress uses stderr and JSON results use stdout, preserving automation contracts. Plans and queries create no
+journal, including when a journal path is supplied.
+
+Image/model preparation checks local completeness and identity before network work. Reusable artifacts skip
+downloads; absent caches and conflicting content are distinct outcomes. Missing model provenance is reported
+as unverified rather than fabricated. Complete content hashes belong to offline artifact acceptance.
+See the [command manual](commands.md).

@@ -16,3 +16,7 @@
 ## Documentation languages
 
 Chinese is the primary development and documentation language. Keep complete Chinese documentation at the default entry points, with English translations in separate files linked at the end. Update both languages when behavior or commands change and retain the same validation limits.
+
+- Keep recursive CLI help and both manuals in sync; preserve JSON stdout and progress stderr.
+- Keep installation diagnostics in install.log; distinguish expected probes and reuse complete local artifacts offline.
+- Extend GPU support through separate profiles, fixtures and hardware acceptance evidence.

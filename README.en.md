@@ -8,7 +8,7 @@ The GPU server runs the model. The headnode runs OpenCode and its tools: file
 edits, shell commands, git, and SSH to other cluster nodes. A client does not need
 a local GPU, CUDA, Docker, Node.js, or npm.
 
-[Deployment guide](docs/en/deployment.md) · [Architecture](docs/en/architecture.md) ·
+[User manual and all commands](docs/en/commands.md) · [Deployment guide](docs/en/deployment.md) · [Architecture](docs/en/architecture.md) ·
 [Development](docs/en/development.md) · [Offline deployment](docs/en/offline.md) ·
 [Validation](docs/en/validation.md)
 
@@ -20,6 +20,29 @@ flowchart LR
     Client --> Tools[Headnode files / bash / git / SSH]
     Tools --> Nodes[Other cluster nodes]
 ```
+
+## Discover commands
+
+Use `./local-ai --help` for groups, `./local-ai server --help` for server commands, and
+`./local-ai server start --help` for options and defaults. See the [complete manual](docs/en/commands.md).
+
+| Entry | Purpose | Run on |
+|---|---|---|
+| profiles | List hardware presets | Either host |
+| image / model | Prepare images and weights | GPU host or preparation machine |
+| server | Plan, start, query, stop | GPU001 |
+| client | Install, inspect, export native client | bcm-headnode |
+| chat | Connect to inference; execute local tools | bcm-headnode |
+
+## Example environment
+
+| Hostname | Role | Commands run here |
+|---|---|---|
+| `GPU001` | GPU server; an eight-card B300 in this example | Prepare images/weights, manage inference instances, check health |
+| `bcm-headnode` | BCM headnode | Log in as `alice`, install the client, use OpenCode in `/home/alice/project` |
+
+Replace these hostnames with your own. The examples assume `alice` can SSH from `bcm-headnode` to `GPU001`.
+Instance names `a` and `b` identify services on that GPU server, not hostnames.
 
 ## Supported deployment profiles
 
@@ -62,23 +85,64 @@ space for images, caches, and offline exports. GB300 TP2 offloads roughly
 A conservative 256 GiB MemAvailable guard is enforced for that experimental profile;
 it is not a measured minimum RAM requirement.
 
+Preparation reuses complete local images/models without repeat downloads. Installation appends to /raid/local-ai/install.log; client installation uses its private asset directory. See the [manual](docs/en/commands.md) for force refresh, journal paths and provenance checks.
+
 ## GPU server: prepare and start
 
+The deployment account needs Docker access and write permission to the data directory, configured by the administrator.
+
 Run these commands **on the GPU server**, not on BCM:
+
+Choose these values before running the example:
+
+| Option | Meaning / what to change |
+|---|---|
+| `--profile b300-tp4` | B300 four-GPU inference preset. TP4 splits one instance across four local GPUs. |
+| `--data-dir /raid/local-ai` | Weights, image locks, cache and logs; separate from the Git checkout. Choose a large local directory. |
+| `--gpus 0,1,2,3` | Server GPU indices from nvidia-smi, or full UUIDs. Count must match the profile. |
+| `--name a` | Instance name, reused for status/stop and its log directory; not a hostname. |
+| `--port 18000` | Model HTTP API port, default 18000. Use 18001 for a second instance; this is not the SSH port. |
+
+Server plan/start default to profile b300-tp4 and name a; --gpus is required.
+The data directory uses LOCAL_AI_DATA_DIR if set, otherwise /raid/local-ai.
+Use the same --data-dir for preparation, planning and startup: options do not carry over between commands.
 ```bash
 git clone https://github.com/junli-nv/local-ai.git
 cd local-ai
+# List profiles and validation status
 ./local-ai profiles
+docker version
+nvidia-ctk cdi list
+```
+
+Confirm the Docker daemon is reachable and CDI includes nvidia.com/gpu=GPU-... UUID aliases for selected GPUs.
+If the device list is empty, an administrator refreshes definitions on GPU001:
+
+```bash
+sudo systemctl restart nvidia-cdi-refresh.service
+nvidia-ctk cdi list
+```
+
+Without this service, follow the manual CDI guidance in the [deployment guide](docs/en/deployment.md).
+After prerequisites pass, prepare artifacts and start:
+
+```bash
+# Download the inference container image
 ./local-ai image pull --profile b300-tp4 --data-dir /raid/local-ai
+# Download complete model weights
 ./local-ai model download --profile b300-tp4 --data-dir /raid/local-ai
-./local-ai server plan --profile b300-tp4 --gpus 0,1,2,3 --name a
-./local-ai server start --profile b300-tp4 --gpus 0,1,2,3 --name a
+# Preview the plan without starting a service
+./local-ai server plan --profile b300-tp4 --gpus 0,1,2,3 --name a --data-dir /raid/local-ai
+# Start the instance; initial loading takes time
+./local-ai server start --profile b300-tp4 --gpus 0,1,2,3 --name a --data-dir /raid/local-ai
 curl --fail http://127.0.0.1:18000/health
 ```
 
+Run on GPU001: 127.0.0.1 means GPU001 itself. A successful /health request (curl exit code 0) means the API is healthy; the body may be empty. While loading, wait and retry; inspect instances/a/server.log.
+
 `server plan` is read-only. `server start` validates weights, native CPU/image
 architecture, selected GPU UUIDs, CDI aliases, active processes, assignments, and
-the API port. It never kills another workload or changes Slurm.
+the API port. It never kills another workload.
 
 For a GB300 host with four local GPUs, select `--profile gb300-tp4`. With two
 local GPUs and sufficient host memory, select `--profile gb300-tp2 --gpus 0,1`.
@@ -92,22 +156,30 @@ git clone https://github.com/junli-nv/local-ai.git
 cd local-ai
 ./local-ai client install
 ./local-ai client doctor
-ssh gpu-a hostname
-./local-ai chat --server gpu-a --project /path/to/project
+ssh GPU001 hostname
+./local-ai chat --server GPU001 --project /home/alice/project
 ```
 
-Replace `gpu-a` with the actual GPU hostname. `chat` opens an authenticated SSH
+Replace `GPU001` with the actual GPU hostname. `chat` opens an authenticated SSH
 tunnel, waits for the model API, launches OpenCode locally, and closes the tunnel
 on exit. No headnode Docker daemon or global Python package installation is required.
 
+| Option | Meaning |
+|---|---|
+| `--server GPU001` | Server SSH hostname, optionally alice@GPU001; replace with a reachable host. |
+| `--project /home/alice/project` | Project directory on bcm-headnode; defaults to the current directory, not a server directory. |
+| `--port 18001` | Remote model API port; must match the instance. Default: 18000. |
+
 Options:
 ```bash
-./local-ai chat --server user@gpu-a --port 18001 --project /path/to/project
-./local-ai chat --server gpu-a --check
-./local-ai chat --server gpu-a --run 'Use bash to run hostname and report its output.'
+./local-ai chat --server alice@GPU001 --port 18001 --project /home/alice/project
+./local-ai chat --server GPU001 --check
+./local-ai chat --server GPU001 --run 'Use bash to run hostname and report its output.'
 ```
 
-For an existing tunnel or compatible local proxy:
+--check only checks connectivity, without inference. --run executes one quoted prompt and exits; omit it for interactive use.
+
+For an existing tunnel or compatible local proxy, --endpoint selects an API base URL including /v1, instead of --server:
 ```bash
 ./local-ai chat --endpoint http://127.0.0.1:28000/v1
 ```
@@ -120,8 +192,8 @@ credentials nor MyTerm tools automatically.
 
 On an eight-card B300 server:
 ```bash
-./local-ai server start --profile b300-tp4 --name a --gpus 0,1,2,3 --port 18000
-./local-ai server start --profile b300-tp4 --name b --gpus 4,5,6,7 --port 18001
+./local-ai server start --profile b300-tp4 --name a --gpus 0,1,2,3 --port 18000 --data-dir /raid/local-ai
+./local-ai server start --profile b300-tp4 --name b --gpus 4,5,6,7 --port 18001 --data-dir /raid/local-ai
 ```
 
 Instances share only read-only model files; caches, logs, KV, ports, and GPU

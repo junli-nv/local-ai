@@ -2,6 +2,49 @@
 
 [中文（默认）](../development.md)
 
+## Developer handoff and contribution conventions
+
+1. Read README topology, the command manual, architecture and validation record first. Keep raw infrastructure evidence in ignored runtime paths.
+2. Keep command entry points in cli.py. Every new command needs recursive help, option meanings/defaults, execution location and matching Chinese/English documentation.
+3. Keep GPU policy, server CPU/image platform and client architecture independent. Add profiles and inventory fixtures; never hardcode real hosts or GPU UUIDs.
+4. Generate engine arguments through profiles.py. Pin model revisions and image manifest/platform digests rather than mutable tags.
+5. Plans with supplied inventory must not spawn processes or write files. Validate live occupancy, CDI and platform at start.
+6. Route installation diagnostics through installlog.py, keeping JSON stdout separate from progress stderr. Expected missing-object probes are not installation failures.
+7. Validate local artifacts; distinguish verified and unverified provenance without fabricating locks. Preserve both archive checksums and imported-image content identity.
+8. Run the unittest, Ruff and diff checks below. Fix failures without deleting or weakening existing acceptance tests.
+9. Record hardware/version/method/results/limits for real GPU tests. CPU tests alone never promote a hardware validation level.
+10. Review staged files, record release evidence, clean temporary containers/tunnels/resources, push and inspect CI.
+
+Use the profile workflow below when B200 or later hardware becomes available. Do not relabel a validated profile as support for an untested GPU.
+
+## Development without a GPU
+
+Base sanitized inventories on the [existing fixture](../../tests/fixtures/b300-tp4.json). Validate argument generation and rejection cases first.
+This command probes no real GPUs, starts no container and creates no data directory:
+
+```bash
+./local-ai server plan --profile b300-tp4 --gpus 0,1,2,3 --inventory tests/fixtures/b300-tp4.json --data-dir /tmp/local-ai-plan
+```
+
+See [profiles.json](../../src/local_ai/profiles.json), [engine arguments](../../src/local_ai/profiles.py),
+[policy tests](../../tests/test_policy.py) and [installation/cache/documentation tests](../../tests/test_installation.py).
+
+## Project configuration
+
+pyproject.toml configures Python packaging and developer tools; ordinary source-checkout usage does not require editing it.
+
+| Section | Purpose here |
+|---|---|
+| build-system | setuptools>=68 build backend |
+| project | cluster-local-ai 0.1.0, Python>=3.10, no third-party runtime dependencies |
+| project.scripts | Installed local-ai entry point: local_ai.cli:main |
+| tool.setuptools | Find packages under src and include profiles.json |
+| project.optional-dependencies | dev extra installs Ruff 0.14.2 |
+| tool.ruff | Python 3.10 target, 100-character lines and lint rules |
+
+The root Bash launcher adds src to PYTHONPATH and calls the same entry point. Model/GPU engine presets live in profiles.json/profiles.py. See the [command manual](commands.md).
+
+
 ## Setup and checks
 
 Runtime code uses Python's standard library only. Optional developer tools belong
@@ -14,6 +57,8 @@ python3 -m venv .venv
 .venv/bin/ruff format --check src tests
 git diff --check
 ```
+
+Editable installation (-e) reflects source changes immediately; .[dev] includes developer tools. unittest -s selects the test directory and -v lists test names. ruff check checks rules; ruff format --check verifies formatting without editing. git diff --check finds whitespace errors.
 
 CPU-only CI tests policy and failure boundaries. It cannot establish CUDA kernel
 compatibility, hardware memory requirements, topology or throughput.

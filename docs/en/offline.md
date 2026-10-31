@@ -11,6 +11,52 @@ Docker/CDI/Toolkit on the server; Python/Bash/git/SSH/rg/script on BCM. Host dri
 and OS packages are not included inside vLLM. Plan offline installation packages
 for the actual distro/kernel. Linux ELF architecture is not an entire ABI check.
 
+## Example paths and options
+
+| Path / option | Meaning |
+|---|---|
+| /data/local-ai | Artifact root on the connected preparation host |
+| /data/export -> /media/export | Export location, then its copied/mounted path on the offline host |
+| /raid/local-ai | Runtime data on offline GPU001 |
+| --output | Destination export archive |
+| --archive / --lock | Image archive and matching lock from the same export |
+| --binary / --seed-cache | Unpacked native OpenCode binary and public cache on BCM |
+
+Replace example paths with actual mount points. --profile selects the server platform; --data-dir selects this preparation/runtime root.
+See the [manual](commands.md) for client options and defaults. rsync -a SOURCE/ DEST/ copies directory contents with attributes.
+sha256sum -c verifies a manifest; stop if checksums do not match.
+
+## Offline artifact checklist
+
+Carry these files together, shown under /media/export. AMD64 filenames are examples; use the matching ARM64 artifacts where required. Renaming a file does not convert its platform.
+
+```text
+/media/export/
+  local-ai-source.tar.gz
+  local-ai-source.tar.gz.sha256
+  vllm-amd64.tar
+  vllm-amd64.tar.lock.json
+  models/
+  MODELS.sha256
+  client-amd64.tar.gz
+  client-amd64.tar.gz.sha256
+```
+
+The preparation steps below generate these files. Copy the source archive and checksum from the connected checkout's dist/ directory into the export set. Include the complete models/ tree and its checksum manifest, not only weight shards. Prepare OS, driver and container-runtime installation packages separately.
+
+After preparing and transferring the artifacts, extract source on **both GPU001 and bcm-headnode**. Use a writable, empty checkout directory:
+
+```bash
+cd /media/export
+sha256sum -c local-ai-source.tar.gz.sha256
+mkdir -p /home/alice/local-ai
+tar -xzf local-ai-source.tar.gz -C /home/alice/local-ai
+cd /home/alice/local-ai
+./local-ai --help
+```
+
+Later /path/to/local-ai means this source directory; /raid/local-ai is the GPU001 runtime data root. Use the same explicit --data-dir for import and startup, especially if LOCAL_AI_DATA_DIR is set.
+
 ## 1. Source snapshot
 
 From a reviewed commit:
@@ -64,7 +110,7 @@ cd /path/to/local-ai
 ./local-ai image import --profile b300-tp4 --data-dir /raid/local-ai \
   --archive /media/export/vllm-amd64.tar \
   --lock /media/export/vllm-amd64.tar.lock.json
-./local-ai server start --profile b300-tp4 --gpus 0,1,2,3 --name a
+./local-ai server start --profile b300-tp4 --gpus 0,1,2,3 --name a --data-dir /raid/local-ai
 curl --fail http://127.0.0.1:18000/health
 ```
 
@@ -97,13 +143,15 @@ cd /path/to/local-ai
   --binary /media/export/client-unpacked/client/bin/opencode \
   --seed-cache /media/export/client-unpacked/client/seed-cache
 ./local-ai client doctor
-./local-ai chat --server gpu-a --check
-./local-ai chat --server gpu-a --run 'Use bash to run hostname and report the result.'
+./local-ai chat --server GPU001 --check
+./local-ai chat --server GPU001 --run 'Use bash to run hostname and report the result.'
 ```
 
 No Node/npm/Docker is required on BCM. Use `--sha256` with the exported manifest's
 binary checksum when importing a standalone binary outside the checked archive.
 Verify network-free operation after any new client release or plugin change.
+
+Offline import/start append to /raid/local-ai/install.log. Repeating preparation checks reuses complete local artifacts; offline procedures do not use --force. Missing files, revision conflicts and truncated shards are explicit failures, not successful acceptance.
 
 ## 4. Acceptance
 

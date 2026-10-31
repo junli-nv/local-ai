@@ -6,7 +6,10 @@ import os
 import platform
 import subprocess
 import tempfile
+import time
 from pathlib import Path
+
+from . import installlog
 
 
 def arch(value=None):
@@ -18,7 +21,16 @@ def arch(value=None):
 
 
 def run(command, check=True, timeout=30, **kwargs):
-    result = subprocess.run(command, capture_output=True, text=True, timeout=timeout, **kwargs)
+    result = (
+        installlog.run(
+            command,
+            timeout=timeout,
+            probe=(not check and str(command[0]) == "docker" and "inspect" in command[:3]),
+            **kwargs,
+        )
+        if installlog.active()
+        else subprocess.run(command, capture_output=True, text=True, timeout=timeout, **kwargs)
+    )
     if check and result.returncode:
         raise RuntimeError("Command failed: " + command[0] + "\n" + result.stderr.strip())
     return result
@@ -47,10 +59,27 @@ def fingerprint(value):
 
 def sha256(path):
     h = hashlib.sha256()
+    total = Path(path).stat().st_size
+    size = 0
+    started = last = time.monotonic()
+    if installlog.active():
+        installlog.event("CHECKSUM START SHA256 path=%s total_bytes=%d" % (path, total))
     with Path(path).open("rb") as f:
         for chunk in iter(lambda: f.read(1024 * 1024), b""):
             h.update(chunk)
-    return h.hexdigest()
+            size += len(chunk)
+            now = time.monotonic()
+            if installlog.active() and now - last >= 15:
+                installlog.event(
+                    "CHECKSUM RUNNING bytes=%d/%d elapsed=%.1fs" % (size, total, now - started)
+                )
+                last = now
+    value = h.hexdigest()
+    if installlog.active():
+        installlog.event(
+            "CHECKSUM DONE SHA256=%s elapsed=%.2fs" % (value, time.monotonic() - started)
+        )
+    return value
 
 
 def private_dir(path):

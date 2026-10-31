@@ -38,6 +38,34 @@ provide general networking and does not establish a fresh disconnected GB300
 server cold start. The image is not run under ARM emulation as a substitute for
 hardware validation.
 
+## Independent-host deployment and installation acceptance
+
+On 2026-10-31, deployment was repeated directly on another AMD64 B300 host without an existing project data directory.
+
+| Check | Result |
+|---|---|
+| Copy complete existing weights; pull pinned platform image | Passed; weights were not downloaded again from the internet |
+| CDI preflight | Found zero device definitions; local refresh restored UUID aliases for all eight GPUs |
+| Four-GPU cold start and healthy API | Passed; health wait about 361 seconds including first compilation |
+| GPU isolation | Only GPUs 0–3 allocated HBM; GPUs 4–7 remained at zero |
+| Actual BCM tool calls | glob twice, read twice, edit once, bash twice; hostname confirmed BCM |
+| Synthetic code repair and independent tests | Passed without modifying original tests |
+| Temporary service cleanup | Container removed and all eight GPUs returned to zero HBM |
+| Real image export, SHA256 and import | Passed; archive 9,205,795,328 bytes, export about 212 s, import about 63 s |
+| Local image identity after removing original reference | Passed using image ID/content lock without registry access |
+| Repeat image/model preparation | Both returned already-present and network=false |
+| Wheel build and installation into a separate directory | Passed, including new modules, profiles.json and CLI entry point |
+
+The reused model files lacked this project's model.lock.json, so revision_verified=false was explicitly reported.
+No verified-provenance claim was fabricated. Structural shard checks do not replace complete content hashes and provenance validation.
+
+The archive roundtrip used the same Docker 29.2.1 backend and exercised lock fallback with the original reference absent.
+The entire host was not physically disconnected from the internet. Fresh OS/driver installation, another storage backend and
+GB300 are not established by this result. Installation evidence is centralized in install.log; raw evidence remains internal.
+
+CPU regressions additionally cover local reuse, stale locks, revision conflicts, truncated shards, journal streams/status/timeout/path
+handling, pure plans and bilingual CLI/manual/link/Bash-example consistency. New GPUs still require separate profiles and hardware acceptance.
+
 ## Reference decode comparison
 
 Earlier same-node sequential streaming probes used prompt lengths of 53 and
@@ -71,8 +99,7 @@ the workflow runs. Local test/lint/build results do not imply remote CI passed.
 
 - Native GB300 TP2 and TP4 cold-start, memory, tool and performance tests.
 - ARM64 BCM client native test (independent of the server architecture).
-- Fresh offline server deployment on another host and real large image-export
-  roundtrip across Docker/storage-backend versions.
+- Fully disconnected fresh-system deployment and image roundtrips across Docker/storage-backend versions.
 - Sustained two-replica and multi-user concurrency/performance characterization.
 
 ## Primary references

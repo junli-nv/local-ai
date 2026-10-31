@@ -111,16 +111,53 @@ def validate_model(root, policy):
     for name in ["config.json", "tokenizer.json"]:
         if not (model / name).is_file():
             raise ValueError("Missing model file: " + str(model / name))
+    json.loads((model / "config.json").read_text())
+    json.loads((model / "tokenizer.json").read_text())
     indices = list(model.glob("*.safetensors.index.json"))
     if len(indices) != 1:
         raise ValueError("Expected one safetensors index in " + str(model))
-    for name in set(json.loads(indices[0].read_text())["weight_map"].values()):
+    index = json.loads(indices[0].read_text())
+    weights = index.get("weight_map") if isinstance(index, dict) else None
+    if not isinstance(weights, dict) or not weights:
+        raise ValueError("Empty safetensors weight index")
+    if not all(isinstance(name, str) for name in weights.values()):
+        raise ValueError("Invalid weight shard name in index")
+    for name in set(weights.values()):
+        if not isinstance(name, str):
+            raise ValueError("Invalid weight shard name in index")
         relative = Path(name)
         if relative.is_absolute() or ".." in relative.parts:
             raise ValueError("Unsafe weight index path")
         f = model / relative
         if not f.is_file() or f.stat().st_size == 0:
             raise ValueError("Missing weight shard: " + str(f))
+        if not f.resolve().is_relative_to(model.resolve()):
+            raise ValueError("Unsafe weight shard symlink: " + str(f))
+        with f.open("rb") as stream:
+            header = stream.read(8)
+            size = int.from_bytes(header, "little")
+            if len(header) != 8 or not 2 <= size <= min(100_000_000, f.stat().st_size - 8):
+                raise ValueError("Invalid or truncated safetensors header: " + str(f))
+            tensors = json.loads(stream.read(size))
+        if not isinstance(tensors, dict):
+            raise ValueError("Invalid safetensors header object: " + str(f))
+        ends = []
+        for key, entry in tensors.items():
+            if key == "__metadata__":
+                continue
+            offsets = entry.get("data_offsets") if isinstance(entry, dict) else None
+            if (
+                not isinstance(offsets, list)
+                or len(offsets) != 2
+                or not all(isinstance(x, int) for x in offsets)
+            ):
+                raise ValueError("Invalid tensor offsets: " + str(f))
+            start, end = offsets
+            if not 0 <= start <= end:
+                raise ValueError("Invalid tensor offsets: " + str(f))
+            ends.append(end)
+        if not ends or max(ends) + size + 8 != f.stat().st_size:
+            raise ValueError("Truncated or oversized weight shard: " + str(f))
     return model
 
 
@@ -146,7 +183,11 @@ def start(value, policy):
     aliases = set(run(["nvidia-ctk", "cdi", "list"]).stdout.splitlines())
     for gpu in spec["gpus"]:
         if "nvidia.com/gpu=" + gpu not in aliases:
-            raise RuntimeError("Missing local CDI UUID alias: " + gpu)
+            raise RuntimeError(
+                "Missing local CDI UUID alias: "
+                + gpu
+                + ". On this GPU host, run nvidia-ctk cdi list; refresh definitions with sudo systemctl restart nvidia-cdi-refresh.service, then verify the selected UUID aliases. See the deployment guide for hosts without that service."
+            )
     reference = resolve_image(root, policy)
     command = list(value["command"])
     command[command.index(policy["image"])] = reference
