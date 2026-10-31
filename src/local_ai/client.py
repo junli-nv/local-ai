@@ -1,0 +1,185 @@
+"""Headnode client. Every tool executes with the headnode user's permissions."""
+
+import contextlib
+import fcntl
+import json
+import os
+import shlex
+import shutil
+import subprocess
+import sys
+import time
+import urllib.parse
+from pathlib import Path
+
+from .artifacts import validate
+from .common import atomic_json, fingerprint, private_dir
+from .tunnel import Tunnel, destination, wait_endpoint
+
+
+def service_key(server, user, ssh_port, port, endpoint):
+    identity = (
+        {"endpoint": endpoint}
+        if endpoint
+        else {"ssh": destination(server, user), "ssh_port": ssh_port, "api_port": port}
+    )
+    return fingerprint(identity)[:20]
+
+
+def config(base, model):
+    return {
+        "$schema": "https://opencode.ai/config.json",
+        "model": "local-deepseek/" + model,
+        "enabled_providers": ["local-deepseek"],
+        "provider": {
+            "local-deepseek": {
+                "npm": "@ai-sdk/openai-compatible",
+                "name": "Cluster local DeepSeek",
+                "options": {"baseURL": base, "apiKey": "local"},
+                "models": {
+                    model: {
+                        "name": model,
+                        "reasoning": True,
+                        "tool_call": True,
+                        "interleaved": {"field": "reasoning_content"},
+                        "limit": {"context": 131072, "output": 32768},
+                    }
+                },
+            }
+        },
+        "autoupdate": False,
+        "share": "disabled",
+        "shell": "/bin/bash",
+    }
+
+
+def prepare(state, assets, session, base, model, project):
+    cache = state / "cache"
+    with (state / ".prepare.lock").open("a") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        if not cache.exists():
+            temp = state / ("cache.prepare-" + str(os.getpid()))
+            shutil.copytree(assets / "seed-cache", temp)
+            temp.rename(cache)
+    for name in ["data", "state"]:
+        (state / name).mkdir(exist_ok=True, mode=0o700)
+    (session / "config").mkdir(exist_ok=True, mode=0o700)
+    file = session / "opencode.json"
+    cfg = config(base, model)
+    atomic_json(file, cfg)
+    env = os.environ.copy()
+    env.update(
+        OPENCODE_CONFIG=str(file),
+        OPENCODE_CONFIG_CONTENT=json.dumps(cfg),
+        XDG_CONFIG_HOME=str(session / "config"),
+        XDG_CACHE_HOME=str(cache),
+        XDG_DATA_HOME=str(state / "data"),
+        XDG_STATE_HOME=str(state / "state"),
+        SHELL="/bin/bash",
+        PWD=str(project),
+        OPENCODE_DISABLE_AUTOUPDATE="true",
+        OPENCODE_DISABLE_MODELS_FETCH="true",
+        OPENCODE_DISABLE_LSP_DOWNLOAD="true",
+        OPENCODE_DISABLE_DEFAULT_PLUGINS="true",
+    )
+    for key in ["NO_PROXY", "no_proxy"]:
+        env[key] = ",".join(filter(None, [env.get(key), "127.0.0.1", "localhost", "::1"]))
+    return env
+
+
+def execute(command, project, env, logfile, prompt):
+    if prompt is None:
+        return subprocess.call(
+            ["script", "-q", "-e", "-f", str(logfile), "-c", shlex.join(command)],
+            cwd=project,
+            env=env,
+        )
+    with logfile.open("wb") as log:
+        child = subprocess.Popen(
+            command, cwd=project, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
+        )
+        try:
+            while True:
+                chunk = child.stdout.read1(8192)
+                if not chunk:
+                    break
+                log.write(chunk)
+                log.flush()
+                sys.stdout.buffer.write(chunk)
+                sys.stdout.buffer.flush()
+            return child.wait()
+        finally:
+            if child.poll() is None:
+                child.terminate()
+                try:
+                    child.wait(timeout=3)
+                except subprocess.TimeoutExpired:
+                    child.kill()
+                    child.wait()
+            child.stdout.close()
+
+
+def chat(options):
+    os.umask(0o077)
+    assets = Path(options.client_dir).expanduser().resolve()
+    if not (assets / "manifest.json").is_file():
+        raise RuntimeError("Client not installed; run local-ai client install on this headnode")
+    manifest = validate(assets)
+    state_root = private_dir(options.state_dir)
+    key = service_key(
+        options.server, options.ssh_user, options.ssh_port, options.port, options.endpoint
+    )
+    state = private_dir(state_root / "services" / key)
+    session = private_dir(state / "logs" / ("session-%d-%d" % (time.time_ns(), os.getpid())))
+    project = Path(options.project).expanduser().resolve()
+    if not project.is_dir():
+        raise ValueError("Project directory does not exist: " + str(project))
+    if not options.check and options.run is None and not sys.stdin.isatty():
+        raise ValueError("Interactive chat requires a terminal; use --run for batch execution")
+    if options.endpoint:
+        parsed = urllib.parse.urlsplit(options.endpoint)
+        if parsed.scheme not in {"http", "https"} or not parsed.hostname or parsed.username:
+            raise ValueError("Endpoint must be an HTTP(S) base URL without embedded credentials")
+        context = contextlib.nullcontext(None)
+    else:
+        context = Tunnel(
+            options.server,
+            options.ssh_user,
+            options.ssh_port,
+            options.port,
+            options.local_port,
+            session / "tunnel.log",
+        )
+    with context as tunnel:
+        base = options.endpoint.rstrip("/") if options.endpoint else tunnel.endpoint
+        wait_endpoint(base, options.model, tunnel.process if tunnel else None)
+        env = prepare(state, assets, session, base, options.model, project)
+        if options.check:
+            print(
+                json.dumps(
+                    {
+                        "ready": True,
+                        "client_arch": manifest["arch"],
+                        "log_directory": str(session),
+                        "tunnel_closes_on_exit": bool(tunnel),
+                    }
+                )
+            )
+            return 0
+        command = [str(assets / "bin/opencode")]
+        command += (
+            ["run", "--dir", str(project), "--format", "json", options.run]
+            if options.run is not None
+            else [str(project)]
+        )
+        atomic_json(
+            session / "invocation.json",
+            {
+                "project": str(project),
+                "command": command,
+                "ssh_command": tunnel.command if tunnel else None,
+                "client_arch": manifest["arch"],
+            },
+        )
+        print("Log: " + str(session / "terminal.log"), file=sys.stderr)
+        return execute(command, project, env, session / "terminal.log", options.run)

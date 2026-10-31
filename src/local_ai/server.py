@@ -1,0 +1,241 @@
+"""GPU-host operations. Planning is pure when inventory is supplied."""
+
+import csv
+import fcntl
+import json
+import re
+import socket
+from pathlib import Path
+
+from .common import arch, atomic_json, fingerprint, run
+from .images import resolve_image
+from .profiles import engine_args, select_gpus
+
+
+def inventory():
+    r = run(
+        [
+            "nvidia-smi",
+            "--query-gpu=index,uuid,name,pci.bus_id,memory.total",
+            "--format=csv,noheader,nounits",
+        ]
+    )
+    gpus = []
+    for row in csv.reader(r.stdout.splitlines()):
+        gpus.append(
+            {
+                "index": int(row[0]),
+                "uuid": row[1].strip(),
+                "name": row[2].strip(),
+                "pci": row[3].strip(),
+                "memory_mib": int(row[4]),
+            }
+        )
+    return {"arch": arch(), "gpus": gpus}
+
+
+def inspect_container(name):
+    r = run(["docker", "inspect", name], check=False)
+    return json.loads(r.stdout)[0] if r.returncode == 0 else None
+
+
+def plan(root, policy, gpus, name, port, hardware):
+    if not re.fullmatch(r"[a-z][a-z0-9-]{0,31}", name):
+        raise ValueError("Invalid instance name")
+    if not 1024 <= port <= 65535:
+        raise ValueError("Port must be 1024..65535")
+    chosen = select_gpus(hardware, gpus, policy)
+    root = Path(root).expanduser().resolve()
+    spec = {
+        "data_dir": str(root),
+        "profile": policy["name"],
+        "platform": policy["platform"],
+        "instance": name,
+        "container": "local-ai-" + name,
+        "port": port,
+        "image": policy["image"],
+        "gpus": [g["uuid"] for g in chosen],
+        "args": engine_args(policy, port),
+    }
+    inst = root / "instances" / name
+    labels = {
+        "local-ai.project": "cluster-local-ai",
+        "local-ai.data-dir": str(root),
+        "local-ai.instance": name,
+        "local-ai.gpus": ",".join(spec["gpus"]),
+        "local-ai.port": str(port),
+        "local-ai.spec": fingerprint(spec),
+    }
+    command = ["docker", "run", "-d", "--name", spec["container"], "--platform", policy["platform"]]
+    for key, value in labels.items():
+        command += ["--label", key + "=" + value]
+    command += ["--network", "host", "--ipc", "host", "--ulimit", "memlock=-1"]
+    for gpu in spec["gpus"]:
+        command += ["--device", "nvidia.com/gpu=" + gpu]
+    for source, target, ro in [
+        (root / "models", "/models", True),
+        (inst, "/instance", False),
+        (inst / "cache", "/root/.cache", False),
+    ]:
+        command += [
+            "--mount",
+            "type=bind,src=" + str(source) + ",dst=" + target + (",readonly" if ro else ""),
+        ]
+    for value in [
+        "HF_HUB_OFFLINE=1",
+        "TRANSFORMERS_OFFLINE=1",
+        "PYTHONUNBUFFERED=1",
+        "VLLM_ENGINE_READY_TIMEOUT_S=3600",
+        "VLLM_USE_RUST_FRONTEND=1",
+        "NCCL_SOCKET_IFNAME=lo",
+        "GLOO_SOCKET_IFNAME=lo",
+        "CUDA_VISIBLE_DEVICES=" + ",".join(spec["gpus"]),
+    ]:
+        command += ["-e", value]
+    entry = "import os,json,datetime; f=open('/instance/server.log','a',buffering=1); f.write('\\nSTART '+datetime.datetime.now().isoformat()+'\\n'); os.dup2(f.fileno(),1); os.dup2(f.fileno(),2); os.execvp('vllm',['vllm']+json.load(open('/instance/args.json')))"
+    command += ["--entrypoint", "python3", policy["image"], "-c", entry]
+    return {
+        "spec": spec,
+        "selected_devices": chosen,
+        "command": command,
+        "validation": policy["validation"],
+        "notes": [
+            policy.get("host_memory_note", ""),
+            "Planning does not allocate GPUs or check current port/GPU occupancy.",
+        ],
+    }
+
+
+def validate_model(root, policy):
+    model = Path(root) / "models" / policy["model_directory"]
+    for name in ["config.json", "tokenizer.json"]:
+        if not (model / name).is_file():
+            raise ValueError("Missing model file: " + str(model / name))
+    indices = list(model.glob("*.safetensors.index.json"))
+    if len(indices) != 1:
+        raise ValueError("Expected one safetensors index in " + str(model))
+    for name in set(json.loads(indices[0].read_text())["weight_map"].values()):
+        relative = Path(name)
+        if relative.is_absolute() or ".." in relative.parts:
+            raise ValueError("Unsafe weight index path")
+        f = model / relative
+        if not f.is_file() or f.stat().st_size == 0:
+            raise ValueError("Missing weight shard: " + str(f))
+    return model
+
+
+def conflicts(spec, containers, compute):
+    selected = set(spec["gpus"])
+    for c in containers:
+        labels = c["Config"].get("Labels") or {}
+        if c["State"]["Running"] and selected & set(labels.get("local-ai.gpus", "").split(",")):
+            raise RuntimeError("GPU assignment overlaps " + c["Name"])
+        if c["State"]["Running"] and labels.get("local-ai.port") == str(spec["port"]):
+            raise RuntimeError("API port already assigned to " + c["Name"])
+    busy = [row for row in compute if row and row[0].strip() in selected]
+    if busy:
+        raise RuntimeError("Selected GPUs have compute processes: " + str(busy))
+
+
+def start(value, policy):
+    spec = value["spec"]
+    root = Path(spec["data_dir"])
+    inst = root / "instances" / spec["instance"]
+    validate_model(root, policy)
+    check_host_memory(policy)
+    aliases = set(run(["nvidia-ctk", "cdi", "list"]).stdout.splitlines())
+    for gpu in spec["gpus"]:
+        if "nvidia.com/gpu=" + gpu not in aliases:
+            raise RuntimeError("Missing local CDI UUID alias: " + gpu)
+    reference = resolve_image(root, policy)
+    command = list(value["command"])
+    command[command.index(policy["image"])] = reference
+    root.mkdir(parents=True, exist_ok=True)
+    with (root / ".deploy.lock").open("a") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        old = inspect_container(spec["container"])
+        if old:
+            labels = old["Config"].get("Labels") or {}
+            if labels.get("local-ai.project") != "cluster-local-ai" or labels.get(
+                "local-ai.spec"
+            ) != fingerprint(spec):
+                raise RuntimeError(
+                    "Existing container differs or is unmanaged; inspect it and replace it explicitly"
+                )
+            if (
+                not (inst / "args.json").is_file()
+                or json.loads((inst / "args.json").read_text()) != spec["args"]
+            ):
+                raise RuntimeError(
+                    "Managed args.json drift detected; explicit replacement required"
+                )
+            if old["State"]["Running"]:
+                return {"state": "already-running", "container": spec["container"]}
+        ids = run(
+            ["docker", "ps", "-q", "--filter", "label=local-ai.project=cluster-local-ai"]
+        ).stdout.split()
+        others = [inspect_container(cid) for cid in ids]
+        compute = list(
+            csv.reader(
+                run(
+                    ["nvidia-smi", "--query-compute-apps=gpu_uuid,pid", "--format=csv,noheader"]
+                ).stdout.splitlines()
+            )
+        )
+        conflicts(spec, [c for c in others if c], compute)
+        with socket.socket() as s:
+            s.bind(("127.0.0.1", spec["port"]))
+        (inst / "cache").mkdir(parents=True, exist_ok=True)
+        atomic_json(inst / "args.json", spec["args"])
+        atomic_json(inst / "spec.json", spec)
+        atomic_json(inst / "docker-command.json", command)
+        r = run(
+            ["docker", "start", spec["container"]] if old else command, check=False, timeout=None
+        )
+        (inst / "launch.log").write_text(r.stdout + r.stderr)
+        if r.returncode:
+            raise RuntimeError("Container launch failed; see " + str(inst / "launch.log"))
+    return {
+        "state": "started-not-yet-ready",
+        "container": spec["container"],
+        "health": "http://127.0.0.1:%d/health" % spec["port"],
+        "log": str(inst / "server.log"),
+    }
+
+
+def status(name):
+    if not re.fullmatch(r"[a-z][a-z0-9-]{0,31}", name):
+        raise ValueError("Invalid instance name")
+    old = inspect_container("local-ai-" + name)
+    if old is None:
+        raise ValueError("Container not found")
+    return {"container": old["Name"], "state": old["State"], "labels": old["Config"].get("Labels")}
+
+
+def stop(root, name):
+    value = status(name)
+    labels = value["labels"] or {}
+    if labels.get("local-ai.project") != "cluster-local-ai" or labels.get(
+        "local-ai.data-dir"
+    ) != str(Path(root).resolve()):
+        raise ValueError("Refusing to stop a container owned by another deployment")
+    result = run(["docker", "stop", "--timeout", "60", "local-ai-" + name], timeout=None)
+    return {"state": "stopped", "container": result.stdout.strip()}
+
+
+def check_host_memory(policy, available_gib=None):
+    """Conservative offload guard, not a measured minimum RAM claim."""
+    minimum = policy.get("min_host_available_gib")
+    if minimum is None:
+        return
+    if available_gib is None:
+        values = {}
+        for line in Path("/proc/meminfo").read_text().splitlines():
+            key, value = line.split(":", 1)
+            values[key] = int(value.strip().split()[0])
+        available_gib = values["MemAvailable"] / (1024 * 1024)
+    if available_gib < minimum:
+        raise ValueError(
+            "CPU Engram offload requires at least %s GiB MemAvailable in this profile; available %.1f GiB"
+            % (minimum, available_gib)
+        )

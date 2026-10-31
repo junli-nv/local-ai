@@ -1,0 +1,52 @@
+{
+  "model": {
+    "repo": "deepseek-ai/DeepSeek-V4.1-Flash",
+    "revision": "314113f8a7dadb388215396ba5fbee2c610a04d6",
+    "model_directory": "DeepSeek-V4.1-Flash",
+    "served_name": "DeepSeek-V4.1-Flash",
+    "image": "vllm/vllm-openai@sha256:ef74f0f30e704546aa671746e1da6b1a25094b0b0914a29d33384dec86f88cac",
+    "image_tag": "vllm/vllm-openai:v0.32.0-ubuntu2404"
+  },
+  "profiles": {
+    "b300-tp4": {
+      "arch": "amd64",
+      "platform": "linux/amd64",
+      "tp": 4,
+      "cpu_offload": false,
+      "min_vram_mib": 250000,
+      "gpu_names": [
+        "B300"
+      ],
+      "validation": "hardware-verified",
+      "platform_digest": "sha256:327eb19763b5c91a06e750082348170eafb99e476f91eb0cb60328dc18b04961"
+    },
+    "gb300-tp4": {
+      "arch": "arm64",
+      "platform": "linux/arm64",
+      "tp": 4,
+      "cpu_offload": false,
+      "min_vram_mib": 250000,
+      "gpu_names": [
+        "GB300",
+        "B300"
+      ],
+      "validation": "experimental-no-local-hardware",
+      "platform_digest": "sha256:b1bea6490db94268e68577929ae4b800a662b91a3cd4a1fcba81cfb3946ddcff"
+    },
+    "gb300-tp2": {
+      "arch": "arm64",
+      "platform": "linux/arm64",
+      "tp": 2,
+      "cpu_offload": true,
+      "min_vram_mib": 250000,
+      "gpu_names": [
+        "GB300",
+        "B300"
+      ],
+      "validation": "recipe-derived-no-local-hardware",
+      "host_memory_note": "Engram offload alone is about 189 GiB across this replica; budget host memory for loading and the OS as well.",
+      "platform_digest": "sha256:b1bea6490db94268e68577929ae4b800a662b91a3cd4a1fcba81cfb3946ddcff",
+      "min_host_available_gib": 256
+    }
+  }
+}
