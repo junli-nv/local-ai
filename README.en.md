@@ -201,6 +201,46 @@ For a GB300 host with four local GPUs, select `--profile gb300-tp4`. With two
 local GPUs and sufficient host memory, select `--profile gb300-tp2 --gpus 0,1`.
 GB300 profiles require hardware acceptance testing before production.
 
+### Optional: connect directly to the host address
+
+The default `--host 127.0.0.1` works with the SSH tunnel created by `chat --server`.
+If BCM can reach the GPU server directly, use `--host 0.0.0.0` on server plan/start
+to listen on all IPv4 interfaces, or supply a specific local IPv4 address.
+Hostnames and IPv6 listen addresses are not accepted.
+
+Limit API access to trusted clients; API keys and HTTPS are not configured here.
+Preview and start **on the GPU server**:
+
+```bash
+./local-ai server plan --profile b300-tp4 --gpus 0,1,2,3 --name a --host 0.0.0.0 --port 18000 --data-dir /raid/local-ai
+./local-ai server start --profile b300-tp4 --gpus 0,1,2,3 --name a --host 0.0.0.0 --port 18000 --data-dir /raid/local-ai
+```
+
+Changing the address of an existing instance is rejected. After confirming that
+instance a is the one to replace, run these commands before the start above.
+Restarting the original container does not change its configuration:
+
+```bash
+./local-ai server stop --name a --data-dir /raid/local-ai
+docker rm local-ai-a
+```
+
+After the API is ready, check and chat **on BCM**, with the client already installed.
+Replace GPU001 with a hostname BCM can resolve or a reachable server IP, and choose
+your project directory:
+
+```bash
+./local-ai chat --endpoint http://GPU001:18000/v1 --check
+./local-ai chat --endpoint http://GPU001:18000/v1 --project /home/alice/project
+```
+
+Use 0.0.0.0 only for listening, not as the client endpoint. Include the port and /v1
+in the URL. Direct connections create no SSH tunnel; tools still execute on BCM.
+If proxy settings affect internal requests, add the server to NO_PROXY/no_proxy.
+For a specific interface IP, health checks use that IP and clients use --endpoint;
+--server still forwards to remote loopback. A 0.0.0.0 listener supports both methods.
+Existing port conflict protections remain in place.
+
 ## BCM headnode: install and chat
 
 Run these commands **on BCM**, as the user who should execute tools:

@@ -81,10 +81,15 @@ def parser():
                 help="Comma-separated GPU indices from nvidia-smi on this server, or full UUIDs; count must match the profile",
             )
             b.add_argument(
+                "--host",
+                default="127.0.0.1",
+                help="IPv4 listen address; 0.0.0.0 exposes all IPv4 interfaces for direct endpoint access",
+            )
+            b.add_argument(
                 "--port",
                 type=int,
                 default=18000,
-                help="Loopback model HTTP API port on this GPU server, 1024..65535",
+                help="Model HTTP API port on this GPU server, 1024..65535",
             )
             if action == "plan":
                 b.add_argument(
@@ -279,7 +284,7 @@ def dispatch(q):
             if q.action == "plan" and q.inventory
             else server.inventory()
         )
-        value = server.plan(q.data_dir, policy, q.gpus, q.name, q.port, hardware)
+        value = server.plan(q.data_dir, policy, q.gpus, q.name, q.port, hardware, host=q.host)
         return value if q.action == "plan" else server.start(value, policy)
     if q.group == "image":
         policy = profile(q.profile)

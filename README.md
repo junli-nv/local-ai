@@ -179,6 +179,42 @@ GPU 进程占用、实例分配和端口，不会终止其他作业。
 四卡 GB300 使用 `--profile gb300-tp4`；两卡 GB300 使用 `--profile gb300-tp2 --gpus 0,1`。
 GB300 配置用于生产前须完成实机验收。容器处于 running 状态不代表 API 已就绪。
 
+### 可选：通过宿主机地址直连
+
+默认 `--host 127.0.0.1`，配合下方的 `chat --server` 使用 SSH 隧道。
+若 BCM 能直达 GPU 服务器，可在 `server plan/start` 中指定 `--host 0.0.0.0`
+监听所有 IPv4 网卡，或指定本机某个 IPv4 地址；不接受主机名或 IPv6。
+
+先确认网络仅允许可信客户端访问 API 端口；当前未配置 API key 或 HTTPS。
+在 **GPU 服务器**预览并启动：
+
+```bash
+./local-ai server plan --profile b300-tp4 --gpus 0,1,2,3 --name a --host 0.0.0.0 --port 18000 --data-dir /raid/local-ai
+./local-ai server start --profile b300-tp4 --gpus 0,1,2,3 --name a --host 0.0.0.0 --port 18000 --data-dir /raid/local-ai
+```
+
+若实例 `a` 已存在，改监听地址会被拒绝；确认这是要替换的实例后，先执行以下命令，
+再执行上面的 start。只重启原容器不会改变监听配置：
+
+```bash
+./local-ai server stop --name a --data-dir /raid/local-ai
+docker rm local-ai-a
+```
+
+等 API 就绪后，在已安装客户端的 **BCM** 检查连接并聊天；将 `GPU001` 换成
+BCM 可解析的服务端主机名或可达 IP，并替换项目目录：
+
+```bash
+./local-ai chat --endpoint http://GPU001:18000/v1 --check
+./local-ai chat --endpoint http://GPU001:18000/v1 --project /home/alice/project
+```
+
+`0.0.0.0` 只用于监听，不能作为客户端 endpoint；端口写在 URL 中，路径包含 `/v1`。
+直连不创建 SSH 隧道，工具仍在 BCM 执行。若代理环境影响内网直连，将服务端加入
+`NO_PROXY`/`no_proxy`。绑定具体网卡 IP 时，健康检查使用该 IP，客户端使用
+`--endpoint`；`--server` 隧道的远端目标仍是回环地址。绑定 `0.0.0.0` 时两种方式都可用。
+更换监听地址仍保留原有端口冲突保护。
+
 ## BCM 头节点：安装并聊天
 
 以下命令在 **BCM** 执行，使用实际需要执行工具的用户账户：

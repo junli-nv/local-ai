@@ -63,7 +63,7 @@ the local image-reference representation.
 
 ## Connection and user state
 
-Each chat invocation owns one SSH forward bound to 127.0.0.1. Authentication
+Each chat invocation using --server owns one SSH forward bound to 127.0.0.1. Authentication
 and host-key verification use existing OpenSSH configuration. The process is
 closed on normal exit, startup failure and Python exception unwinding.
 
@@ -73,7 +73,10 @@ history. Each invocation has a separate config file so two sessions cannot
 overwrite one another's temporary port. State/config use 0700/0600; OS
 administrators can still access them.
 
-The API remains loopback-only. SSH provides remote transport/access control.
+The API defaults to 127.0.0.1; SSH provides remote transport/access control.
+Server plan/start --host can select 0.0.0.0 or a local IPv4 address.
+Direct --endpoint connections create no tunnel. External listening does not add
+API keys or HTTPS; restrict network access to trusted clients.
 This is not a tenant gateway, per-user quota engine or load balancer.
 
 ## Performance policy

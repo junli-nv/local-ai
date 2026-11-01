@@ -169,6 +169,12 @@ GB300 两卡替换为 --profile gb300-tp2 --gpus 0,1。
 首次加载/编译可能持续数分钟，容器 running 不能替代 API 验收。
 完整日志在数据目录 instances/a/server.log，启动命令和参数也保存在该目录。
 
+### 可选的内网直连
+
+server plan/start 接受 --host，默认 127.0.0.1。使用 --host 0.0.0.0 或本机 IPv4 地址后，
+BCM 可通过 --endpoint http://GPU001:18000/v1 直连。现有容器改地址须显式重建。
+完整命令和访问范围说明见 [README](../README.md) 的“通过宿主机地址直连”。
+
 ## 4. BCM 安装客户端
 
 在 BCM 头节点，以实际操作用户执行：

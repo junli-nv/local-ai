@@ -155,6 +155,13 @@ Run on GPU001: 127.0.0.1 means GPU001 itself. A successful /health request (curl
 
 Use gb300-tp4 for four local GB300 GPUs or gb300-tp2 with --gpus 0,1 for two. Full UUIDs are accepted. plan does not allocate devices; start checks occupancy. Initial compilation may take minutes. Container running state is not API readiness. Full logs and launch arguments are under instances/a/ in the data directory.
 
+### Optional direct internal-network access
+
+Server plan/start accept --host, default 127.0.0.1. Set --host 0.0.0.0 or a local
+IPv4 address for BCM access through --endpoint http://GPU001:18000/v1.
+An existing container must be explicitly recreated to change its listen address.
+See [README](../../README.en.md) for commands and network access requirements.
+
 ## 4. Install on BCM
 
 Run as the user who will execute tools:

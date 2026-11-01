@@ -82,6 +82,7 @@ BCM 客户端默认 `客户端目录/install.log`。每次操作有独立 ID，�
 | `--profile` | plan/start、image、model download | 硬件与引擎配置。image 必填；其余默认 b300-tp4。 |
 | `--gpus` | plan/start | 必填，逗号分隔的本机 GPU 编号或完整 UUID；数量匹配配置 |
 | `--name` | plan/start/status/stop | 实例名，默认 a；须以小写字母开头，仅含小写字母、数字和连字符，最长 32 字符 |
+| `--host` | plan/start | IPv4 监听地址，默认 127.0.0.1；0.0.0.0 监听所有 IPv4 网卡，也可指定本机 IP；不接受主机名或 IPv6 |
 | `--port` | plan/start | 模型 API 端口，默认 18000，允许 1024–65535 |
 | `--inventory` | 仅 plan | 从 JSON 测试清单生成计划，代替实时硬件发现；start 不接受 |
 | `--output` | image export | 必填，导出镜像的归档路径 |
@@ -103,6 +104,14 @@ plan 不预留 GPU，也不检查当前端口/GPU 进程占用；start 才检查
 启动返回不等于模型已就绪；首次加载和编译可能持续数分钟。
 健康请求成功、curl 退出码为 0 即表示 API 健康，可能没有正文。
 这里 127.0.0.1 指执行 curl 的 GPU001，不是 BCM。
+
+监听地址影响引擎参数、实例身份和启动前端口检查；plan 不探测地址是否属于本机。
+默认回环实例保持兼容；已有实例更改 --host 须显式停止、移除容器并重建。
+绑定 0.0.0.0 时健康地址使用 127.0.0.1；绑定具体 IP 时使用该 IP。
+管理中的实例仍保守地独占同一 API 端口，不支持按不同网卡复用端口。
+直连使用 --endpoint http://GPU001:18000/v1，不能填 0.0.0.0。
+当前不配置 API key/HTTPS，应限制可信网络访问；具体网卡 IP 监听须用 --endpoint，
+因为 --server 隧道的远端目标仍为回环地址。完整操作见 [README](../README.md)。
 
 ## 客户端参数
 

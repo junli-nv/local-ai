@@ -83,7 +83,8 @@ Ongoing model output remains in instances/NAME/server.log; chat history and sess
 | --profile | plan/start; image; model download | Hardware/engine preset; required for image, otherwise b300-tp4 |
 | --gpus | plan/start | Required comma-separated server indices or full UUIDs; count must match the profile |
 | --name | plan/start/status/stop | Default a; lowercase letter followed by lowercase letters, digits or hyphens; at most 32 characters |
-| --port | plan/start | Loopback model API port, default 18000, range 1024–65535 |
+| --host | plan/start | IPv4 listen address, default 127.0.0.1; 0.0.0.0 for all IPv4 interfaces or a local IP; no hostnames or IPv6 |
+| --port | plan/start | Model API port, default 18000, range 1024–65535 |
 | --inventory | plan only | JSON hardware fixture instead of discovery; start does not accept it |
 | --output | image export | Required destination archive path |
 | --archive; --lock | image import | Required image archive and matching .lock.json |
@@ -100,6 +101,16 @@ curl --fail http://127.0.0.1:18000/health
 ```
 
 plan neither reserves GPUs nor checks current process/port occupancy; start checks occupancy. Startup returning is not model readiness. Initial loading/compilation can take minutes. A successful health request (curl exit 0) may have an empty body. Here 127.0.0.1 means GPU001, where curl is run.
+
+The listen address affects engine arguments, instance identity and startup port checks.
+Plan does not check local interface ownership. Default loopback instances stay compatible;
+changing --host requires explicitly stopping, removing and recreating an existing container.
+Wildcard listeners report a loopback health URL; specific IP listeners report that IP.
+Managed instances still reserve the API port across interfaces.
+Use --endpoint http://GPU001:18000/v1 for direct access, never 0.0.0.0.
+API keys/HTTPS are not configured; restrict network access. A specific interface listener
+requires --endpoint because --server still forwards to remote loopback.
+See [README](../../README.en.md) for the complete procedure.
 
 ## Client parameters
 

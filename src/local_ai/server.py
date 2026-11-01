@@ -2,6 +2,7 @@
 
 import csv
 import fcntl
+import ipaddress
 import json
 import re
 import socket
@@ -39,11 +40,34 @@ def inspect_container(name):
     return json.loads(r.stdout)[0] if r.returncode == 0 else None
 
 
-def plan(root, policy, gpus, name, port, hardware):
+def listen_address(host):
+    try:
+        address = ipaddress.IPv4Address(host)
+    except ipaddress.AddressValueError as error:
+        raise ValueError(
+            "Host must be an IPv4 listen address, for example 127.0.0.1 or 0.0.0.0"
+        ) from error
+    if address.is_multicast or str(address) == "255.255.255.255":
+        raise ValueError("Host must be a unicast IPv4 address or 0.0.0.0")
+    return str(address)
+
+
+def check_port(host, port):
+    with socket.socket() as sock:
+        try:
+            sock.bind((host, port))
+        except OSError as error:
+            raise RuntimeError(
+                "Cannot bind model API at %s:%s: %s" % (host, port, error)
+            ) from error
+
+
+def plan(root, policy, gpus, name, port, hardware, host="127.0.0.1"):
     if not re.fullmatch(r"[a-z][a-z0-9-]{0,31}", name):
         raise ValueError("Invalid instance name")
     if not 1024 <= port <= 65535:
         raise ValueError("Port must be 1024..65535")
+    host = listen_address(host)
     chosen = select_gpus(hardware, gpus, policy)
     root = Path(root).expanduser().resolve()
     spec = {
@@ -55,8 +79,11 @@ def plan(root, policy, gpus, name, port, hardware):
         "port": port,
         "image": policy["image"],
         "gpus": [g["uuid"] for g in chosen],
-        "args": engine_args(policy, port),
+        "args": engine_args(policy, port, host),
     }
+    # Preserve the existing default deployment fingerprint.
+    if host != "127.0.0.1":
+        spec["host"] = host
     inst = root / "instances" / name
     labels = {
         "local-ai.project": "cluster-local-ai",
@@ -224,8 +251,7 @@ def start(value, policy):
             )
         )
         conflicts(spec, [c for c in others if c], compute)
-        with socket.socket() as s:
-            s.bind(("127.0.0.1", spec["port"]))
+        check_port(spec.get("host", "127.0.0.1"), spec["port"])
         (inst / "cache").mkdir(parents=True, exist_ok=True)
         atomic_json(inst / "args.json", spec["args"])
         atomic_json(inst / "spec.json", spec)
@@ -239,7 +265,13 @@ def start(value, policy):
     return {
         "state": "started-not-yet-ready",
         "container": spec["container"],
-        "health": "http://127.0.0.1:%d/health" % spec["port"],
+        "health": "http://%s:%d/health"
+        % (
+            "127.0.0.1"
+            if spec.get("host", "127.0.0.1") == "0.0.0.0"
+            else spec.get("host", "127.0.0.1"),
+            spec["port"],
+        ),
         "log": str(inst / "server.log"),
     }
 

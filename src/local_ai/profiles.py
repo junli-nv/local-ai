@@ -39,14 +39,14 @@ def select_gpus(inventory, selectors, policy):
     return chosen
 
 
-def engine_args(policy, port):
+def engine_args(policy, port, host="127.0.0.1"):
     return [
         "serve",
         "/models/" + policy["model_directory"],
         "--served-model-name",
         policy["served_name"],
         "--host",
-        "127.0.0.1",
+        host,
         "--port",
         str(port),
         "--tensor-parallel-size",
