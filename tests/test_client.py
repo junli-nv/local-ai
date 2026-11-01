@@ -1,5 +1,6 @@
 import base64
 import hashlib
+import json
 import tarfile
 import tempfile
 import unittest
@@ -82,3 +83,15 @@ class ClientTests(unittest.TestCase):
             self.assertIn("28000", Path(env1["OPENCODE_CONFIG"]).read_text())
             self.assertIn("28001", Path(env2["OPENCODE_CONFIG"]).read_text())
             self.assertEqual(Path(env1["OPENCODE_CONFIG"]).stat().st_mode & 0o777, 0o600)
+            instruction_paths = []
+            for env, session in [(env1, one), (env2, two)]:
+                cfg = json.loads(Path(env["OPENCODE_CONFIG"]).read_text())
+                self.assertEqual(cfg, json.loads(env["OPENCODE_CONFIG_CONTENT"]))
+                self.assertNotIn("permission", cfg)
+                self.assertEqual(len(cfg["instructions"]), 1)
+                guidance = Path(cfg["instructions"][0])
+                self.assertEqual(guidance.parent, session)
+                self.assertTrue(guidance.read_text(encoding="utf-8").strip())
+                self.assertEqual(guidance.stat().st_mode & 0o777, 0o600)
+                instruction_paths.append(guidance)
+            self.assertNotEqual(*instruction_paths)

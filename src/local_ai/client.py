@@ -13,6 +13,7 @@ from pathlib import Path
 from .artifacts import validate
 from .common import atomic_json, fingerprint, private_dir
 from .endpoint import endpoint_url, wait_endpoint
+from .operations import GUIDANCE
 
 
 def service_key(endpoint):
@@ -58,7 +59,11 @@ def prepare(state, assets, session, base, model, project):
         (state / name).mkdir(exist_ok=True, mode=0o700)
     (session / "config").mkdir(exist_ok=True, mode=0o700)
     file = session / "opencode.json"
+    instructions = session / "operations.md"
+    instructions.write_text(GUIDANCE, encoding="utf-8")
+    instructions.chmod(0o600)
     cfg = config(base, model)
+    cfg["instructions"] = [str(instructions)]
     atomic_json(file, cfg)
     env = os.environ.copy()
     env.update(

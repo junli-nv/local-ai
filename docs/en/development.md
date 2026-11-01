@@ -2,6 +2,17 @@
 
 [中文（默认）](../development.md)
 
+## Scope of development rules
+
+These conventions apply when changing this repository, not to ordinary operations
+tasks. See [AGENTS.md](../../AGENTS.md) and its
+[English version](contributor-instructions.md). Only the pure
+`server plan --inventory FILE` feature must avoid additional hardware probes,
+subprocesses and file writes. User-requested local or SSH hardware queries are
+normal operations. [operations.py](../../src/local_ai/operations.py) supplies
+general operations guidance, written to each private chat session and loaded
+through its client configuration.
+
 ## Developer handoff and contribution conventions
 
 1. Read README topology, the command manual, architecture and validation record first. Keep raw infrastructure evidence in ignored runtime paths.

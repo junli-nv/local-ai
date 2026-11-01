@@ -20,6 +20,25 @@ flowchart LR
     Tools --> Nodes[Other cluster nodes]
 ```
 
+## Operations and project instructions
+
+local-ai helps diagnose and resolve system, hardware, network, storage and service
+problems, as well as code tasks. Ask the BCM client to SSH to GPU001 and report its
+actual CPU, memory and GPU models and counts. It uses the current account's tools
+and SSH access; inference profiles do not restrict which hardware it can inspect.
+`--project` selects the working directory. Remote hardware queries do not require
+code changes or an inventory fixture.
+
+Repository instructions are in [AGENTS.md](AGENTS.md), with an
+[English version](docs/en/contributor-instructions.md) and a
+[development guide](docs/en/development.md). The no-probing rule for
+`server plan --inventory FILE` applies only to that pure planning feature.
+Each new `chat` session loads built-in operations guidance. Restart the client
+session after updating the code; the inference server does not need a restart.
+The session log directory contains `operations.md`, referenced by `instructions`
+in `opencode.json`. Report specific tool permission, authentication or network
+failures rather than claiming that the project prohibits hardware queries.
+
 ## Discover commands
 
 Use `./local-ai --help` for groups, `./local-ai server --help` for server commands, and

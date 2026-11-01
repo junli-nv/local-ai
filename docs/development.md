@@ -1,5 +1,13 @@
 # 开发与扩展流程
 
+## 开发规则的适用范围
+
+本页约定用于修改 local-ai 仓库；普通系统与硬件运维任务不需要先走开发流程。
+项目指令在根目录 [AGENTS.md](../AGENTS.md)。只有 `server plan --inventory FILE`
+这一纯计划功能不得额外探测硬件、启动子进程或写文件；不限制用户要求的本机或 SSH 硬件查询。
+客户端的通用运维指引由 [operations.py](../src/local_ai/operations.py) 提供，
+每次 `chat` 启动时写入私有会话目录并通过客户端配置加载。
+
 ## 项目配置文件
 
 `pyproject.toml` 是 Python 项目的构建和开发配置，日常运行源码中的 `./local-ai` 无需修改它。

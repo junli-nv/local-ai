@@ -1,9 +1,27 @@
-# Contributor instructions
+# Operations tasks and contributor instructions
+
+## Operations task scope
+
+local-ai primarily helps users diagnose and resolve system, hardware, network, storage
+and service problems. It is not limited to coding. Use the current account's access
+to inspect the local host or the remote host named by the user. Read-only hardware
+queries are not GPU workload acceptance tests and require neither an inventory
+fixture nor a hardware model allowlist.
+
+For a named SSH target, use the existing OpenSSH configuration directly and confirm
+the remote hostname. Do not start by enumerating ~/.ssh. Report actual connection
+or tool permission errors; a non-interactive automatic rejection is not a user
+rejection or a project-wide hardware-query prohibition.
+
+The following rules apply only when changing this repository's code, tests or
+documentation. Do not reinterpret them as restrictions on ordinary operations tasks.
+
+## Repository development rules
 
 - Keep GPU-server and BCM-client roles separate.
 - Runtime code uses Python 3.10+ standard library only.
 - Use Bash launchers and a project virtualenv for optional development tools.
-- Planning with supplied inventory must not probe hardware or write files.
+- Only the implementation and pure-plan tests of `server plan --inventory FILE` must avoid extra hardware discovery, subprocesses and file writes. This does not restrict operations queries; inventory, live planning and startup inspect actual hardware.
 - Never infer client CPU architecture from a GPU profile.
 - Reject occupied GPUs, conflicting ports, wrong images and spec drift.
 - Preserve per-user state. Model connections use API endpoints only; do not manage network forwarding. Clean up client child processes on exit.
