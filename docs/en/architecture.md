@@ -25,6 +25,10 @@ These identities are independent:
 | endpoint.py | HTTP(S) API address validation and model readiness checks |
 | readiness.py | Port/HTTP health probes, startup waiting and explicit runtime-log readiness; status is read-only |
 | client.py | Private user state, local tools, config and full transcripts |
+| paths.py / program.py | Relocatable roots and ordinary program-file selection |
+| deployment.py / bundle.py | In-place role preparation, complete export and manifest verification |
+| resume.py / operations.py | Native session resume and general task instructions |
+| installlog.py | Actual installation commands, output and failure diagnostics |
 | cli.py | Explicit role/operation dispatch |
 
 No module launches a process at import. Chat never invokes GPU deployment.
@@ -79,14 +83,7 @@ network access. Tools may use SSH for onward tasks, independently of inference t
 
 ## Performance policy
 
-The B300 reference's eager/CPU-offload baseline decoded about 5.2 tokens/s.
-GPU-resident Engram plus decode CUDA Graphs reached about 222 tokens/s at TP4;
-TP8 was comparable for one request. This combined-profile comparison does not
-isolate each optimization's contribution or predict concurrent-user throughput.
-
-GB300 has a different host-memory/interconnect architecture. Its TP2 profile
-intentionally uses upstream-style CPU Engram offload. B300 speed is not a GB300
-performance claim. GB300 profiles remain unverified on hardware.
+GPU Engram placement and CUDA Graph choices belong to each model/profile. GB300 memory/interconnect differences require separate validation. Measurements, methods and limits live in the [validation record](validation.md), not duplicated performance claims here.
 
 ## Installation observability
 

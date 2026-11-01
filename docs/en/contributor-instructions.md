@@ -46,3 +46,5 @@ Chinese is the primary development and documentation language. Keep complete Chi
 - Keep recursive CLI help and both manuals in sync; preserve JSON stdout and progress stderr.
 - Keep installation diagnostics in install.log; distinguish expected probes and reuse complete local artifacts offline.
 - Extend GPU support through separate profiles, fixtures and hardware acceptance evidence.
+
+Documentation changes must follow the [documentation delivery requirements](development.md#documentation-delivery-requirements): review every bilingual document, verify README as the entry point, reconcile defaults/examples/links, and manually read the workflow. Do not create tags without an explicit user request.

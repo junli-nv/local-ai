@@ -45,7 +45,7 @@ Chinese is primary; maintain English separately and synchronize both entry paths
 | Fixed release blocks upgrades/offline use | Reference releases are validation records, not runtime allowlists. Reuse installs, detect imports, allow explicit releases/offline exports and test capabilities |
 | Models/revisions change | Configure recipe identities, directories, names, engine/client capabilities and separate locks; do not inherit hardware acceptance or DeepSeek-specific settings |
 | Directory installation and migration | The unpacked directory is the root, with ordinary src/. install prepares assets in place; export writes a complete dist/ bundle excluding dist/, instance state, histories and credentials. Reinstall/reconfigure after moving |
-| Source-script delivery | Use immutable tags on validated commits; GitHub Releases and Python distributions are optional, not prerequisites |
+| Source-script delivery | Deliver main/exact commits during development; passing checks does not trigger tags; formal versions require explicit request and quality review |
 | Around 400 ms TTFT seems high | Record method, input size, cache/load and timing first. Separate compilation, generation delay and reasoning content; avoid one-number conclusions |
 
 Use the [manual](commands.md) and [deployment guide](deployment.md) for operations;
@@ -130,6 +130,19 @@ pyproject.toml configures Python packaging and developer tools; ordinary source-
 
 The root Bash launcher adds src to PYTHONPATH and calls the same entry point. Model/GPU engine presets live in profiles.json/profiles.py. See the [command manual](commands.md).
 
+
+## Documentation delivery requirements
+
+Documentation correctness is a delivery condition. For every implementation, default or documentation change, carefully review both languages of README, command, deployment, offline, architecture, development and validation documents. Confirm unchanged documents do not conflict. Fixing one matching line is insufficient.
+
+1. **README is the entry point.** Walk the first-use path: prerequisites, source download, installation, configuration, startup, readiness, logs, client usage and migration links. Include necessary steps without hidden assumptions.
+2. **Match actual behavior.** Check options/defaults, saved settings, execution host, output and exit codes against --help, implementation and evidence. Distinguish program, runtime data and private user state.
+3. **Keep examples consistent.** Main workflow: GPU001, bcm-headnode, /raid/local-ai, a and 18000. Introduce b/18001 only in the two-instance section, with both server/client commands. Explain changes of host, path, user, model or address before using them.
+4. **Make steps executable.** State host, user and working directory, input/output files, logs and success criteria. An endpoint saved by install is optional for chat. Explain invocation overrides versus persistent settings. Check quotes, ordering and prerequisite files.
+5. **Keep concise responsibilities.** README owns one complete main path; deployment expands special cases/recovery; the manual owns parameters. Offline instructions retain two independently executable routes. Link to sections instead of copying whole workflows or appending duplicate sections.
+6. **Synchronize languages.** Match hosts, paths, ports, defaults, sequence and validation scope. Date historical records and label old behavior; do not present it as current installation guidance.
+7. **Check every reference.** Verify relative links, anchors, source URLs and version status. Fix references when removing tags/changing headings. Clearly state development status without treating a source version as a stability promise.
+8. **Review before delivery.** Run existing documentation contracts for Bash syntax, CLI examples, links and option coverage, then manually read workflows and bilingual differences. Automated checks do not replace semantic review. State reviewed scope, inconsistencies fixed and unverified items in the commit description; fix conflicts before committing.
 
 ## Setup and checks
 
@@ -255,17 +268,11 @@ Also verify actual terminal copying, model tool round trips and history
 migration. Exit clients and back up history before switching. Restore the
 original backup when downgrading across incompatible database migrations.
 
-## Stable release procedure
+## Delivery and version labels
 
-Deliver script source through validated Git tags. GitHub Releases and wheel/sdist
-packages are optional, not installation prerequisites.
+Deliver development source from main and exact commits. Existing v1.0.0/v1.1.0 tags have been withdrawn; the source version is not a stability promise. Tests and CI are basic requirements, not automatic release readiness. Do not create tags or GitHub Releases without an explicit user request.
 
-1. Align pyproject.toml, local_ai.__version__ and both version docs. Project/client/model/image versions are independent.
-2. Run unittest, Ruff and diff checks; run native acceptance for client adapter changes. Optional Python packages also need build and isolated-install checks.
-3. Commit/push and require CI to pass for that exact commit.
-4. Create and push an annotated version tag at the validated commit. Match the version and never move published tags.
-5. Users clone the tag; prepare offline artifacts from that version. Optional source archives may use git archive with SHA256 checksums; no GitHub Release is required.
-6. Deliver tag, commit, results and limits. A new tag does not imply universal model/hardware/cluster acceptance.
+For routine delivery, review implementation and all documentation, validate appropriately, commit/push, and verify the remote commit/CI. If a formal version is explicitly requested later, assess complete installation paths, documentation consistency, compatibility and known issues first. Only then align versions/evidence and tag the exact successful CI commit. Exact commits remain available for reproduction and rollback.
 
 ## Directory installation implementation
 

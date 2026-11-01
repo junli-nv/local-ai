@@ -1,77 +1,35 @@
-# Deployment guide
+# Deployment and operations
 
 [中文（默认）](../deployment.zh-CN.md)
 
-Run inference on the GPU server; run OpenCode and its tools on BCM. The complete program and deployment assets live in /raid/local-ai: src/, images/, models/, clients/ and dist/. Private histories and credentials remain user-specific.
+Follow [README](../../README.en.md) for first online installation. This page expands deployment branches and recovery, without repeating source download, client installation or chat. See [offline deployment](offline.md) for migration, and the [manual](commands.md) for parameters.
 
-## Example environment
+Conventions: GPU001, bcm-headnode, alice, /raid/local-ai, instance a, port 18000. Run local-ai commands on GPU001 from /raid/local-ai unless explicitly marked BCM. No data-directory overrides are used.
 
-| Hostname | Role | Commands run here |
-|---|---|---|
-| `GPU001` | GPU server; an eight-card B300 in this example | Prepare images/weights, manage inference instances, check health |
-| `bcm-headnode` | BCM headnode | Log in as `alice`, install the client, use OpenCode in `/home/alice/project` |
+## CDI setup
 
-Replace these hostnames with your own. The examples assume BCM can reach the model API on GPU001.
-Instance names `a` and `b` identify services on that GPU server, not hostnames.
+nvidia-ctk cdi list must show nvidia.com/gpu=GPU-... UUID aliases for selected GPUs. Generate definitions on the target host; never copy another host's definitions.
 
-See the [manual](commands.md) for every command, option default and troubleshooting step.
-
-## 1. Select a profile
-
-| Profile | Server CPU | Local GPUs | Engram | Status |
-|---|---|---:|---|---|
-| b300-tp4 | AMD64 | 4 | GPU | B300 validated |
-| gb300-tp4 | ARM64 | 4 | GPU | Experimental |
-| gb300-tp2 | ARM64 | 2 | CPU | Experimental |
-
-Check uname -m and nvidia-smi. Choose the BCM binary independently. GPUs must be visible to one OS; cross-host TP and NVL72 scheduling are not implemented. TP2 offload alone needs about 189 GiB RAM. The 256 GiB MemAvailable guard is conservative, not a measured minimum. Validate GB300 on real hardware.
-
-## 2. Prepare the GPU server
-
-The deployment account needs Docker access and write permission to the data directory, configured by the administrator.
-
-Choose these values before running the example:
-
-| Option | Meaning / what to change |
-|---|---|
-| `--profile b300-tp4` | B300 four-GPU inference preset. TP4 splits one instance across four local GPUs. |
-| `--data-dir /raid/local-ai` | Runtime data root for models, image locks, caches, instances and logs. Defaults to the unpacked directory; src/ holds source and local-ai is a launcher file. |
-| `--gpus 0,1,2,3` | Server GPU indices from nvidia-smi, or full UUIDs. Count must match the profile. |
-| `--name a` | Instance name, reused for status/stop and its log directory; not a hostname. |
-| `--port 18000` | Model HTTP API port, default 18000. Use 18001 for a second instance. |
-
-Server plan/start default to profile b300-tp4 and name a; --gpus is required.
-The data directory uses LOCAL_AI_DATA_DIR if set, otherwise the program's unpacked directory (/raid/local-ai here).
-Use the same --data-dir for preparation, planning and startup: options do not carry over between commands.
-
-Allocate GPUs first. Install compatible drivers, Docker API 1.49+, NVIDIA Container Toolkit and Python 3.10+. The complete program and runtime assets stay in the unpacked installation directory. The tool does not stop other jobs.
-
-Download the complete program from GitHub into a new empty /raid/local-ai. The unpacked directory is the installation. Preserve custom source changes before updating legacy installations. Defaults follow the program location, including after renaming. The example account needs sudo/Docker access; root may omit sudo.
-
-```bash
-sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.1.0.tar.gz -o /tmp/local-ai-source.tar.gz
-tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
-cd /raid/local-ai
-./local-ai --version
-nvidia-smi
-nvidia-ctk cdi list
-# List profiles and validation status
-./local-ai profiles
-```
-
-nvidia-ctk cdi list must show nvidia.com/gpu=GPU-... aliases for selected devices. Zero devices is not ready. If CDI is missing, regenerate on this host; do not copy device definitions:
+With the automatic refresh service:
 
 ```bash
 sudo systemctl restart nvidia-cdi-refresh.service
 nvidia-ctk cdi list
 ```
 
-Verify UUID aliases again after refresh. Without a refresh service, follow NVIDIA's manual CDI procedure. Avoid duplicate definitions.
+Without that service, an administrator first checks /etc/cdi and /var/run/cdi for existing valid NVIDIA definitions/conflicts, then generates local UUID definitions:
 
-### Check Docker storage before downloading
+```bash
+sudo install -d /etc/cdi
+sudo nvidia-ctk cdi generate --device-name-strategy uuid --output=/etc/cdi/nvidia.yaml
+nvidia-ctk cdi list
+```
 
-Run on the GPU node:
+Regenerate manual definitions after driver, GPU or MIG changes. Avoid duplicate definitions. If selected UUIDs remain absent, stop and investigate. Server image and BCM architectures are independent; see README for GB300 validation limits.
+
+## Docker storage failures
+
+On GPU001:
 
 ```bash
 docker version
@@ -79,30 +37,22 @@ docker info --format 'Server={{.ServerVersion}} Driver={{.Driver}} Root={{.Docke
 docker ps -a
 ```
 
-The Docker server must be accessible. An active docker service only confirms a running process,
-not working image extraction or storage. A first image inspection reporting `No such image`
-is expected and triggers a pull; diagnose the subsequent pull error.
+Docker must reach its server. systemctl active does not establish storage health. Initial image inspect No such image is expected; the following pull's actual error determines the failure.
 
-`--data-dir` controls project weights, locks and runtime data, not Docker/containerd storage.
-With Docker 29's containerd image store, these services may use `/var/lib/docker` and
-`/var/lib/containerd` separately; check the actual configuration. Never delete or move storage
-while the services are running, or share runtime databases between nodes.
+--data-dir controls project assets, not Docker/containerd live storage. Docker 29 may use /var/lib/docker and /var/lib/containerd separately; inspect actual configuration. Never delete/move these directories while running or share their databases across nodes.
 
-### Recovery: missing metadata.db during image extraction
+### Missing metadata.db
 
-Stop installation and inspect runtime storage if image pull reports:
+Stop installation if pull reports:
 
 ```text
 failed to prepare extraction snapshot
 /var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/metadata.db: no such file or directory
 ```
 
-One verified cause is storage deleted while services still hold open database files.
-An active Docker service does not rule this out. Restarting Docker alone does not restart
-the independent containerd service. First check configuration, mounts and original data.
-Restore storage containing data that must be retained instead of replacing it with empty directories.
+One observed cause is deletion of storage while services still hold deleted database handles. Restarting Docker alone does not restart independent containerd. Have an administrator inspect configuration, mounts and original data; recover required storage first.
 
-Inspect Docker containers and every containerd namespace before restarting:
+Inspect Docker containers and all containerd namespaces/tasks before arranging maintenance:
 
 ```bash
 docker ps -a
@@ -113,9 +63,7 @@ for ns in $(sudo ctr namespaces list -q); do
 done
 ```
 
-Arrange maintenance for running tasks. Empty lists do not replace administrator confirmation
-of other runtime users. Once interruption is acceptable and original storage need not be restored,
-run on the target GPU node; root may omit sudo:
+After confirming interruption is allowed and original storage need not be restored:
 
 ```bash
 sudo systemctl stop docker.service docker.socket
@@ -124,118 +72,55 @@ sudo systemctl start docker.socket docker.service
 docker info
 ```
 
-Retry the original image pull before downloading weights. Do not repeatedly restart services
-or delete databases. For continued failures inspect the installation journal's actual error and
-`journalctl -u containerd -u docker`.
+Return to README and retry installation; if the original operation was image pull, retry that first. Persistent failures require install.log and journalctl -u containerd -u docker, not repeated restarts/database deletion.
 
-`metadata.db` may be created only on the first snapshot creation. Its absence immediately after
-restart does not prove failure; listing snapshots may not create it either. Successful image pull
-and extraction are the acceptance check. Never manually `touch metadata.db`.
-This recovery does not restore lost images, containers or volumes and is not a routine installation step.
+metadata.db may be created only when a snapshot is first created; absence immediately after restart is not proof of failure. Do not touch it manually. Successful pull/extraction establishes recovery. These steps do not restore lost images, containers or volumes and are not a routine installation requirement.
 
-Complete local images/models are reused. Preparation decisions, commands and errors append to /raid/local-ai/install.log; see the [manual](commands.md).
+## Listening and networking
 
-```bash
-./local-ai install --role server --profile b300-tp4
-```
+--host defaults to 127.0.0.1. README uses 0.0.0.0 so BCM can access http://GPU001:18000/v1; a specific local IPv4 address is also accepted. 0.0.0.0 is not a client address; --host accepts neither hostnames nor IPv6.
 
-Existing complete weights belong in /raid/local-ai/models/DeepSeek-V4.1-Flash/. Weights are CPU-independent; images are not.
+Health probes use 127.0.0.1 for wildcard binding, otherwise the configured IP. Configure routing/firewalls for BCM access. Existing instances require replacement to change addresses. API keys/HTTPS are not configured; restrict trusted-client access.
 
-## 3. Start and validate
+Administrators manage nginx/frp forwarding separately. Clients use the final reachable endpoint; model access does not require SSH. Operational tools may still use SSH. Add GPU001/the actual IP to NO_PROXY/no_proxy if proxy variables interfere.
 
-```bash
-# Preview the plan without starting a service
-./local-ai server plan --host 0.0.0.0 --profile b300-tp4 --gpus 0,1,2,3 --name a --port 18000 --data-dir /raid/local-ai
-# Start the instance; initial loading takes time
-./local-ai server start --host 0.0.0.0 --profile b300-tp4 --gpus 0,1,2,3 --name a --port 18000 --data-dir /raid/local-ai
-./local-ai server status --name a
-curl --fail http://127.0.0.1:18000/v1/models
-./local-ai server status --name a
-```
+## Replace an instance
 
-On GPU001, server status --name a prints READY or NOT READY. Server start waits up to 600 seconds by default and records a timestamped READY confirmation in the terminal and instance server.log. Timeout or container exit is explicitly reported.
+For GPU, port, address or recipe changes, confirm a is the intended instance and record old/new parameters. Stop and explicitly remove its container, then start with new arguments. Restarting the same container does not change arguments.
 
-Use gb300-tp4 for four local GB300 GPUs or gb300-tp2 with --gpus 0,1 for two. Full UUIDs are accepted. plan does not allocate devices; start checks occupancy. Initial compilation may take minutes. Container running state is not API readiness. Full logs and launch arguments are under instances/a/ in the data directory.
-
-Normal acceptance is start reporting READY and exit 0; no extra curl step is required.
-NOT READY includes the reason. Use --wait-timeout 1200 for a longer cold start.
-Timeout or Ctrl+C retains the container; query status or repeat start with identical arguments.
-See [README](../../README.en.md) for explicit results, exit codes and log markers.
-
-### API listen address
-
-Server plan/start accept --host, default 127.0.0.1. Set --host 0.0.0.0 or a local
-IPv4 address for BCM access through --endpoint http://GPU001:18000/v1.
-An existing container must be explicitly recreated to change its listen address.
-See [README](../../README.en.md) for commands and network access requirements.
-
-## 4. Install on BCM
-
-Install as the user who will execute tools:
+This example recreates a with the same parameters; apply actual changes consistently to plan/start:
 
 ```bash
-sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.1.0.tar.gz -o /tmp/local-ai-source.tar.gz
-tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
-./local-ai --version
-./local-ai client install
+./local-ai server status --name a
+./local-ai server stop --name a
+docker rm local-ai-a
+./local-ai server plan --profile b300-tp4 --host 0.0.0.0 --gpus 0,1,2,3 --name a --port 18000
+./local-ai server start --profile b300-tp4 --host 0.0.0.0 --gpus 0,1,2,3 --name a --port 18000
 ```
 
-BCM needs Python, Bash, git, rg and script, not Docker, CUDA, Node or npm.
-Installation checks the pinned binary's integrity. Offline installation imports
-prepared native assets. SSH is optional for onward tool tasks, not model access.
+Weights and host logs remain. Different specs are never silently substituted. Readiness/timeouts/logging are described in [README](../../README.en.md#1-install-and-start-on-gpu001); exit codes are in the manual.
 
-## 5. Use from BCM
+## Two instances and multiple users
 
-Wait for the GPU API and verify BCM can reach it. Replace GPU001 with a reachable
-IP or hostname. The API port is part of --endpoint; --project selects an existing
-BCM directory, defaulting to the current directory.
+Only this section introduces another service: on eight B300 GPUs, a uses GPUs 0–3/port 18000 and b uses GPUs 4–7/port 18001. Confirm spare devices and port availability, then run on GPU001:
 
 ```bash
-./local-ai chat --endpoint http://GPU001:18000/v1 --project /home/alice/project
-./local-ai chat --endpoint http://GPU001:18000/v1 --check
+cd /raid/local-ai
+./local-ai server start --profile b300-tp4 --host 0.0.0.0 --gpus 0,1,2,3 --name a --port 18000
+./local-ai server start --profile b300-tp4 --host 0.0.0.0 --gpus 4,5,6,7 --name b --port 18001
+```
+
+Only read-only weights are shared; GPUs, memory, KV, ports, caches and logs are separate. On BCM, select b for these invocations:
+
+```bash
+cd /raid/local-ai
+./local-ai chat --endpoint http://GPU001:18001/v1 --check
 ./local-ai chat --endpoint http://GPU001:18001/v1 --project /home/alice/project
-./local-ai chat --endpoint http://GPU001:18000/v1 --run 'Use bash to run hostname and report its output.'
 ```
 
-The client connects to HTTP(S) APIs and does not manage network forwarding.
-Administrators configure frp/nginx or other forwarding separately and supply its
-reachable URL. Tools execute on BCM; inference runs on the GPU server.
-See [README](../../README.en.md) for listen addresses and instance recreation.
+Without --endpoint, chat still uses the saved 18000 address. To change the saved default, run install --role client --endpoint URL again. Histories are separate per endpoint and are not migrated by changing ports.
 
-## 6. Two instances and multiple users
+Use separate Linux accounts/private state, default ~/.local/state/local-ai/. Shared binaries do not share histories. Different directories under one account are not permission isolation; administrators can access user data. Exit clients before state backup.
 
-On an eight-GPU B300 server:
-
-```bash
-./local-ai server start --host 0.0.0.0 --profile b300-tp4 --name a --gpus 0,1,2,3 --port 18000 --data-dir /raid/local-ai
-./local-ai server start --host 0.0.0.0 --profile b300-tp4 --name b --gpus 4,5,6,7 --port 18001 --data-dir /raid/local-ai
-```
-
-Instances have separate GPUs, HBM, KV, caches, ports and logs; only read-only weights are shared. Select the port in the --endpoint URL. There is no load balancing.
-
-Use separate Linux accounts and private state under ~/.local/state/local-ai/. History is keyed by API endpoint. Connection configurations are independent. Root can access user files. Four active sequences per engine is a scheduling limit; additional requests queue. Measure concurrent throughput separately.
-
-## 7. Stop and reconfigure
-
-```bash
-./local-ai server stop --name b --data-dir /raid/local-ai
-./local-ai server start --host 0.0.0.0 --profile b300-tp4 --name b --gpus 4,5,6,7 --port 18001 --data-dir /raid/local-ai
-```
-
-To change GPUs, port or profile, inspect and stop the instance, explicitly remove its container, then recreate it. Model files and host logs remain. Automatic boot startup and resource handoff are not implemented.
-
-## 8. Offline use and development
-
-Use export to carry the complete program, matching server image/weights and installed BCM assets together in dist/. See [offline deployment](offline.md), [architecture](architecture.md), [development](development.md) and [validation](validation.md). Keep the internal BCM-to-API network available. External MCP, web search and dependency downloads need separate preparation.
-
-## Export the complete directory
-
-After installation, export program, image archives, models, clients and portable configuration together. Carry the two files in dist/. dist/ itself is excluded. Verify/extract on the new host and run install --offline before choosing its GPUs and endpoint. These instructions download v1.1.0; the older v1.0.0 tag lacks directory installation and complete export commands.
-
-```bash
-cd /raid/local-ai
-./local-ai export
-ls -lh dist/local-ai.tar dist/local-ai.tar.sha256
-```
+Four active sequences per engine is a scheduling limit, not a four-user limit; additional requests queue. No automatic balancing, quotas, boot startup or cross-host TP is provided. Measure concurrency separately; see [validation](validation.md).

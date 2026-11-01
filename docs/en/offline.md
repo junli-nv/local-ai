@@ -2,16 +2,17 @@
 
 The unpacked directory is the installation: /raid/local-ai here. local-ai is the launcher; src/ and docs/ hold source/manuals. models/, images/, clients/ hold weights, image archives/locks and public clients. dist/ holds exports. Defaults follow moved/renamed directories; no LOCAL_AI_DATA_DIR or --data-dir overrides are used.
 
-Prerequisites: Python 3.10+, Bash, curl, tar, sha256sum; GPU hosts need compatible drivers, Docker API 1.49+ and NVIDIA Container Toolkit/CDI. BCM needs Git, rg and util-linux script. Use root or suitable sudo/Docker access. Example: Linux AMD64, four allocated B300 GPUs, b300-tp4, instance a. New GPU001 and bcm-headnode communicate internally on port 18000. Mount media at /media/local-ai. Allow roughly 510 GB for weights plus images and a complete dist/ copy. New targets must be empty.
+Prerequisites: Python 3.10+, Bash, curl, tar, sha256sum (required for transfer verification); GPU hosts need compatible drivers, Docker API 1.49+ and NVIDIA Container Toolkit/CDI. BCM needs Git, rg and util-linux script. Use root or suitable sudo/Docker access. Example: Linux AMD64, four allocated B300 GPUs, b300-tp4, instance a. New GPU001 and bcm-headnode communicate internally on port 18000. Mount media at /media/local-ai. Allow roughly 510 GB for weights plus images and a complete dist/ copy. New targets must be empty.
 
 Archives contain top-level local-ai/ and bundle.json checksums. They exclude dist/, instance state, logs, temporary caches, Git metadata, private histories and credentials. Docker active databases and drivers remain host-managed.
+
+Both routes below are complete and independent; follow one route from start to finish. gpu-old/bcm-old are the existing source hosts; prep-host downloads assets without starting GPUs. New targets use GPU001/bcm-headnode as in README. Source downloads use main; record the source commit for reproducibility.
 
 ## Scenario 1: export an installed environment
 
 ### 1.1 Export on old GPU host gpu-old
 
 Start from the complete current README installation, including local-ai and src/. Legacy data-only installations need the preparation below first. Do not update models during export. Export creates/reuses local image archives without downloading weights.
-
 
 ```bash
 cd /raid/local-ai
@@ -26,7 +27,6 @@ Success: media server/ contains local-ai.tar and its checksum, including program
 
 Use BCM's complete installation directory. Private history is excluded.
 
-
 ```bash
 cd /raid/local-ai
 ./local-ai export
@@ -39,7 +39,6 @@ Carry the media to GPU001 and then bcm-headnode; mount it at /media/local-ai on 
 ### 1.3 Install offline and start on new GPU host GPU001
 
 Installation verifies assets/imports the local image without starting inference. Check CDI and GPU allocation before startup.
-
 
 ```bash
 cd /media/local-ai/server
@@ -57,7 +56,6 @@ nvidia-ctk cdi list
 Success: installed=true, offline=true, then READY and ready=true.
 
 ### 1.4 Install offline and connect on new BCM host bcm-headnode
-
 
 ```bash
 cd /media/local-ai/client
@@ -78,10 +76,9 @@ Success: chat --check returns ready=true; execute hostname through chat and veri
 
 Use compatible Linux AMD64 with Python, Docker and access to GitHub, the registry, Hugging Face and NPM. Preparation needs no GPU.
 
-
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.1.0.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/heads/main.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ./local-ai --version
@@ -91,7 +88,6 @@ cd /raid/local-ai
 Success: installed=true with complete model, image archives and client assets; no inference is started.
 
 ### 2.2 Export to dist/ and copy onto media
-
 
 ```bash
 cd /raid/local-ai
@@ -103,7 +99,6 @@ cp dist/local-ai.tar dist/local-ai.tar.sha256 /media/local-ai/both/
 Carry the media to each new host; this combined package supplies both roles, selected during installation.
 
 ### 2.3 Install offline and start on new GPU host GPU001
-
 
 ```bash
 cd /media/local-ai/both
@@ -122,7 +117,6 @@ Success: installed=true, offline=true, READY and ready=true.
 
 ### 2.4 Install offline and connect on new BCM host bcm-headnode
 
-
 ```bash
 cd /media/local-ai/both
 sha256sum -c local-ai.tar.sha256
@@ -140,7 +134,6 @@ Success: chat --check returns ready=true; execute hostname through chat to confi
 
 Extract into another empty directory; defaults follow the new location.
 
-
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/ai-prod
 tar -xf /media/local-ai/server/local-ai.tar --strip-components=1 -C /raid/ai-prod
@@ -152,17 +145,15 @@ cd /raid/ai-prod
 
 Preserve custom source edits first. Obtain the complete program from GitHub and unpack into the existing data root; source packages contain no models or instances.
 
-
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.1.0.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/heads/main.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ./local-ai --version
 ```
 
 On the old GPU host reuse local resources and export without weight downloads:
-
 
 ```bash
 ./local-ai install --role server --profile b300-tp4 --offline
@@ -171,10 +162,11 @@ On the old GPU host reuse local resources and export without weight downloads:
 
 For legacy BCM client assets outside the installation, include the actual asset directory once:
 
-
 ```bash
 ./local-ai export --client-dir /home/alice/.local/state/local-ai/clients/amd64
 ```
+
+If CDI lacks the selected GPU UUID aliases, resolve [CDI setup](deployment.md#cdi-setup) before startup. Each role uses only its prepared assets; exports do not download unprepared models/clients.
 
 ## Logs and failures
 

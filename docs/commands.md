@@ -4,7 +4,7 @@
 
 ## 从哪里开始
 
-第一次部署先看[部署指南](deployment.zh-CN.md)；本页用于查命令、参数和运行维护。首次先从 GitHub 下载完整程序并解压；解压目录就是安装目录，以下在 /raid/local-ai 执行 ./local-ai。
+第一次部署先看 [README](../README.md)；本页用于查命令、参数和运行维护。首次先从 GitHub 下载完整程序并解压；解压目录就是安装目录，以下在 /raid/local-ai 执行 ./local-ai。
 
 | 示例对象 | 含义 |
 |---|---|
@@ -18,17 +18,19 @@
 ```bash
 ./local-ai --help
 ./local-ai server --help
-./local-ai server start --help --data-dir /raid/local-ai
+./local-ai server start --help
 ./local-ai chat --help
 ```
 
-通用格式为 `./local-ai 命令组 子命令 参数`；profiles 和 chat 没有下级子命令。
+通用格式为 `./local-ai 命令组 子命令 参数`；install、export、profiles 和 chat 没有下级子命令。
 每一级都支持 `--help`。全局 `--debug` 必须放在命令组之前，用于错误时显示 Python 调用栈。
 
 ## 全部命令
 
 | 命令 | 执行位置 | 作用与结果 |
 |---|---|---|
+| `install` | 目标主机或准备机 | 就地准备所选角色资源并保存安装设置 |
+| `export` | 已安装主机或准备机 | 完整离线包及 SHA256，默认 dist/ |
 | `profiles` | 任意一端 | 输出配置目录和验证状态，JSON 格式 |
 | `server inventory` | GPU001 | 读取本机 CPU 架构及 GPU 型号、UUID、显存 |
 | `server plan` | GPU001 | 输出 GPU 选择、引擎参数及 Docker 启动命令；不创建容器 |
@@ -48,18 +50,37 @@ chat 连接指定 API 并启动本机 OpenCode；不是登录容器后再执行�
 
 引擎参数不做任意透传；模型和 vLLM 参数在 profiles.json/profiles.py 中维护。启动后实例目录保存 spec.json、args.json、docker-command.json 和 launch.log，便于核对实际配置。
 
+## 统一安装与完整导出
+
+install 在解压目录中准备资源，不另复制源码。首次默认客户端；--role 可选 server、client、both，后续默认取安装记录。--profile 选择服务端配方；安装不启动 GPU 服务。
+--offline 只用本地资源，缺文件或校验失败即停止；--online 允许下载。含 bundle.json 的包默认离线，否则默认在线。--client-version 显式选版，默认复用本地版本；--endpoint 保存 API 地址，后续 chat 可省略。
+export 一并打包完整程序、模型、镜像归档、客户端和配方。--output 默认 dist/local-ai.tar，旁边生成 .sha256；--profile 可重复，默认取安装记录；--client-dir 可首次携带旧版客户端；--data-dir 可携带旧数据。包内相对顶层 local-ai/，支持换目录名。
+导出排除 dist/、旧实例、日志、运行缓存、Git 元数据、个人历史和凭据。源码在 src/，启动文件为 local-ai，手册在 docs/。公共客户端默认 clients/CPU；个人状态仍由 --state-dir 隔离。安装和导出统一写安装根目录的 install.log。
+
+```bash
+cd /raid/local-ai
+./local-ai install --role server --profile b300-tp4
+./local-ai export
+./local-ai export --output dist/local-ai.tar.gz
+```
+
+外部模型配方：设置 LOCAL_AI_CATALOG，格式及验收见[开发指南](development.md#模型与客户端兼容性)。
+
+安装时 --model 可指定客户端模型 ID；服务端以 --profile 中的模型为准，两者显式冲突时报错。服务启动、模型下载和聊天默认复用安装记录中的配方及模型；命令行参数仍可覆盖。
+
+BCM 使用 install --role client --endpoint http://GPU001:18000/v1，替代上述 server 安装命令；两台机器各自保存设置。兼容的准备机可用 --role both 准备两端资源。client install/export 是只处理客户端的低级命令，不能替代完整 install/export。
+
 ## 本地复用与安装日志
 
 准备命令默认先检查本地：镜像的平台及固定摘要匹配，就不访问仓库；模型配置、分词器、
 索引和所有分片完整，就不联网下载。模型检查包含 safetensors 长度与偏移检查，不等同于逐文件 SHA256。
 带有 model.lock.json 时核对仓库和 revision；缺锁则明确返回 revision_verified=false，不伪造已验证状态；
-锁文件版本冲突或权重截断直接报错。完整性哈希验收使用离线材料的 MODELS.sha256。
+锁文件版本冲突或权重截断直接报错。离线包首次安装按 bundle.json 中的逐文件 SHA256 验收完整内容。
 
 `image pull --force` 显式联系镜像仓库；`model download --force` 从固定 revision 强制重新下载，
 可能重新传输完整权重。普通重复执行不需要加它。
 
-安装与部署命令追加到一个日志：GPU 端默认 `数据目录/install.log`，
-BCM 客户端默认 `客户端目录/install.log`。每次操作有独立 ID，记录时间、主机、版本、参数、
+install/export 默认写安装根目录的 install.log；低级 image/model/server 操作写数据目录/install.log，client install 写客户端程序目录/install.log。每次操作有独立 ID，记录时间、主机、版本、参数、
 真实命令、实时输出、耗时、退出码、完整异常；长命令每 15 秒报告存活和输出字节数。
 标准输出仍保留 JSON，进度提示写到标准错误。只读查询与 plan 不创建日志。
 
@@ -80,7 +101,7 @@ BCM 客户端默认 `客户端目录/install.log`。每次操作有独立 ID，�
 | 参数 | 适用命令 | 含义与默认值 |
 |---|---|---|
 | `--data-dir` | server 的 plan/start/status/stop；image；model download | 运行数据根目录；先取 LOCAL_AI_DATA_DIR，未设置则为程序所在的解压目录。status 实际按实例名查询。 |
-| `--profile` | plan/start、image、model download | 硬件与引擎配置。image 必填；其余默认 b300-tp4。 |
+| `--profile` | plan/start、image、model download | 硬件与引擎配置。image 必填；plan/start/model 优先取已安装配方，未安装时默认 b300-tp4。 |
 | `--gpus` | plan/start | 必填，逗号分隔的本机 GPU 编号或完整 UUID；数量匹配配置 |
 | `--name` | plan/start/status/stop | 实例名，默认 a；须以小写字母开头，仅含小写字母、数字和连字符，最长 32 字符 |
 | `--host` | plan/start | IPv4 监听地址，默认 127.0.0.1；0.0.0.0 监听所有 IPv4 网卡，也可指定本机 IP；不接受主机名或 IPv6 |
@@ -96,8 +117,8 @@ TP 表示张量并行：b300-tp4 在同一主机上使用 4 张 B300；GB300 配
 例如在 GPU001 上预览、启动和查询：
 
 ```bash
-./local-ai server plan --host 0.0.0.0 --profile b300-tp4 --gpus 0,1,2,3 --name a --port 18000 --data-dir /raid/local-ai
-./local-ai server start --host 0.0.0.0 --profile b300-tp4 --gpus 0,1,2,3 --name a --port 18000 --data-dir /raid/local-ai
+./local-ai server plan --host 0.0.0.0 --profile b300-tp4 --gpus 0,1,2,3 --name a --port 18000
+./local-ai server start --host 0.0.0.0 --profile b300-tp4 --gpus 0,1,2,3 --name a --port 18000
 ./local-ai server status --name a
 ```
 
@@ -212,10 +233,10 @@ tmux 自身的选取设置仍由用户管理；长对话可用 `/export` 导出�
 停止与重建示例，在 GPU001 执行；先确认实例 a 正是要替换的服务：
 
 ```bash
-./local-ai server stop --name a --data-dir /raid/local-ai
+./local-ai server stop --name a
 # 仅移除已停止的实例容器；权重和宿主机日志保留
 docker rm local-ai-a
-./local-ai server start --host 0.0.0.0 --profile b300-tp4 --gpus 0,1,2,3 --name a --port 18000 --data-dir /raid/local-ai
+./local-ai server start --host 0.0.0.0 --profile b300-tp4 --gpus 0,1,2,3 --name a --port 18000
 ```
 
 备份用户状态前退出相关客户端；不要将历史、凭据或原始日志提交 Git。
@@ -228,24 +249,6 @@ docker rm local-ai-a
 本项目没有自动负载均衡、用户配额、开机自启、跨主机 TP 或自动 GPU 调度；启动前确认设备可用并取得使用权；项目不依赖集群调度系统。
 B300 与 GB300 的实际验收范围见[验证记录](validation.md)，不能用 CPU 测试代替硬件验证。
 
-## 统一安装与完整导出
-
-install 在解压目录中准备资源，不另复制源码。首次默认客户端；--role 可选 server、client、both，后续默认取安装记录。--profile 选择服务端配方；安装不启动 GPU 服务。
---offline 只用本地资源，缺文件或校验失败即停止；--online 允许下载。含 bundle.json 的包默认离线，否则默认在线。--client-version 显式选版，默认复用本地版本；--endpoint 保存 API 地址，后续 chat 可省略。
-export 一并打包完整程序、模型、镜像归档、客户端和配方。--output 默认 dist/local-ai.tar，旁边生成 .sha256；--profile 可重复，默认取安装记录；--client-dir 可首次携带旧版客户端；--data-dir 可携带旧数据。包内相对顶层 local-ai/，支持换目录名。
-导出排除 dist/、旧实例、日志、缓存、Git 元数据、个人历史和凭据。源码在 src/，启动文件为 local-ai，手册在 docs/。公共客户端默认 clients/CPU；个人状态仍由 --state-dir 隔离。安装和导出统一写安装根目录的 install.log。
-
-```bash
-cd /raid/local-ai
-./local-ai install --role server --profile b300-tp4
-./local-ai install --role client --endpoint http://GPU001:18000/v1
-./local-ai export
-./local-ai export --output dist/local-ai.tar.gz
-```
-
-外部模型配方：设置 LOCAL_AI_CATALOG，格式及验收见[开发指南](development.md#模型与客户端兼容性)。
-
-安装时 --model 可指定客户端模型 ID；服务端以 --profile 中的模型为准，两者显式冲突时报错。服务启动、模型下载和聊天默认复用安装记录中的配方及模型；命令行参数仍可覆盖。
 
 ---
 

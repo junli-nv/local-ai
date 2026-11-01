@@ -24,6 +24,9 @@ BCM 负责 OpenCode、项目文件、Shell/Git/SSH 工具、用户凭据、历�
 | `readiness.py` | 端口与 HTTP 健康探测、启动等待、明确就绪日志；状态查询只读 |
 | `client.py` | 用户私有状态、本地工具、连接配置和完整日志 |
 | `installlog.py` | 安装步骤、实际命令、实时输出及失败诊断集中记录；只读操作无文件副作用 |
+| `paths.py` / `program.py` | 可迁移路径与普通程序文件选择 |
+| `deployment.py` / `bundle.py` | 就地准备角色资源、完整导出与清单校验 |
+| `resume.py` / `operations.py` | 原生会话恢复与通用任务指引 |
 | `cli.py` | 解析参数并显式分派操作 |
 
 导入模块不会启动进程。聊天操作不会隐式部署 GPU 服务。
@@ -71,12 +74,7 @@ GPU 服务按示例监听 0.0.0.0，默认参数仍为 127.0.0.1；监听地址�
 
 ## 性能配置的依据
 
-B300 参考配置中，eager 与 CPU Engram 基线约为 5.2 token/s；
-GPU 常驻 Engram 加解码 CUDA Graph 后，TP4 约为 222 token/s，TP8 单请求速度相近。
-这是组合配置对比，不能分别归因于某项优化，也不能据此预测多人并发吞吐。
-
-GB300 的主存和互联架构不同，TP2 按上游方式采用 CPU Engram offload。
-B300 的速度不代表 GB300；GB300 配置仍等待实机验证。
+Engram 放置、CUDA Graph 等策略属于具体模型和硬件配方。GB300 主存与互联不同，须独立验收。具体测量值、方法和限制统一记录在[验证记录](validation.md)，本页不重复性能数字。
 
 ## 安装准备的可观测性
 
