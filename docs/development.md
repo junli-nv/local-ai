@@ -44,7 +44,7 @@ GPU 服务端负责推理；BCM 客户端用当前用户权限执行文件、She
 | OpenCode 接管复制但复制失败 | 默认终端选取与复制粘贴，关闭客户端鼠标捕获和剪贴板快捷键；说明点击/滚轮停用的取舍，验证终端模式 |
 | 固定客户端版本妨碍升级或离线使用 | 参考版本是验收记录，不是运行白名单；复用安装、识别导入版本、允许选版/离线包，按实际接口验证候选版本 |
 | 模型会更新，也可能换模型 | 仓库/revision、目录、服务名、引擎参数和客户端能力按配方配置；独立模型锁；新配方不继承实机验收，不套用 DeepSeek 专用参数 |
-| 程序与数据目录混淆 | 源码位置与 --data-dir 分别配置；示例源码在 /home/cmsupport/workspace/local-ai，GPU 数据在 /raid/local-ai；已有环境不要求移动目录 |
+| 目录式安装与迁移 | 解压目录即安装根，普通 src/ 保存源码；install 就地准备角色资源，export 默认生成 dist/ 完整离线包；排除 dist/、实例状态、个人历史和凭据；换目录后重新安装并配置本机资源 |
 | 源码脚本如何发布 | 经过验证的提交用不可变 Git tag 标识；GitHub Release 和 Python 分发包按需提供，不作为部署前提 |
 | 约 400 ms TTFT 是否过高 | 记录方法、输入规模、缓存/负载及端到端/首 token 耗时再判断；不混淆启动编译、生成前延迟与思考内容，不凭单个数值给结论 |
 
@@ -243,6 +243,10 @@ PYTHONPATH=src .venv/bin/python scripts/check-client.py --client-dir /home/alice
 4. 在该提交上创建带说明的版本标签并推送；版本号与 tag 一致，不移动已发布标签。
 5. 用户按 tag 克隆源码；离线材料按离线指南从该版本导出。需要下载包时可用 git archive 并生成 SHA256，但不要求建立 GitHub Release。
 6. 交付 tag、提交、验证结果和兼容边界。新 tag 不代表所有模型、硬件或集群都已验收。
+
+## 目录式安装实现
+
+paths.py 根据启动脚本位置决定根目录，不取终端 cwd，也不写死 /raid/local-ai；显式 --data-dir 和 LOCAL_AI_DATA_DIR 保留兼容。deployment.py 就地准备资源并记录相对的安装设置；bundle.py 流式导出程序、模型、镜像归档和客户端，生成整包及逐文件 SHA256。config/catalog.json 随包携带配方。程序为普通目录，不使用隐藏版本目录或源码链接。导出排除自身 dist/ 和个人状态。安装不启动 GPU；新主机用本机 GPU、端口和 endpoint 创建实例。
 
 ---
 

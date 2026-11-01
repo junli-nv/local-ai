@@ -71,8 +71,13 @@ class EndpointTests(unittest.TestCase):
             with self.subTest(url=url), self.assertRaises(ValueError):
                 endpoint_url(url)
 
-    def test_endpoint_required_and_legacy_options_rejected(self):
-        for extra in [[], ["--server", "gpu-a"]]:
+    def test_endpoint_configurable_and_legacy_options_rejected(self):
+        with patch("local_ai.cli.settings", return_value={}):
+            self.assertIsNone(parser().parse_args(["chat"]).endpoint)
+            with contextlib.redirect_stderr(io.StringIO()) as output:
+                self.assertEqual(main(["chat", "--check"]), 1)
+            self.assertIn("Set --endpoint", output.getvalue())
+        for extra in [["--server", "gpu-a"]]:
             with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
                 parser().parse_args(["chat"] + extra)
         for option in ["--server", "--ssh-user", "--ssh-port", "--local-port", "--port"]:

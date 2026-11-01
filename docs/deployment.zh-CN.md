@@ -42,26 +42,28 @@ GB300 配置必须完成实机验收，不能直接套用 B300 的速度结论�
 | 参数 | 示例含义 / 如何修改 |
 |---|---|
 | `--profile b300-tp4` | 使用 B300 四卡推理配置；TP4 表示同一实例跨 4 张本机 GPU。其他平台按上表选择。 |
-| `--data-dir /raid/local-ai` | 运行数据根目录，存放模型、镜像锁、缓存、实例和日志；源码示例位于 /home/cmsupport/workspace/local-ai，与数据目录分别配置。 |
+| `--data-dir /raid/local-ai` | 运行数据根目录，存放模型、镜像锁、缓存、实例和日志；默认就是解压目录；源码在 src/，local-ai 是启动脚本。 |
 | `--gpus 0,1,2,3` | 使用服务端 `nvidia-smi` 显示的这 4 张卡；也可写完整 GPU UUID。数量须匹配配置。 |
 | `--name a` | 自定义实例名，用于区分容器与日志；查询、停止时沿用同一个名字。 |
 | `--port 18000` | 模型 HTTP API 端口，默认 18000；第二个实例换成 18001。 |
 
 `server plan/start` 默认配置为 `b300-tp4`，实例名默认 `a`，但必须显式指定 `--gpus`。
-数据目录默认取环境变量 `LOCAL_AI_DATA_DIR`，未设置时为 `/raid/local-ai`。
+数据目录默认取环境变量 `LOCAL_AI_DATA_DIR`，未设置时使用程序所在的解压目录，本例为 `/raid/local-ai`。
 若修改目录，下载、计划和启动时须使用同一个 `--data-dir`，参数不会由前一条命令自动继承。
 
 前提：驱动、Docker、NVIDIA Container Toolkit 已安装且兼容。
-Python3 至少 3.10，Docker API 至少 1.49。源码示例目录为 /home/cmsupport/workspace/local-ai，GPU 运行数据目录为 /raid/local-ai；两者独立，私有客户端保存在各用户目录。
+Python3 至少 3.10，Docker API 至少 1.49。完整程序与部署材料均在 /raid/local-ai：src/ 是源码，images/、models/、clients/ 是公共材料，dist/ 是导出包；个人历史与凭据仍为用户私有。
 先确认选定 GPU 可用且已取得使用权；本工具不会停止其他作业。
 
 在 GPU 服务器运行：
-以下克隆命令用于新安装，源码目标目录 /home/cmsupport/workspace/local-ai 应为空；已有安装进入包含 local-ai 脚本的实际源码目录，无需移动源码或数据。示例账户需 sudo 和 Docker 权限，root 可省略 sudo。
+以下从 GitHub 下载完整程序，解压目录就是安装目录。新安装使用空的 /raid/local-ai；旧版补齐程序前先保存自定义源码修改。默认数据目录跟随程序位置，改名后无需另装源码。示例账户需 sudo 和 Docker 权限，root 可省略 sudo。
 
 ```bash
-sudo install -d -o "$(id -u)" -g "$(id -g)" /home/cmsupport/workspace/local-ai
-git clone --branch v1.0.0 --depth 1 https://github.com/junli-nv/local-ai.git /home/cmsupport/workspace/local-ai
-cd /home/cmsupport/workspace/local-ai
+sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/heads/main.tar.gz -o /tmp/local-ai-source.tar.gz
+tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
+cd /raid/local-ai
+./local-ai --version
 nvidia-smi
 nvidia-ctk cdi list
 # 查看配置及验证状态
@@ -139,10 +141,7 @@ docker info
 
 下载固定镜像和完整模型：
 ```bash
-# 下载推理容器镜像
-./local-ai image pull --profile b300-tp4 --data-dir /raid/local-ai
-# 下载完整模型权重
-./local-ai model download --profile b300-tp4 --data-dir /raid/local-ai
+./local-ai install --role server --profile b300-tp4
 ```
 若已有完整模型，复制到 /raid/local-ai/models/DeepSeek-V4.1-Flash/ 即可。
 同一份权重可用于 AMD64/ARM64，但容器镜像不能混用架构。
@@ -188,9 +187,11 @@ BCM 可通过 --endpoint http://GPU001:18000/v1 直连。现有容器改地址�
 在 BCM 以实际执行工具的用户安装：
 
 ```bash
-sudo install -d -o "$(id -u)" -g "$(id -g)" /home/cmsupport/workspace/local-ai
-git clone --branch v1.0.0 --depth 1 https://github.com/junli-nv/local-ai.git /home/cmsupport/workspace/local-ai
-cd /home/cmsupport/workspace/local-ai
+sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/heads/main.tar.gz -o /tmp/local-ai-source.tar.gz
+tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
+cd /raid/local-ai
+./local-ai --version
 ./local-ai client install
 ```
 
@@ -228,7 +229,6 @@ SSH 仅是访问其他节点的可选工具，不是模型连接的前提。
 每人使用自己的 Linux 账户。默认私有目录：
 ```
 ~/.local/state/local-ai/
-  clients/ARCH/
   services/SERVICE_ID/
     cache/
     data/
@@ -255,14 +255,23 @@ SSH 仅是访问其他节点的可选工具，不是模型连接的前提。
 
 ## 8. 离线与开发资料
 
-离线时携带三个独立部分：源码、服务端平台匹配的镜像/权重、BCM 平台匹配的
-客户端资源。步骤见 [离线文档](offline.md)。
+离线时用 export 将完整程序、服务端镜像/权重和已安装客户端一起打包到 dist/。步骤见 [离线文档](offline.md)。
 不需要互联网推理，但网页搜索、外部 MCP、在线下载依赖会不可用。
 离线推理仍须保持 BCM 到 GPU API 的内网连接。
 
 代码如何划分、为何这么设计：见 [架构](architecture.md)。
 如何新增平台、改模型、运行测试和提交代码：见 [开发指南](development.md)。
 已验证内容和未验证范围：见 [验证记录](validation.md)。
+
+## 完整目录导出
+
+安装成功后，下面命令将程序、镜像归档、模型、客户端和可迁移配置一并导出；只携带 dist/ 中两个文件即可。dist/ 不被重复打包。新机器校验并解压后运行 install --offline，再配置本机 GPU 和 endpoint。本页下载 main 中的目录式安装流程；旧 v1.0.0 标签不包含这些新增命令。
+
+```bash
+cd /raid/local-ai
+./local-ai export
+ls -lh dist/local-ai.tar dist/local-ai.tar.sha256
+```
 
 ---
 

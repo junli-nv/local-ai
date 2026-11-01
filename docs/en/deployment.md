@@ -2,7 +2,7 @@
 
 [中文（默认）](../deployment.zh-CN.md)
 
-Run inference on the GPU server; run OpenCode and its tools on BCM. Example source: /home/cmsupport/workspace/local-ai; GPU runtime data: /raid/local-ai. User-private client state remains separate.
+Run inference on the GPU server; run OpenCode and its tools on BCM. The complete program and deployment assets live in /raid/local-ai: src/, images/, models/, clients/ and dist/. Private histories and credentials remain user-specific.
 
 ## Example environment
 
@@ -35,23 +35,25 @@ Choose these values before running the example:
 | Option | Meaning / what to change |
 |---|---|
 | `--profile b300-tp4` | B300 four-GPU inference preset. TP4 splits one instance across four local GPUs. |
-| `--data-dir /raid/local-ai` | Runtime data root for models, image locks, caches, instances and logs. Example source location: /home/cmsupport/workspace/local-ai; configure it separately. |
+| `--data-dir /raid/local-ai` | Runtime data root for models, image locks, caches, instances and logs. Defaults to the unpacked directory; src/ holds source and local-ai is a launcher file. |
 | `--gpus 0,1,2,3` | Server GPU indices from nvidia-smi, or full UUIDs. Count must match the profile. |
 | `--name a` | Instance name, reused for status/stop and its log directory; not a hostname. |
 | `--port 18000` | Model HTTP API port, default 18000. Use 18001 for a second instance. |
 
 Server plan/start default to profile b300-tp4 and name a; --gpus is required.
-The data directory uses LOCAL_AI_DATA_DIR if set, otherwise /raid/local-ai.
+The data directory uses LOCAL_AI_DATA_DIR if set, otherwise the program's unpacked directory (/raid/local-ai here).
 Use the same --data-dir for preparation, planning and startup: options do not carry over between commands.
 
-Allocate GPUs first. Install compatible drivers, Docker API 1.49+, NVIDIA Container Toolkit and Python 3.10+. These examples keep source in /home/cmsupport/workspace/local-ai and runtime data in /raid/local-ai. The tool does not stop other jobs.
+Allocate GPUs first. Install compatible drivers, Docker API 1.49+, NVIDIA Container Toolkit and Python 3.10+. The complete program and runtime assets stay in the unpacked installation directory. The tool does not stop other jobs.
 
-Clone into the new, empty source directory /home/cmsupport/workspace/local-ai. For an existing installation, enter the actual directory containing the local-ai script; no source or data relocation is required. The example account needs sudo/Docker access; root may omit sudo.
+Download the complete program from GitHub into a new empty /raid/local-ai. The unpacked directory is the installation. Preserve custom source changes before updating legacy installations. Defaults follow the program location, including after renaming. The example account needs sudo/Docker access; root may omit sudo.
 
 ```bash
-sudo install -d -o "$(id -u)" -g "$(id -g)" /home/cmsupport/workspace/local-ai
-git clone --branch v1.0.0 --depth 1 https://github.com/junli-nv/local-ai.git /home/cmsupport/workspace/local-ai
-cd /home/cmsupport/workspace/local-ai
+sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/heads/main.tar.gz -o /tmp/local-ai-source.tar.gz
+tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
+cd /raid/local-ai
+./local-ai --version
 nvidia-smi
 nvidia-ctk cdi list
 # List profiles and validation status
@@ -134,10 +136,7 @@ This recovery does not restore lost images, containers or volumes and is not a r
 Complete local images/models are reused. Preparation decisions, commands and errors append to /raid/local-ai/install.log; see the [manual](commands.md).
 
 ```bash
-# Download the inference container image
-./local-ai image pull --profile b300-tp4 --data-dir /raid/local-ai
-# Download complete model weights
-./local-ai model download --profile b300-tp4 --data-dir /raid/local-ai
+./local-ai install --role server --profile b300-tp4
 ```
 
 Existing complete weights belong in /raid/local-ai/models/DeepSeek-V4.1-Flash/. Weights are CPU-independent; images are not.
@@ -175,9 +174,11 @@ See [README](../../README.en.md) for commands and network access requirements.
 Install as the user who will execute tools:
 
 ```bash
-sudo install -d -o "$(id -u)" -g "$(id -g)" /home/cmsupport/workspace/local-ai
-git clone --branch v1.0.0 --depth 1 https://github.com/junli-nv/local-ai.git /home/cmsupport/workspace/local-ai
-cd /home/cmsupport/workspace/local-ai
+sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/heads/main.tar.gz -o /tmp/local-ai-source.tar.gz
+tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
+cd /raid/local-ai
+./local-ai --version
 ./local-ai client install
 ```
 
@@ -227,4 +228,14 @@ To change GPUs, port or profile, inspect and stop the instance, explicitly remov
 
 ## 8. Offline use and development
 
-Carry source, matching server image/weights, and BCM-native assets separately. See [offline deployment](offline.md), [architecture](architecture.md), [development](development.md) and [validation](validation.md). Keep the internal BCM-to-API network available. External MCP, web search and dependency downloads need separate preparation.
+Use export to carry the complete program, matching server image/weights and installed BCM assets together in dist/. See [offline deployment](offline.md), [architecture](architecture.md), [development](development.md) and [validation](validation.md). Keep the internal BCM-to-API network available. External MCP, web search and dependency downloads need separate preparation.
+
+## Export the complete directory
+
+After installation, export program, image archives, models, clients and portable configuration together. Carry the two files in dist/. dist/ itself is excluded. Verify/extract on the new host and run install --offline before choosing its GPUs and endpoint. These instructions download main with directory-based installation; older v1.0.0 lacks these new commands.
+
+```bash
+cd /raid/local-ai
+./local-ai export
+ls -lh dist/local-ai.tar dist/local-ai.tar.sha256
+```

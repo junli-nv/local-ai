@@ -1,5 +1,6 @@
 #!/bin/bash
 set -e
 local_ai_source="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+export LOCAL_AI_ROOT="$local_ai_source"
 export PYTHONPATH="$local_ai_source/src${PYTHONPATH:+:$PYTHONPATH}"
 exec python3 -m local_ai "$@"

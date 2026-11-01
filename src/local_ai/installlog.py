@@ -74,7 +74,7 @@ def session(options):
     global _current
     group, action = options.group, getattr(options, "action", None)
     enabled = (
-        (group == "image")
+        (group in {"image", "install", "export"})
         or (group == "model")
         or (group == "client" and action in {"install", "export"})
         or (group == "server" and action == "start")
@@ -83,6 +83,10 @@ def session(options):
         yield
         return
     root = getattr(options, "data_dir", None) or getattr(options, "client_dir", None)
+    if group in {"install", "export"}:
+        from .paths import root as program_root
+
+        root = program_root()
     logfile = options.install_log or Path(root) / "install.log"
     journal = Journal(logfile)
     previous, _current = _current, journal

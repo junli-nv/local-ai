@@ -1,6 +1,6 @@
 # local-ai
 
-Current version tag: [1.0.0](https://github.com/junli-nv/local-ai/tree/v1.0.0). Use `./local-ai --version` for the project version; OpenCode, model and vLLM versions are selected separately.
+Latest stable version tag: [1.0.0](https://github.com/junli-nv/local-ai/tree/v1.0.0). Use `./local-ai --version` for the project version; OpenCode, model and vLLM versions are selected separately.
 
 [中文（默认）](README.md)
 
@@ -94,8 +94,7 @@ operator-approved GPU allocation. Known baseline: Ubuntu 24.04, driver
 580.126.20, Docker 29.2.1, Toolkit 1.19.1.
 
 **BCM headnode:** Linux AMD64 or ARM64, Python 3.10+, Bash, git,
-ripgrep (`rg`), and util-linux `script`. OpenCode 1.19.5 is installed into the
-user's private state directory. The model API must be reachable from BCM. Install SSH only if onward tool tasks need it. GitHub/source access is needed only during online setup.
+ripgrep (`rg`), and util-linux `script`. OpenCode public binaries are installed under clients/ in this directory; personal state remains private. The model API must be reachable from BCM. Install SSH only if onward tool tasks need it. GitHub/source access is needed only during online setup.
 
 The four-card B300 reference uses about 125.7 GiB/card for weights and about
 218 GiB/card including reserved KV/runtime memory. Model files occupy about
@@ -118,20 +117,22 @@ Choose these values before running the example:
 | Option | Meaning / what to change |
 |---|---|
 | `--profile b300-tp4` | B300 four-GPU inference preset. TP4 splits one instance across four local GPUs. |
-| `--data-dir /raid/local-ai` | Runtime data root for models, image locks, caches, instances and logs. Example source location: /home/cmsupport/workspace/local-ai; configure it separately. |
+| `--data-dir /raid/local-ai` | Runtime data root for models, image locks, caches, instances and logs. Defaults to the unpacked directory; src/ holds source and local-ai is a launcher file. |
 | `--gpus 0,1,2,3` | Server GPU indices from nvidia-smi, or full UUIDs. Count must match the profile. |
 | `--name a` | Instance name, reused for status/stop and its log directory; not a hostname. |
 | `--port 18000` | Model HTTP API port, default 18000. Use 18001 for a second instance. |
 
 Server plan/start default to profile b300-tp4 and name a; --gpus is required.
-The data directory uses LOCAL_AI_DATA_DIR if set, otherwise /raid/local-ai.
+The data directory uses LOCAL_AI_DATA_DIR if set, otherwise the program's unpacked directory (/raid/local-ai here).
 Use the same --data-dir for preparation, planning and startup: options do not carry over between commands.
-Clone into the new, empty source directory /home/cmsupport/workspace/local-ai. For an existing installation, enter the actual directory containing the local-ai script; no source or data relocation is required. The example account needs sudo/Docker access; root may omit sudo.
+Download the complete program from GitHub into a new empty /raid/local-ai. The unpacked directory is the installation. Preserve custom source changes before updating legacy installations. Defaults follow the program location, including after renaming. The example account needs sudo/Docker access; root may omit sudo.
 
 ```bash
-sudo install -d -o "$(id -u)" -g "$(id -g)" /home/cmsupport/workspace/local-ai
-git clone --branch v1.0.0 --depth 1 https://github.com/junli-nv/local-ai.git /home/cmsupport/workspace/local-ai
-cd /home/cmsupport/workspace/local-ai
+sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/heads/main.tar.gz -o /tmp/local-ai-source.tar.gz
+tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
+cd /raid/local-ai
+./local-ai --version
 # List profiles and validation status
 ./local-ai profiles
 docker version
@@ -203,10 +204,7 @@ See the [storage recovery details](docs/en/deployment.md).
 After prerequisites pass, prepare artifacts and start:
 
 ```bash
-# Download the inference container image
-./local-ai image pull --profile b300-tp4 --data-dir /raid/local-ai
-# Download complete model weights
-./local-ai model download --profile b300-tp4 --data-dir /raid/local-ai
+./local-ai install --role server --profile b300-tp4
 # Preview the plan without starting a service
 ./local-ai server plan --host 0.0.0.0 --profile b300-tp4 --gpus 0,1,2,3 --name a --data-dir /raid/local-ai
 # Start the instance; initial loading takes time
@@ -284,11 +282,13 @@ a health URL using that IP.
 Run **on BCM** as the user who will execute tools:
 
 ```bash
-sudo install -d -o "$(id -u)" -g "$(id -g)" /home/cmsupport/workspace/local-ai
-git clone --branch v1.0.0 --depth 1 https://github.com/junli-nv/local-ai.git /home/cmsupport/workspace/local-ai
-cd /home/cmsupport/workspace/local-ai
-./local-ai client install
-./local-ai chat --endpoint http://GPU001:18000/v1 --project /home/alice/project
+sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/heads/main.tar.gz -o /tmp/local-ai-source.tar.gz
+tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
+cd /raid/local-ai
+./local-ai --version
+./local-ai install --role client --endpoint http://GPU001:18000/v1
+./local-ai chat --project /home/alice/project
 ```
 
 Replace GPU001 with a hostname BCM can resolve or the reachable GPU host IP.
@@ -356,10 +356,13 @@ scheduling limit, not a four-user registration limit; additional work queues.
 
 | Location | Contents |
 |---|---|
+| `/raid/local-ai/local-ai` | Launcher file |
+| `/raid/local-ai/src/`, `docs/` | Complete source and manuals |
+| `/raid/local-ai/clients/` | Public native client assets by CPU architecture |
+| `/raid/local-ai/dist/` | Complete offline packages and SHA256 checksums |
 | GPU `/raid/local-ai/models/` | Pinned weights and model metadata |
-| GPU `/raid/local-ai/images/` | Architecture-specific image locks |
+| GPU `/raid/local-ai/images/` | Portable image archives and architecture-specific locks |
 | GPU `/raid/local-ai/instances/NAME/` | Spec, args, launch command, cache, full server log |
-| BCM private `clients/ARCH/` | Client binary, public cache seed, asset manifest |
 | BCM private `services/ID/` | User history/cache and per-session complete logs |
 
 No credentials, binaries, model weights, or chat histories belong in this
@@ -381,3 +384,13 @@ python3 -m venv .venv
 Read [the design and development workflow](docs/en/development.md) before adding a
 profile, model, endpoint, or runtime option. GitHub Actions runs CPU-only tests;
 GPU hardware acceptance is a separate, explicitly documented step.
+
+## Export the complete directory
+
+After installation, export program, image archives, models, clients and portable configuration together. Carry the two files in dist/. dist/ itself is excluded. Verify/extract on the new host and run install --offline before choosing its GPUs and endpoint. These instructions download main with directory-based installation; older v1.0.0 lacks these new commands.
+
+```bash
+cd /raid/local-ai
+./local-ai export
+ls -lh dist/local-ai.tar dist/local-ai.tar.sha256
+```

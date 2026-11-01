@@ -1,6 +1,6 @@
 # local-ai
 
-当前版本标签：[1.0.0](https://github.com/junli-nv/local-ai/tree/v1.0.0)。使用 `./local-ai --version` 查询项目版本；该版本号与可选的 OpenCode、模型及 vLLM 版本分别管理。
+最近稳定版本标签：[1.0.0](https://github.com/junli-nv/local-ai/tree/v1.0.0)。使用 `./local-ai --version` 查询项目版本；该版本号与可选的 OpenCode、模型及 vLLM 版本分别管理。
 
 在 GPU 服务器上运行容器化推理服务，在 BCM 头节点上运行每位用户自己的 OpenCode 客户端。
 
@@ -78,7 +78,7 @@ NVIDIA Container Toolkit，以及足够的 GPU 显存、主存和磁盘。使用
 已验证基线为 Ubuntu 24.04、驱动 580.126.20、Docker 29.2.1、Toolkit 1.19.1。
 
 **BCM 头节点：** Linux AMD64 或 ARM64、Python 3.10+、Bash、Git、ripgrep（`rg`）
-和 util-linux 的 `script`。OpenCode 1.19.5 安装在当前用户的私有目录。
+和 util-linux 的 `script`。OpenCode 公共程序安装在本目录 clients/ 下；个人状态仍保持私有。
 BCM 须能访问模型 API；仅在工具任务需要 SSH 访问其他节点时另行准备 OpenSSH。在线准备阶段才需要访问代码与软件下载源。
 
 B300 四卡参考配置的权重约占 125.7 GiB/卡，包含预留 KV 缓存及运行开销后约占 218 GiB/卡。
@@ -86,7 +86,7 @@ B300 四卡参考配置的权重约占 125.7 GiB/卡，包含预留 KV 缓存及
 GB300 TP2 的 Engram offload 本身约占 189 GiB 主存，另需加载和系统空间。
 该实验配置检查 `MemAvailable` 至少 256 GiB；这是保守保护值，不是实测最低需求。
 
-准备命令优先复用完整本地镜像和模型，不重复联网下载。安装过程统一追加到 `/raid/local-ai/install.log`；客户端安装日志在其私有程序目录。强制刷新、指定日志路径及版本校验规则见[使用手册](docs/commands.md)。
+准备命令优先复用完整本地镜像和模型，不重复联网下载。安装过程统一追加到 `/raid/local-ai/install.log`；低级 client install 日志在选定客户端程序目录。强制刷新、指定日志路径及版本校验规则见[使用手册](docs/commands.md)。
 
 ## GPU 服务器：准备并启动
 
@@ -99,21 +99,23 @@ GB300 TP2 的 Engram offload 本身约占 189 GiB 主存，另需加载和系统
 | 参数 | 示例含义 / 如何修改 |
 |---|---|
 | `--profile b300-tp4` | 使用 B300 四卡推理配置；TP4 表示同一实例跨 4 张本机 GPU。其他平台按上表选择。 |
-| `--data-dir /raid/local-ai` | 运行数据根目录，存放模型、镜像锁、缓存、实例和日志；源码示例位于 /home/cmsupport/workspace/local-ai，与数据目录分别配置。 |
+| `--data-dir /raid/local-ai` | 运行数据根目录，存放模型、镜像锁、缓存、实例和日志；默认就是解压目录；源码在 src/，local-ai 是启动脚本。 |
 | `--gpus 0,1,2,3` | 使用服务端 `nvidia-smi` 显示的这 4 张卡；也可写完整 GPU UUID。数量须匹配配置。 |
 | `--name a` | 自定义实例名，用于区分容器与日志；查询、停止时沿用同一个名字。 |
 | `--port 18000` | 模型 HTTP API 端口，默认 18000；第二个实例换成 18001。 |
 
 `server plan/start` 默认配置为 `b300-tp4`，实例名默认 `a`，但必须显式指定 `--gpus`。
-数据目录默认取环境变量 `LOCAL_AI_DATA_DIR`，未设置时为 `/raid/local-ai`。
+数据目录默认取环境变量 `LOCAL_AI_DATA_DIR`，未设置时使用程序所在的解压目录，本例为 `/raid/local-ai`。
 若修改目录，下载、计划和启动时须使用同一个 `--data-dir`，参数不会由前一条命令自动继承。
 
-以下克隆命令用于新安装，源码目标目录 /home/cmsupport/workspace/local-ai 应为空；已有安装进入包含 local-ai 脚本的实际源码目录，无需移动源码或数据。示例账户需 sudo 和 Docker 权限，root 可省略 sudo。
+以下从 GitHub 下载完整程序，解压目录就是安装目录。新安装使用空的 /raid/local-ai；旧版补齐程序前先保存自定义源码修改。默认数据目录跟随程序位置，改名后无需另装源码。示例账户需 sudo 和 Docker 权限，root 可省略 sudo。
 
 ```bash
-sudo install -d -o "$(id -u)" -g "$(id -g)" /home/cmsupport/workspace/local-ai
-git clone --branch v1.0.0 --depth 1 https://github.com/junli-nv/local-ai.git /home/cmsupport/workspace/local-ai
-cd /home/cmsupport/workspace/local-ai
+sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/heads/main.tar.gz -o /tmp/local-ai-source.tar.gz
+tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
+cd /raid/local-ai
+./local-ai --version
 # 查看配置及验证状态
 ./local-ai profiles
 docker version
@@ -177,10 +179,7 @@ docker info
 确认前置条件后，再下载和启动：
 
 ```bash
-# 下载推理容器镜像
-./local-ai image pull --profile b300-tp4 --data-dir /raid/local-ai
-# 下载完整模型权重
-./local-ai model download --profile b300-tp4 --data-dir /raid/local-ai
+./local-ai install --role server --profile b300-tp4
 # 预览计划，不启动服务
 ./local-ai server plan --host 0.0.0.0 --profile b300-tp4 --gpus 0,1,2,3 --name a --data-dir /raid/local-ai
 # 启动实例，首次加载需等待
@@ -251,11 +250,13 @@ docker rm local-ai-a
 以下命令在 **BCM** 执行，使用实际需要执行工具的用户账户：
 
 ```bash
-sudo install -d -o "$(id -u)" -g "$(id -g)" /home/cmsupport/workspace/local-ai
-git clone --branch v1.0.0 --depth 1 https://github.com/junli-nv/local-ai.git /home/cmsupport/workspace/local-ai
-cd /home/cmsupport/workspace/local-ai
-./local-ai client install
-./local-ai chat --endpoint http://GPU001:18000/v1 --project /home/alice/project
+sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/heads/main.tar.gz -o /tmp/local-ai-source.tar.gz
+tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
+cd /raid/local-ai
+./local-ai --version
+./local-ai install --role client --endpoint http://GPU001:18000/v1
+./local-ai chat --project /home/alice/project
 ```
 
 将 `GPU001` 换成 BCM 可解析的主机名或可达的 GPU 宿主机 IP，项目目录换成 BCM 本机
@@ -310,14 +311,17 @@ OpenCode 的默认下载版本只是验收参考，可用 `client install --vers
 不同逻辑服务/端口使用不同历史记录，每次连接配置单独保存。
 每引擎四个活动序列是调度上限，不是只能有四名用户；更多请求会排队。
 
-## 运行数据与源码分开
+## 安装目录与导出
 
 | 位置 | 内容 |
 |---|---|
+| `/raid/local-ai/local-ai` | 启动脚本文件 |
+| `/raid/local-ai/src/`、`docs/` | 完整源码和手册 |
+| `/raid/local-ai/clients/` | 按 CPU 架构存放公共客户端程序 |
+| `/raid/local-ai/dist/` | 完整离线包和 SHA256 校验文件 |
 | GPU `/raid/local-ai/models/` | 固定模型权重及元数据 |
-| GPU `/raid/local-ai/images/` | 按 CPU 架构保存的镜像锁定信息 |
+| GPU `/raid/local-ai/images/` | 镜像归档与按 CPU 架构保存的身份锁 |
 | GPU `/raid/local-ai/instances/NAME/` | 实例配置、参数、启动命令、缓存及完整服务日志 |
-| BCM 私有 `clients/ARCH/` | 客户端程序、公共缓存种子及资源清单 |
 | BCM 私有 `services/ID/` | 用户历史、缓存及每次会话完整日志 |
 
 凭据、二进制、模型权重和聊天历史不进入 Git。
@@ -344,3 +348,13 @@ GitHub Actions 运行 CPU 单元测试；GPU 实机验收单独执行并记录�
 英文版本：[English README](README.en.md) · [Deployment](docs/en/deployment.md) · [Architecture](docs/en/architecture.md) ·
 [Development](docs/en/development.md) · [Offline deployment](docs/en/offline.md) ·
 [Validation](docs/en/validation.md)
+
+## 完整目录导出
+
+安装成功后，下面命令将程序、镜像归档、模型、客户端和可迁移配置一并导出；只携带 dist/ 中两个文件即可。dist/ 不被重复打包。新机器校验并解压后运行 install --offline，再配置本机 GPU 和 endpoint。本页下载 main 中的目录式安装流程；旧 v1.0.0 标签不包含这些新增命令。
+
+```bash
+cd /raid/local-ai
+./local-ai export
+ls -lh dist/local-ai.tar dist/local-ai.tar.sha256
+```

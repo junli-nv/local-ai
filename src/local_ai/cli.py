@@ -2,14 +2,24 @@
 
 import argparse
 import json
-import os
 import shlex
 import subprocess
 import sys
 from pathlib import Path
 
-from . import __version__, artifacts, client, images, installlog, readiness, server
+from . import (
+    __version__,
+    artifacts,
+    bundle,
+    client,
+    deployment,
+    images,
+    installlog,
+    readiness,
+    server,
+)
 from .common import arch, client_home
+from .paths import client_assets, data_root, root, settings
 from .profiles import catalog, profile
 
 
@@ -47,6 +57,73 @@ def parser():
     )
     groups = a.add_subparsers(dest="group", required=True)
     groups.add_parser("profiles", help="Show hardware profiles and validation levels")
+    b = groups.add_parser(
+        "install", help="Install in this unpacked directory; reuse local bundle assets"
+    )
+    b.add_argument(
+        "--role",
+        choices=["server", "client", "both"],
+        default=settings().get("role", "client"),
+        help="Resources to prepare; first installation defaults to client",
+    )
+    b.add_argument(
+        "--profile",
+        choices=list(catalog()["profiles"]),
+        default=settings().get("default_profile")
+        or (settings().get("profiles") or ["b300-tp4"])[0],
+        help="Server model/image recipe; does not allocate or start GPUs",
+    )
+    b.add_argument(
+        "--data-dir",
+        type=Path,
+        default=data_root(),
+        help="Runtime data directory; defaults to the unpacked program root",
+    )
+    b.add_argument("--endpoint", help="Save the client API URL; optional until chat")
+    b.add_argument(
+        "--model", help="Client model ID; server installations follow the selected profile"
+    )
+    b.add_argument(
+        "--client-version", help="Optional OpenCode release; reuse local version by default"
+    )
+    network = b.add_mutually_exclusive_group()
+    network.add_argument(
+        "--offline",
+        dest="offline",
+        action="store_true",
+        help="Use local files only; fail instead of downloading",
+    )
+    network.add_argument(
+        "--online",
+        dest="offline",
+        action="store_false",
+        help="Allow downloads; extracted bundles otherwise default to offline",
+    )
+    b.set_defaults(offline=None)
+    b = groups.add_parser("export", help="Export a portable complete local-ai directory")
+    b.add_argument(
+        "--output",
+        type=Path,
+        default=root() / "dist/local-ai.tar",
+        help="Portable archive; defaults to ROOT/dist/local-ai.tar; .tar recommended for large models",
+    )
+    b.add_argument(
+        "--data-dir",
+        type=Path,
+        default=data_root(),
+        help="Existing runtime data to include; program always comes from its own directory",
+    )
+    b.add_argument(
+        "--profile",
+        action="append",
+        choices=list(catalog()["profiles"]),
+        help="Server recipes to include; repeat for multiple recipes; uses installed recipes by default",
+    )
+    b.add_argument(
+        "--client-dir",
+        type=Path,
+        help="Optional existing native client assets to include from a legacy installation",
+    )
     gpu = groups.add_parser(
         "server",
         help="GPU001: inspect, plan, start, query or stop inference instances",
@@ -68,7 +145,7 @@ def parser():
         b.add_argument(
             "--data-dir",
             type=Path,
-            default=Path(os.environ.get("LOCAL_AI_DATA_DIR", "/raid/local-ai")),
+            default=data_root(),
             help="Server data root for models, image locks, cache and logs; LOCAL_AI_DATA_DIR overrides the fallback",
         )
         b.add_argument(
@@ -77,7 +154,8 @@ def parser():
         if action in ["plan", "start"]:
             b.add_argument(
                 "--profile",
-                default="b300-tp4",
+                default=settings().get("default_profile")
+                or (settings().get("profiles") or ["b300-tp4"])[0],
                 choices=list(catalog()["profiles"]),
                 help="Hardware and engine preset; use profiles to list supported values",
             )
@@ -135,7 +213,7 @@ def parser():
         b.add_argument(
             "--data-dir",
             type=Path,
-            default=Path(os.environ.get("LOCAL_AI_DATA_DIR", "/raid/local-ai")),
+            default=data_root(),
             help="Server data root for models, image locks, cache and logs; LOCAL_AI_DATA_DIR overrides the fallback",
         )
         if action == "export":
@@ -170,14 +248,15 @@ def parser():
     )
     b.add_argument(
         "--profile",
-        default="b300-tp4",
+        default=settings().get("default_profile")
+        or (settings().get("profiles") or ["b300-tp4"])[0],
         choices=list(catalog()["profiles"]),
         help="Hardware and engine preset; use profiles to list supported values",
     )
     b.add_argument(
         "--data-dir",
         type=Path,
-        default=Path(os.environ.get("LOCAL_AI_DATA_DIR", "/raid/local-ai")),
+        default=data_root(),
         help="Server data root for models, image locks, cache and logs; LOCAL_AI_DATA_DIR overrides the fallback",
     )
     b.add_argument(
@@ -199,7 +278,7 @@ def parser():
         b.add_argument(
             "--client-dir",
             type=Path,
-            default=client_home() / "clients" / arch(),
+            default=client_assets(arch()),
             help="Native client asset directory on this BCM host",
         )
         if action == "install":
@@ -235,13 +314,13 @@ def parser():
     )
     b.add_argument(
         "--endpoint",
-        required=True,
-        help="Reachable OpenAI-compatible HTTP(S) base URL including /v1; include the API port in the URL",
+        default=settings().get("endpoint"),
+        help="Reachable OpenAI-compatible HTTP(S) base URL including /v1; or set it with install --endpoint",
     )
     b.add_argument(
         "--client-dir",
         type=Path,
-        default=client_home() / "clients" / arch(),
+        default=client_assets(arch()),
         help="Native client asset directory on this BCM host",
     )
     b.add_argument(
@@ -258,7 +337,7 @@ def parser():
     )
     b.add_argument(
         "--model",
-        default=catalog()["model"]["served_name"],
+        default=settings().get("model") or catalog()["model"]["served_name"],
         help="Served model ID; must match the remote API model list",
     )
     b.add_argument(
@@ -283,6 +362,10 @@ def parser():
 
 
 def dispatch(q):
+    if q.group == "install":
+        return deployment.install(q)
+    if q.group == "export":
+        return bundle.export(q)
     if q.group == "profiles":
         return catalog()["profiles"]
     if q.group == "server":
@@ -331,10 +414,15 @@ def dispatch(q):
         return images.download_model(q.data_dir, profile(q.profile), force=q.force)
     if q.group == "client":
         if q.action == "install":
-            return artifacts.install(q.client_dir, q.binary, q.seed_cache, q.version, q.sha256)
+            value = artifacts.install(q.client_dir, q.binary, q.seed_cache, q.version, q.sha256)
+            if q.client_dir.resolve() == client_assets(arch()):
+                deployment.publish_client(q.client_dir)
+            return value
         if q.action == "export":
             return artifacts.export_client(q.client_dir, q.output)
     if q.group == "chat":
+        if not q.endpoint:
+            raise ValueError("Set --endpoint or save it with install --endpoint")
         return client.chat(q)
     raise ValueError("Unsupported command")
 

@@ -99,3 +99,7 @@ Image/model preparation checks local completeness and identity before network wo
 downloads; absent caches and conflicting content are distinct outcomes. Missing model provenance is reported
 as unverified rather than fabricated. Complete content hashes belong to offline artifact acceptance.
 See the [command manual](commands.md).
+
+## Portable installation directory
+
+The unpacked root retains complete program, models, image archives and public clients. Defaults follow its location. install prepares assets; server start creates host-local instances. export writes dist/ with relative checksums; install --offline verifies/imports after extraction elsewhere. Exclude dist/ itself, old instances, histories and credentials. Public clients contain only binaries/public cache; personal state stays isolated.

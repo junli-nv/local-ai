@@ -24,3 +24,7 @@ __pycache__/
 /runtime-seed/
 /bin/
 /.deploy.lock
+/clients/
+/config/
+/installation.json
+/bundle.json

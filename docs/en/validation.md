@@ -144,3 +144,7 @@ disabled mouse capture, bracketed paste and clean exit.
 The sdist includes docs, launcher, compatibility script and inventory fixtures.
 Existing platform/model validation levels are unchanged. No inference service
 was restarted or scheduler job submitted. Publication requires passing commit CI.
+
+## 2026-11-01: directory installation and complete offline bundles
+
+107 unit/documentation tests passed, covering default dist/, recursive-export exclusion, ordinary source, renamed installation, compressed archives, saved defaults, legacy clients, initial checksums, repeat installation and corruption rejection. Fresh online installation on another idle AMD64 B300 host downloaded the image, complete model and native client in about 479 seconds; model size about 476 GiB and image archive 9,205,795,328 bytes. GPU startup and complete offline recovery remain under separate acceptance, to be recorded below; this does not raise GB300/other-model validation levels.

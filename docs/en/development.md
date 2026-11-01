@@ -44,7 +44,7 @@ Chinese is primary; maintain English separately and synchronize both entry paths
 | Application copying fails | Default terminal selection/copy/paste; disable application mouse/clipboard shortcuts. Explain disabled click/wheel behavior and verify terminal modes |
 | Fixed release blocks upgrades/offline use | Reference releases are validation records, not runtime allowlists. Reuse installs, detect imports, allow explicit releases/offline exports and test capabilities |
 | Models/revisions change | Configure recipe identities, directories, names, engine/client capabilities and separate locks; do not inherit hardware acceptance or DeepSeek-specific settings |
-| Source/data paths confused | Configure source and --data-dir independently; example source is /home/cmsupport/workspace/local-ai and GPU data is /raid/local-ai. Existing installations need no relocation |
+| Directory installation and migration | The unpacked directory is the root, with ordinary src/. install prepares assets in place; export writes a complete dist/ bundle excluding dist/, instance state, histories and credentials. Reinstall/reconfigure after moving |
 | Source-script delivery | Use immutable tags on validated commits; GitHub Releases and Python distributions are optional, not prerequisites |
 | Around 400 ms TTFT seems high | Record method, input size, cache/load and timing first. Separate compilation, generation delay and reasoning content; avoid one-number conclusions |
 
@@ -266,3 +266,7 @@ packages are optional, not installation prerequisites.
 4. Create and push an annotated version tag at the validated commit. Match the version and never move published tags.
 5. Users clone the tag; prepare offline artifacts from that version. Optional source archives may use git archive with SHA256 checksums; no GitHub Release is required.
 6. Deliver tag, commit, results and limits. A new tag does not imply universal model/hardware/cluster acceptance.
+
+## Directory installation implementation
+
+paths.py uses the launcher location, not cwd or a fixed /raid/local-ai. Explicit --data-dir and LOCAL_AI_DATA_DIR remain compatible. deployment.py prepares assets in place and records relative settings. bundle.py streams program/model/image/client exports with archive and per-file SHA256. config/catalog.json carries recipes. Use ordinary source directories without hidden versions/symlinks. Exclude dist/ and private state. Installation does not start GPUs; new hosts recreate instances with local GPUs, ports and endpoints.

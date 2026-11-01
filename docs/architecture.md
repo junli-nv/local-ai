@@ -88,6 +88,10 @@ cli.py 只为安装和部署操作建立 installlog.py 会话；common.run 在�
 模型版本锁缺失时明确返回未验证状态，不伪造来源。完整内容哈希属于离线材料验收。
 细节见[命令手册](commands.md)。
 
+## 可迁移安装目录
+
+完整程序、模型、镜像归档和公共客户端保留在解压目录；默认路径随程序位置变化。install 准备资源，server start 创建本机实例。export 写入 dist/ 并包含相对路径校验清单；新目录中 install --offline 校验并导入。dist/ 自身、旧实例、个人历史和凭据排除。公共客户端仅含程序和公共缓存，个人状态仍隔离。
+
 ---
 
 [English version](en/architecture.md)

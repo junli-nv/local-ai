@@ -6,7 +6,7 @@ Global `./local-ai --version` prints the project version and exits. It differs f
 
 ## Getting started
 
-Use the [deployment guide](deployment.md) for first installation and this page for command lookup and operations. Run commands from the source checkout.
+Use the [deployment guide](deployment.md) for first installation and this page for command lookup and operations. Download/unpack the complete program first; that directory is the installation. Run ./local-ai from /raid/local-ai here.
 
 | Example | Meaning |
 |---|---|
@@ -80,7 +80,7 @@ Ongoing model output remains in instances/NAME/server.log; chat history and sess
 
 | Option | Commands | Meaning and default |
 |---|---|---|
-| --data-dir | server plan/start/status/stop; image; model download | Data root: LOCAL_AI_DATA_DIR, otherwise /raid/local-ai. status actually looks up the instance by name. |
+| --data-dir | server plan/start/status/stop; image; model download | Data root: LOCAL_AI_DATA_DIR, otherwise the unpacked program directory. status actually looks up the instance by name. |
 | --profile | plan/start; image; model download | Hardware/engine preset; required for image, otherwise b300-tp4 |
 | --gpus | plan/start | Required comma-separated server indices or full UUIDs; count must match the profile |
 | --name | plan/start/status/stop | Default a; lowercase letter followed by lowercase letters, digits or hyphens; at most 32 characters |
@@ -91,7 +91,7 @@ Ongoing model output remains in instances/NAME/server.log; chat history and sess
 | --output | image export | Required destination archive path |
 | --archive; --lock | image import | Required image archive and matching .lock.json |
 
-TP is tensor parallelism: b300-tp4 uses four local B300 GPUs. See [deployment](deployment.md) for GB300 limitations. Example source directory: /home/cmsupport/workspace/local-ai; GPU data directory: /raid/local-ai. Options do not persist between commands; use the same data root for preparation, planning, starting and stopping.
+TP is tensor parallelism: b300-tp4 uses four local B300 GPUs. See [deployment](deployment.md) for GB300 limitations. Program and data default to the unpacked directory (/raid/local-ai here). Options do not persist between commands; use the same data root for preparation, planning, starting and stopping.
 
 On GPU001:
 
@@ -124,7 +124,7 @@ and JSON ready/listening/health/log fields to stdout. It probes the container an
 
 ## Client parameters
 
-client install/export accept --client-dir, defaulting to clients/ARCH under the private user-state root. The root is ~/.local/state/local-ai, or $XDG_STATE_HOME/local-ai when set. Select native binaries for BCM's architecture independently of the GPU server.
+client install/export accept --client-dir, defaulting to public assets in INSTALL_ROOT/clients/ARCH. Personal state remains ~/.local/state/local-ai or $XDG_STATE_HOME/local-ai. Select native binaries for BCM's architecture independently of the GPU server.
 
 | Option | Command | Meaning and default |
 |---|---|---|
@@ -140,7 +140,7 @@ Choose [installed-environment migration](offline.md#scenario-1-export-an-install
 
 | Option | Meaning and default |
 |---|---|
-| --endpoint URL | Required reachable HTTP(S) model API base including port and /v1 |
+| --endpoint URL | Reachable HTTP(S); may be saved by install --endpoint; model API base including port and /v1 |
 | --project | Existing BCM project directory, default current directory |
 | --client-dir | Native client asset directory; match installation location |
 | --state-dir | Private history/cache/log root, default described above |
@@ -225,3 +225,20 @@ Most management commands return JSON. chat returns the client's exit code; singl
 No automatic load balancing, user quotas, boot startup, cross-host TP or GPU scheduling is provided. Allocate dedicated, available GPU resources before startup. The application does not require a cluster scheduler. See [validation](validation.md) for B300/GB300 evidence and remaining acceptance work.
 
 Select external model recipes with LOCAL_AI_CATALOG; see [compatibility](development.md#model-and-client-compatibility).
+
+## Unified installation and complete export
+
+install prepares resources in place, keeping ordinary source directories. --role selects server, client or both; first default is client, later defaults reuse installation records. --profile selects the server recipe. Installation never starts GPUs.
+--offline uses local assets only and fails on missing files/checksums; --online allows downloads. bundle.json defaults to offline; ordinary source defaults to online. --client-version explicitly selects a release, otherwise reuse local assets. --endpoint saves the API address so later chat can omit it.
+export packs the program, models, image archives, clients and recipes. --output defaults to dist/local-ai.tar with a .sha256. Repeat --profile for multiple recipes; installed recipes are the default. --client-dir includes legacy client assets; --data-dir includes legacy runtime data. Paths are relative to top-level local-ai/ and survive renaming.
+Exclude dist/, old instances, logs, caches, Git metadata, private histories and credentials. Source is src/, launcher is local-ai and manuals are docs/. Public clients default to clients/CPU; --state-dir keeps personal state private. Install/export logs are INSTALL_ROOT/install.log.
+
+```bash
+cd /raid/local-ai
+./local-ai install --role server --profile b300-tp4
+./local-ai install --role client --endpoint http://GPU001:18000/v1
+./local-ai export
+./local-ai export --output dist/local-ai.tar.gz
+```
+
+install --model selects the client model ID; server installs use --profile's model and reject explicit conflicts. Server/model/chat defaults reuse installed profile/model settings; explicit arguments still override them.

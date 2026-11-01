@@ -7,10 +7,13 @@ from importlib.resources import files
 from pathlib import Path
 
 from .common import arch
+from .paths import root
 
 
 def catalog():
     path = os.environ.get("LOCAL_AI_CATALOG")
+    if not path and (root() / "config/catalog.json").is_file():
+        path = root() / "config/catalog.json"
     text = (
         Path(path).expanduser().read_text()
         if path
