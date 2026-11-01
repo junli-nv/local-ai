@@ -17,7 +17,7 @@ a Linux AMD64 BCM client. Select server and client architectures independently.
 
 | Item | Value throughout both workflows |
 |---|---|
-| Installation root including source | /raid/local-ai |
+| Example source directory containing the local-ai script | /home/cmsupport/workspace/local-ai |
 | Old/new GPU data root | /raid/local-ai |
 | Online preparation scratch data | /data/local-ai-prep |
 | Preparation artifact bundle | /data/local-ai-offline |
@@ -35,14 +35,16 @@ Before starting:
 - rsync, tar, sha256sum, find, sort and xargs are available. BCM can reach the
   internal model API. Media is mounted with enough space: roughly 510 GB of
   weights plus images, archives and copies.
-- Use an empty /raid/local-ai install root on new hosts and an empty bundle for each
-  preparation batch. Preserve old installations; use their actual source/data paths if different.
+- Use empty source and data directories on new hosts and an empty bundle for each
+  preparation batch. Preserve old installations; set source and --data-dir to their actual, independent locations.
   Prepare OS/driver packages separately.
 - For custom recipes, carry and verify the same JSON catalog, select it through
   LOCAL_AI_CATALOG at every stage, and retain matching source/recipe/locks.
 
-Source resides directly in /raid/local-ai, alongside GPU models/, images/,
-instances/ and install.log. BCM client assets remain in the user-private path.
+Source files, including local-ai and src/, are in /home/cmsupport/workspace/local-ai in this example.
+Use the actual source location on existing hosts. GPU data in /raid/local-ai includes models/,
+images/, instances/ and install.log; it need not contain the local-ai script.
+BCM client assets remain in the user-private path.
 
 The complete bundle must contain:
 
@@ -62,14 +64,14 @@ The complete bundle must contain:
 
 ### 1.1 Export source, image and model on old GPU host gpu-old
 
-Run from the actual installation root. Git checkouts export committed source;
+Run from the actual source directory containing local-ai, shown as /home/cmsupport/workspace/local-ai, independently of --data-dir. Git checkouts export committed source;
 extracted installations without .git package an explicit source list. Review local
 changes first. Neither branch archives models/, images/, instances/ or the whole root.
 These commands do not download or require stopping a read-only serving instance.
 Do not update model files during the copy.
 
 ```bash
-cd /raid/local-ai
+cd /home/cmsupport/workspace/local-ai
 ./local-ai --version
 sudo install -d -o "$(id -u)" -g "$(id -g)" /data/local-ai-offline
 if [ -e .git ]; then
@@ -102,7 +104,7 @@ Use the current account's actual client asset directory, not the
 that the two old hosts share storage.
 
 ```bash
-cd /raid/local-ai
+cd /home/cmsupport/workspace/local-ai
 sudo install -d -o "$(id -u)" -g "$(id -g)" /data/local-ai-offline
 ./local-ai client export \
   --client-dir /home/alice/.local/state/local-ai/clients/amd64 \
@@ -136,15 +138,16 @@ without a directory prefix; do not add --strip-components.
 ```bash
 cd /media/local-ai-offline
 sha256sum -c local-ai-source.tar.gz.sha256
-sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-tar -xzf local-ai-source.tar.gz -C /raid/local-ai
+sudo install -d -o "$(id -u)" -g "$(id -g)" /home/cmsupport/workspace/local-ai
+tar -xzf local-ai-source.tar.gz -C /home/cmsupport/workspace/local-ai
 
+sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
 mkdir -p /raid/local-ai/models
 rsync -a /media/local-ai-offline/models/ /raid/local-ai/models/
 cd /raid/local-ai
 sha256sum -c /media/local-ai-offline/MODELS.sha256
 
-cd /raid/local-ai
+cd /home/cmsupport/workspace/local-ai
 ./local-ai --version
 ./local-ai image import --profile b300-tp4 --data-dir /raid/local-ai \
   --archive /media/local-ai-offline/vllm-amd64.tar \
@@ -172,12 +175,12 @@ user directory; the offline media itself may be read-only.
 cd /media/local-ai-offline
 sha256sum -c local-ai-source.tar.gz.sha256
 sha256sum -c client-amd64.tar.gz.sha256
-sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-tar -xzf local-ai-source.tar.gz -C /raid/local-ai
+sudo install -d -o "$(id -u)" -g "$(id -g)" /home/cmsupport/workspace/local-ai
+tar -xzf local-ai-source.tar.gz -C /home/cmsupport/workspace/local-ai
 mkdir -p /home/alice/local-ai-client-import
 tar -xzf client-amd64.tar.gz -C /home/alice/local-ai-client-import
 
-cd /raid/local-ai
+cd /home/cmsupport/workspace/local-ai
 ./local-ai client install \
   --client-dir /home/alice/.local/state/local-ai/clients/amd64 \
   --binary /home/alice/local-ai-client-import/client/bin/opencode \
@@ -194,7 +197,7 @@ and the one-shot task actually invokes the hostname tool on the new BCM host
 (bcm-headnode in this example). Start interactive use:
 
 ```bash
-cd /raid/local-ai
+cd /home/cmsupport/workspace/local-ai
 ./local-ai chat --endpoint http://GPU001:18000/v1 \
   --client-dir /home/alice/.local/state/local-ai/clients/amd64
 ```
@@ -219,9 +222,9 @@ reviewed version can be selected consistently.
 ### 2.1 Download source, image and model, then export on prep-host
 
 ```bash
-sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai /data/local-ai-prep
-git clone --branch v1.0.0 --depth 1 https://github.com/junli-nv/local-ai.git /raid/local-ai
-cd /raid/local-ai
+sudo install -d -o "$(id -u)" -g "$(id -g)" /home/cmsupport/workspace/local-ai /data/local-ai-prep
+git clone --branch v1.0.0 --depth 1 https://github.com/junli-nv/local-ai.git /home/cmsupport/workspace/local-ai
+cd /home/cmsupport/workspace/local-ai
 ./local-ai --version
 sudo install -d -o "$(id -u)" -g "$(id -g)" /data/local-ai-offline
 git archive --format=tar.gz --output=/data/local-ai-offline/local-ai-source.tar.gz HEAD
@@ -245,7 +248,7 @@ b300-tp4 matches this AMD64 preparation host.
 ### 2.2 Download and export the BCM client on the same prep-host
 
 ```bash
-cd /raid/local-ai
+cd /home/cmsupport/workspace/local-ai
 ./local-ai client install --client-dir /data/local-ai-prep/client-amd64
 ./local-ai client export --client-dir /data/local-ai-prep/client-amd64 \
   --output /data/local-ai-offline/client-amd64.tar.gz
@@ -276,15 +279,16 @@ without a directory prefix; do not add --strip-components.
 ```bash
 cd /media/local-ai-offline
 sha256sum -c local-ai-source.tar.gz.sha256
-sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-tar -xzf local-ai-source.tar.gz -C /raid/local-ai
+sudo install -d -o "$(id -u)" -g "$(id -g)" /home/cmsupport/workspace/local-ai
+tar -xzf local-ai-source.tar.gz -C /home/cmsupport/workspace/local-ai
 
+sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
 mkdir -p /raid/local-ai/models
 rsync -a /media/local-ai-offline/models/ /raid/local-ai/models/
 cd /raid/local-ai
 sha256sum -c /media/local-ai-offline/MODELS.sha256
 
-cd /raid/local-ai
+cd /home/cmsupport/workspace/local-ai
 ./local-ai --version
 ./local-ai image import --profile b300-tp4 --data-dir /raid/local-ai \
   --archive /media/local-ai-offline/vllm-amd64.tar \
@@ -312,12 +316,12 @@ user directory; the offline media itself may be read-only.
 cd /media/local-ai-offline
 sha256sum -c local-ai-source.tar.gz.sha256
 sha256sum -c client-amd64.tar.gz.sha256
-sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-tar -xzf local-ai-source.tar.gz -C /raid/local-ai
+sudo install -d -o "$(id -u)" -g "$(id -g)" /home/cmsupport/workspace/local-ai
+tar -xzf local-ai-source.tar.gz -C /home/cmsupport/workspace/local-ai
 mkdir -p /home/alice/local-ai-client-import
 tar -xzf client-amd64.tar.gz -C /home/alice/local-ai-client-import
 
-cd /raid/local-ai
+cd /home/cmsupport/workspace/local-ai
 ./local-ai client install \
   --client-dir /home/alice/.local/state/local-ai/clients/amd64 \
   --binary /home/alice/local-ai-client-import/client/bin/opencode \
@@ -334,7 +338,7 @@ and the one-shot task actually invokes the hostname tool on the new BCM host
 (bcm-headnode in this example). Start interactive use:
 
 ```bash
-cd /raid/local-ai
+cd /home/cmsupport/workspace/local-ai
 ./local-ai chat --endpoint http://GPU001:18000/v1 \
   --client-dir /home/alice/.local/state/local-ai/clients/amd64
 ```

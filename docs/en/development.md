@@ -44,6 +44,7 @@ Chinese is primary; maintain English separately and synchronize both entry paths
 | Application copying fails | Default terminal selection/copy/paste; disable application mouse/clipboard shortcuts. Explain disabled click/wheel behavior and verify terminal modes |
 | Fixed release blocks upgrades/offline use | Reference releases are validation records, not runtime allowlists. Reuse installs, detect imports, allow explicit releases/offline exports and test capabilities |
 | Models/revisions change | Configure recipe identities, directories, names, engine/client capabilities and separate locks; do not inherit hardware acceptance or DeepSeek-specific settings |
+| Source/data paths confused | Configure source and --data-dir independently; example source is /home/cmsupport/workspace/local-ai and GPU data is /raid/local-ai. Existing installations need no relocation |
 | Source-script delivery | Use immutable tags on validated commits; GitHub Releases and Python distributions are optional, not prerequisites |
 | Around 400 ms TTFT seems high | Record method, input size, cache/load and timing first. Separate compilation, generation delay and reasoning content; avoid one-number conclusions |
 

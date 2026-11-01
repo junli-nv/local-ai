@@ -118,7 +118,7 @@ Choose these values before running the example:
 | Option | Meaning / what to change |
 |---|---|
 | `--profile b300-tp4` | B300 four-GPU inference preset. TP4 splits one instance across four local GPUs. |
-| `--data-dir /raid/local-ai` | Runtime data root; this example keeps source and models/image locks/cache/instances/logs under the same /raid/local-ai root. Data may also be configured separately. |
+| `--data-dir /raid/local-ai` | Runtime data root for models, image locks, caches, instances and logs. Example source location: /home/cmsupport/workspace/local-ai; configure it separately. |
 | `--gpus 0,1,2,3` | Server GPU indices from nvidia-smi, or full UUIDs. Count must match the profile. |
 | `--name a` | Instance name, reused for status/stop and its log directory; not a hostname. |
 | `--port 18000` | Model HTTP API port, default 18000. Use 18001 for a second instance. |
@@ -126,12 +126,12 @@ Choose these values before running the example:
 Server plan/start default to profile b300-tp4 and name a; --gpus is required.
 The data directory uses LOCAL_AI_DATA_DIR if set, otherwise /raid/local-ai.
 Use the same --data-dir for preparation, planning and startup: options do not carry over between commands.
-These clone commands are for a new, empty /raid/local-ai installation. For an existing installation, enter its directory directly. The example account needs sudo/Docker access; root may omit sudo.
+Clone into the new, empty source directory /home/cmsupport/workspace/local-ai. For an existing installation, enter the actual directory containing the local-ai script; no source or data relocation is required. The example account needs sudo/Docker access; root may omit sudo.
 
 ```bash
-sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-git clone --branch v1.0.0 --depth 1 https://github.com/junli-nv/local-ai.git /raid/local-ai
-cd /raid/local-ai
+sudo install -d -o "$(id -u)" -g "$(id -g)" /home/cmsupport/workspace/local-ai
+git clone --branch v1.0.0 --depth 1 https://github.com/junli-nv/local-ai.git /home/cmsupport/workspace/local-ai
+cd /home/cmsupport/workspace/local-ai
 # List profiles and validation status
 ./local-ai profiles
 docker version
@@ -284,9 +284,9 @@ a health URL using that IP.
 Run **on BCM** as the user who will execute tools:
 
 ```bash
-sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-git clone --branch v1.0.0 --depth 1 https://github.com/junli-nv/local-ai.git /raid/local-ai
-cd /raid/local-ai
+sudo install -d -o "$(id -u)" -g "$(id -g)" /home/cmsupport/workspace/local-ai
+git clone --branch v1.0.0 --depth 1 https://github.com/junli-nv/local-ai.git /home/cmsupport/workspace/local-ai
+cd /home/cmsupport/workspace/local-ai
 ./local-ai client install
 ./local-ai chat --endpoint http://GPU001:18000/v1 --project /home/alice/project
 ```

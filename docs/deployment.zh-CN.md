@@ -42,7 +42,7 @@ GB300 配置必须完成实机验收，不能直接套用 B300 的速度结论�
 | 参数 | 示例含义 / 如何修改 |
 |---|---|
 | `--profile b300-tp4` | 使用 B300 四卡推理配置；TP4 表示同一实例跨 4 张本机 GPU。其他平台按上表选择。 |
-| `--data-dir /raid/local-ai` | 运行数据根目录；本例源码与数据统一在 /raid/local-ai，权重、镜像锁、缓存、实例和日志位于其下，也可独立配置数据目录。 |
+| `--data-dir /raid/local-ai` | 运行数据根目录，存放模型、镜像锁、缓存、实例和日志；源码示例位于 /home/cmsupport/workspace/local-ai，与数据目录分别配置。 |
 | `--gpus 0,1,2,3` | 使用服务端 `nvidia-smi` 显示的这 4 张卡；也可写完整 GPU UUID。数量须匹配配置。 |
 | `--name a` | 自定义实例名，用于区分容器与日志；查询、停止时沿用同一个名字。 |
 | `--port 18000` | 模型 HTTP API 端口，默认 18000；第二个实例换成 18001。 |
@@ -52,16 +52,16 @@ GB300 配置必须完成实机验收，不能直接套用 B300 的速度结论�
 若修改目录，下载、计划和启动时须使用同一个 `--data-dir`，参数不会由前一条命令自动继承。
 
 前提：驱动、Docker、NVIDIA Container Toolkit 已安装且兼容。
-Python3 至少 3.10，Docker API 至少 1.49。安装根目录统一为 /raid/local-ai，源码与运行数据同根；私有客户端保存在各用户目录。
+Python3 至少 3.10，Docker API 至少 1.49。源码示例目录为 /home/cmsupport/workspace/local-ai，GPU 运行数据目录为 /raid/local-ai；两者独立，私有客户端保存在各用户目录。
 先确认选定 GPU 可用且已取得使用权；本工具不会停止其他作业。
 
 在 GPU 服务器运行：
-以下克隆命令用于新安装，/raid/local-ai 应为空；已有安装直接进入原安装目录继续。示例账户需 sudo 和 Docker 权限，root 可省略 sudo。
+以下克隆命令用于新安装，源码目标目录 /home/cmsupport/workspace/local-ai 应为空；已有安装进入包含 local-ai 脚本的实际源码目录，无需移动源码或数据。示例账户需 sudo 和 Docker 权限，root 可省略 sudo。
 
 ```bash
-sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-git clone --branch v1.0.0 --depth 1 https://github.com/junli-nv/local-ai.git /raid/local-ai
-cd /raid/local-ai
+sudo install -d -o "$(id -u)" -g "$(id -g)" /home/cmsupport/workspace/local-ai
+git clone --branch v1.0.0 --depth 1 https://github.com/junli-nv/local-ai.git /home/cmsupport/workspace/local-ai
+cd /home/cmsupport/workspace/local-ai
 nvidia-smi
 nvidia-ctk cdi list
 # 查看配置及验证状态
@@ -188,9 +188,9 @@ BCM 可通过 --endpoint http://GPU001:18000/v1 直连。现有容器改地址�
 在 BCM 以实际执行工具的用户安装：
 
 ```bash
-sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-git clone --branch v1.0.0 --depth 1 https://github.com/junli-nv/local-ai.git /raid/local-ai
-cd /raid/local-ai
+sudo install -d -o "$(id -u)" -g "$(id -g)" /home/cmsupport/workspace/local-ai
+git clone --branch v1.0.0 --depth 1 https://github.com/junli-nv/local-ai.git /home/cmsupport/workspace/local-ai
+cd /home/cmsupport/workspace/local-ai
 ./local-ai client install
 ```
 

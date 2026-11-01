@@ -14,7 +14,7 @@
 
 | 项目 | 全文统一的值 |
 |---|---|
-| 各机器的安装根目录（含源码） | `/raid/local-ai` |
+| 源码目录示例（包含 local-ai 脚本） | `/home/cmsupport/workspace/local-ai` |
 | 旧/新 GPU 节点的数据目录 | `/raid/local-ai` |
 | 联网准备机的临时材料目录 | `/data/local-ai-prep` |
 | 准备端汇总材料的目录 | `/data/local-ai-offline` |
@@ -29,10 +29,10 @@
   新 BCM 已安装 Python 3.10+、Bash、Git、rg 和 util-linux 的 script。
 - 复制和校验用到 rsync、tar、sha256sum、find、sort、xargs；目标能访问内网模型 API。
 - `/media/local-ai-offline` 已挂载容量足够的介质。权重约 510 GB，另预留镜像、归档和复制空间。
-- 新环境 /raid/local-ai 安装根目录初始为空；每批材料汇总使用空目录。旧环境保持原位置，原路径不同时导出命令填写真实路径。驱动/OS 软件包另行准备，不能从模型镜像中恢复。
+- 新环境的源码目标目录及数据目录初始为空；每批材料汇总使用空目录。旧环境保持原位置，源码路径和 --data-dir 分别填写实际位置，不要把数据目录当成程序目录。驱动/OS 软件包另行准备，不能从模型镜像中恢复。
 - 使用外部模型配方时，把同一份 JSON 随材料携带并校验，在各端设置 LOCAL_AI_CATALOG；不要混用源码、配方和版本锁。
 
-源码直接放在 /raid/local-ai，GPU 的 models/、images/、instances/、install.log 也在该目录下。BCM 私有客户端目录单独列于上表。
+源码目录只需包含 local-ai、src/ 等程序文件；本文以 /home/cmsupport/workspace/local-ai 为例，已有环境请替换为实际位置。/raid/local-ai 是 GPU 数据目录，包含 models/、images/、instances/ 和 install.log，不要求其中存在 local-ai 脚本。BCM 私有客户端目录单独列于上表。
 
 材料汇总完成后，目录应包含：
 
@@ -52,11 +52,11 @@
 
 ### 1.1 在旧 GPU 节点 gpu-old 导出源码、镜像和模型
 
-从当前使用的安装目录执行。Git 安装导出已提交源码；无 .git 的解压安装按明确清单打包源码。先审查源码修改，两个分支都不打包 models/、images/、instances/ 或整个安装目录。
+从包含 local-ai 脚本的实际源码目录执行；本例为 /home/cmsupport/workspace/local-ai，不是数据目录 /raid/local-ai。Git 安装导出已提交源码；无 .git 的解压安装按明确清单打包源码。先审查源码修改，两个分支都不打包 models/、images/、instances/ 或整个安装目录。
 下面不执行下载，也不要求停止正在使用只读模型的实例；复制时模型文件不能正在被更新。
 
 ```bash
-cd /raid/local-ai
+cd /home/cmsupport/workspace/local-ai
 ./local-ai --version
 sudo install -d -o "$(id -u)" -g "$(id -g)" /data/local-ai-offline
 if [ -e .git ]; then
@@ -88,7 +88,7 @@ find models -type f -print0 | sort -z | xargs -0 -r sha256sum > MODELS.sha256
 本例两台旧机器不依赖共享目录，用 scp 汇总客户端包。
 
 ```bash
-cd /raid/local-ai
+cd /home/cmsupport/workspace/local-ai
 sudo install -d -o "$(id -u)" -g "$(id -g)" /data/local-ai-offline
 ./local-ai client export \
   --client-dir /home/alice/.local/state/local-ai/clients/amd64 \
@@ -120,15 +120,16 @@ rsync -a /data/local-ai-offline/ /media/local-ai-offline/
 ```bash
 cd /media/local-ai-offline
 sha256sum -c local-ai-source.tar.gz.sha256
-sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-tar -xzf local-ai-source.tar.gz -C /raid/local-ai
+sudo install -d -o "$(id -u)" -g "$(id -g)" /home/cmsupport/workspace/local-ai
+tar -xzf local-ai-source.tar.gz -C /home/cmsupport/workspace/local-ai
 
+sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
 mkdir -p /raid/local-ai/models
 rsync -a /media/local-ai-offline/models/ /raid/local-ai/models/
 cd /raid/local-ai
 sha256sum -c /media/local-ai-offline/MODELS.sha256
 
-cd /raid/local-ai
+cd /home/cmsupport/workspace/local-ai
 ./local-ai --version
 ./local-ai image import --profile b300-tp4 --data-dir /raid/local-ai \
   --archive /media/local-ai-offline/vllm-amd64.tar \
@@ -154,12 +155,12 @@ nvidia-ctk cdi list
 cd /media/local-ai-offline
 sha256sum -c local-ai-source.tar.gz.sha256
 sha256sum -c client-amd64.tar.gz.sha256
-sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-tar -xzf local-ai-source.tar.gz -C /raid/local-ai
+sudo install -d -o "$(id -u)" -g "$(id -g)" /home/cmsupport/workspace/local-ai
+tar -xzf local-ai-source.tar.gz -C /home/cmsupport/workspace/local-ai
 mkdir -p /home/alice/local-ai-client-import
 tar -xzf client-amd64.tar.gz -C /home/alice/local-ai-client-import
 
-cd /raid/local-ai
+cd /home/cmsupport/workspace/local-ai
 ./local-ai client install \
   --client-dir /home/alice/.local/state/local-ai/clients/amd64 \
   --binary /home/alice/local-ai-client-import/client/bin/opencode \
@@ -176,7 +177,7 @@ cd /raid/local-ai
 随后开始交互使用：
 
 ```bash
-cd /raid/local-ai
+cd /home/cmsupport/workspace/local-ai
 ./local-ai chat --endpoint http://GPU001:18000/v1 \
   --client-dir /home/alice/.local/state/local-ai/clients/amd64
 ```
@@ -198,9 +199,9 @@ cd /raid/local-ai
 ### 2.1 在 prep-host 下载源码、镜像和模型并导出
 
 ```bash
-sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai /data/local-ai-prep
-git clone --branch v1.0.0 --depth 1 https://github.com/junli-nv/local-ai.git /raid/local-ai
-cd /raid/local-ai
+sudo install -d -o "$(id -u)" -g "$(id -g)" /home/cmsupport/workspace/local-ai /data/local-ai-prep
+git clone --branch v1.0.0 --depth 1 https://github.com/junli-nv/local-ai.git /home/cmsupport/workspace/local-ai
+cd /home/cmsupport/workspace/local-ai
 ./local-ai --version
 sudo install -d -o "$(id -u)" -g "$(id -g)" /data/local-ai-offline
 git archive --format=tar.gz --output=/data/local-ai-offline/local-ai-source.tar.gz HEAD
@@ -223,7 +224,7 @@ find models -type f -print0 | sort -z | xargs -0 -r sha256sum > MODELS.sha256
 ### 2.2 在同一台 prep-host 下载并导出 BCM 客户端
 
 ```bash
-cd /raid/local-ai
+cd /home/cmsupport/workspace/local-ai
 ./local-ai client install --client-dir /data/local-ai-prep/client-amd64
 ./local-ai client export --client-dir /data/local-ai-prep/client-amd64 \
   --output /data/local-ai-offline/client-amd64.tar.gz
@@ -251,15 +252,16 @@ rsync -a /data/local-ai-offline/ /media/local-ai-offline/
 ```bash
 cd /media/local-ai-offline
 sha256sum -c local-ai-source.tar.gz.sha256
-sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-tar -xzf local-ai-source.tar.gz -C /raid/local-ai
+sudo install -d -o "$(id -u)" -g "$(id -g)" /home/cmsupport/workspace/local-ai
+tar -xzf local-ai-source.tar.gz -C /home/cmsupport/workspace/local-ai
 
+sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
 mkdir -p /raid/local-ai/models
 rsync -a /media/local-ai-offline/models/ /raid/local-ai/models/
 cd /raid/local-ai
 sha256sum -c /media/local-ai-offline/MODELS.sha256
 
-cd /raid/local-ai
+cd /home/cmsupport/workspace/local-ai
 ./local-ai --version
 ./local-ai image import --profile b300-tp4 --data-dir /raid/local-ai \
   --archive /media/local-ai-offline/vllm-amd64.tar \
@@ -285,12 +287,12 @@ nvidia-ctk cdi list
 cd /media/local-ai-offline
 sha256sum -c local-ai-source.tar.gz.sha256
 sha256sum -c client-amd64.tar.gz.sha256
-sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-tar -xzf local-ai-source.tar.gz -C /raid/local-ai
+sudo install -d -o "$(id -u)" -g "$(id -g)" /home/cmsupport/workspace/local-ai
+tar -xzf local-ai-source.tar.gz -C /home/cmsupport/workspace/local-ai
 mkdir -p /home/alice/local-ai-client-import
 tar -xzf client-amd64.tar.gz -C /home/alice/local-ai-client-import
 
-cd /raid/local-ai
+cd /home/cmsupport/workspace/local-ai
 ./local-ai client install \
   --client-dir /home/alice/.local/state/local-ai/clients/amd64 \
   --binary /home/alice/local-ai-client-import/client/bin/opencode \
@@ -307,7 +309,7 @@ cd /raid/local-ai
 随后开始交互使用：
 
 ```bash
-cd /raid/local-ai
+cd /home/cmsupport/workspace/local-ai
 ./local-ai chat --endpoint http://GPU001:18000/v1 \
   --client-dir /home/alice/.local/state/local-ai/clients/amd64
 ```

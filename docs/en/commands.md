@@ -91,7 +91,7 @@ Ongoing model output remains in instances/NAME/server.log; chat history and sess
 | --output | image export | Required destination archive path |
 | --archive; --lock | image import | Required image archive and matching .lock.json |
 
-TP is tensor parallelism: b300-tp4 uses four local B300 GPUs. See [deployment](deployment.md) for GB300 limitations. Data and source directories are separate. Options do not persist between commands; use the same data root for preparation, planning, starting and stopping.
+TP is tensor parallelism: b300-tp4 uses four local B300 GPUs. See [deployment](deployment.md) for GB300 limitations. Example source directory: /home/cmsupport/workspace/local-ai; GPU data directory: /raid/local-ai. Options do not persist between commands; use the same data root for preparation, planning, starting and stopping.
 
 On GPU001:
 
