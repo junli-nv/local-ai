@@ -1,4 +1,6 @@
-# Offline deployment: two complete workflows
+# Export, transfer and offline installation
+
+This guide is the single complete migration procedure, separate from normal online deployment. Scenario 1 exports images/models on the old GPU host and client assets on the old BCM host, then imports each on its target. Scenario 2 prepares both roles on an online host. Offline import means checksum verification, extraction and install --offline; there is no separate top-level import command.
 
 The unpacked directory is the installation: /raid/local-ai here. local-ai is the launcher; src/ and docs/ hold source/manuals. models/, images/, clients/ hold weights, image archives/locks and public clients. dist/ holds exports. Defaults follow moved/renamed directories; no LOCAL_AI_DATA_DIR or --data-dir overrides are used.
 
@@ -36,7 +38,7 @@ cp dist/local-ai.tar dist/local-ai.tar.sha256 /media/local-ai/client/
 
 Carry the media to GPU001 and then bcm-headnode; mount it at /media/local-ai on each host.
 
-### 1.3 Install offline and start on new GPU host GPU001
+### 1.3 Import offline and start on new GPU host GPU001
 
 Installation verifies assets/imports the local image without starting inference. Check CDI and GPU allocation before startup.
 
@@ -55,7 +57,7 @@ nvidia-ctk cdi list
 
 Success: installed=true, offline=true, then READY and ready=true.
 
-### 1.4 Install offline and connect on new BCM host bcm-headnode
+### 1.4 Import offline and connect on new BCM host bcm-headnode
 
 ```bash
 cd /media/local-ai/client
@@ -98,7 +100,7 @@ cp dist/local-ai.tar dist/local-ai.tar.sha256 /media/local-ai/both/
 
 Carry the media to each new host; this combined package supplies both roles, selected during installation.
 
-### 2.3 Install offline and start on new GPU host GPU001
+### 2.3 Import offline and start on new GPU host GPU001
 
 ```bash
 cd /media/local-ai/both
@@ -115,7 +117,7 @@ nvidia-ctk cdi list
 
 Success: installed=true, offline=true, READY and ready=true.
 
-### 2.4 Install offline and connect on new BCM host bcm-headnode
+### 2.4 Import offline and connect on new BCM host bcm-headnode
 
 ```bash
 cd /media/local-ai/both
@@ -166,9 +168,11 @@ For legacy BCM client assets outside the installation, include the actual asset 
 ./local-ai export --client-dir /home/alice/.local/state/local-ai/clients/amd64
 ```
 
-If CDI lacks the selected GPU UUID aliases, resolve [CDI setup](deployment.md#cdi-setup) before startup. Each role uses only its prepared assets; exports do not download unprepared models/clients.
+## Configuration after import
 
-The client installation commands above save a default API address. Offline use still allows chat --endpoint URL to select any reachable internal service without reinstalling; use --model ID too for a different model. Defaults are optional; [README](../../README.en.md#connect-to-multiple-services-from-one-bcm) explains overrides and history isolation.
+Before GPU startup, resolve missing UUID aliases through [CDI setup](deployment.md#cdi-setup).
+
+The source endpoint is not carried in the bundle. The new BCM examples set an initial default during client installation; later use config set endpoint URL or edit the file reported by config show, without installation. For one invocation, chat --endpoint URL selects another reachable internal service; add --model ID for a different model. See [multi-service usage](../../README.en.md#connect-to-multiple-services-from-one-bcm) for history isolation.
 
 ## Logs and failures
 

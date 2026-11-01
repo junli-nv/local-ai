@@ -12,6 +12,7 @@ from . import (
     artifacts,
     bundle,
     client,
+    configuration,
     deployment,
     images,
     installlog,
@@ -57,6 +58,17 @@ def parser():
     )
     groups = a.add_subparsers(dest="group", required=True)
     groups.add_parser("profiles", help="Show hardware profiles and validation levels")
+    config = groups.add_parser(
+        "config",
+        help="View or change saved client defaults without installing",
+        description="Manage defaults in ROOT/installation.json; no downloads or service changes.",
+    ).add_subparsers(dest="action", required=True)
+    config.add_parser("show", help="Show the settings file and saved endpoint/model")
+    b = config.add_parser("set", help="Save a client default; do not install or connect")
+    b.add_argument("key", choices=configuration.KEYS, help="Default to change")
+    b.add_argument("value", help="Endpoint URL or served model ID")
+    b = config.add_parser("unset", help="Remove a saved default")
+    b.add_argument("key", choices=configuration.KEYS, help="Default to remove")
     b = groups.add_parser(
         "install", help="Install in this unpacked directory; reuse local bundle assets"
     )
@@ -81,7 +93,7 @@ def parser():
     )
     b.add_argument(
         "--endpoint",
-        help="Save a default client API URL; optional. chat --endpoint overrides one invocation",
+        help="Optional initial default API URL; later edit with config set endpoint",
     )
     b.add_argument(
         "--model", help="Client model ID; server installations follow the selected profile"
@@ -318,7 +330,7 @@ def parser():
     b.add_argument(
         "--endpoint",
         default=settings().get("endpoint"),
-        help="API URL for this invocation only; overrides the default saved by install --endpoint without changing it",
+        help="HTTP(S) API URL including /v1; override the saved default for this invocation without saving",
     )
     b.add_argument(
         "--client-dir",
@@ -365,6 +377,10 @@ def parser():
 
 
 def dispatch(q):
+    if q.group == "config":
+        if q.action == "show":
+            return configuration.show()
+        return configuration.update(q.key, getattr(q, "value", None), remove=q.action == "unset")
     if q.group == "install":
         return deployment.install(q)
     if q.group == "export":
@@ -425,14 +441,17 @@ def dispatch(q):
             return artifacts.export_client(q.client_dir, q.output)
     if q.group == "chat":
         if not q.endpoint:
-            raise ValueError("Set --endpoint or save it with install --endpoint")
+            raise ValueError(
+                "Set --endpoint or save a default with local-ai config set endpoint URL"
+            )
         return client.chat(q)
     raise ValueError("Unsupported command")
 
 
 def main(argv=None):
-    q = parser().parse_args(argv)
+    q = None
     try:
+        q = parser().parse_args(argv)
         with installlog.session(q):
             value = dispatch(q)
             if not isinstance(value, int):
@@ -446,7 +465,7 @@ def main(argv=None):
     except KeyboardInterrupt:
         return 130
     except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as error:
-        if q.debug:
+        if q is not None and q.debug:
             raise
         print("ERROR: " + str(error), file=sys.stderr)
         return 1

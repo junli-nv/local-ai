@@ -25,6 +25,7 @@ These identities are independent:
 | endpoint.py | HTTP(S) API address validation and model readiness checks |
 | readiness.py | Port/HTTP health probes, startup waiting and explicit runtime-log readiness; status is read-only |
 | client.py | Private user state, local tools, config and full transcripts |
+| configuration.py | Read/write client defaults without installing or connecting |
 | paths.py / program.py | Relocatable roots and ordinary program-file selection |
 | deployment.py / bundle.py | In-place role preparation, complete export and manifest verification |
 | resume.py / operations.py | Native session resume and general task instructions |
@@ -81,7 +82,7 @@ Administrators can still access user data.
 API keys/HTTPS, tenant gateways, quotas and load balancing are not configured. Restrict
 network access. Tools may use SSH for onward tasks, independently of inference transport.
 
-install can save an optional default endpoint/model in installation.json. CLI arguments override those defaults for one invocation without writing them back. Each chat uses its selected endpoint for checks and provider configuration; --check reports endpoint/model. Switching to a different model requires its explicit --model ID; unavailable IDs fail without fallback. The same client binary is reused across services.
+Initial install can save optional defaults in installation.json; later changes use config show/set/unset or direct file editing. CLI arguments override those defaults for one invocation without writing them back. Each chat uses its selected endpoint for checks and provider configuration; --check reports endpoint/model. Switching to a different model requires its explicit --model ID; unavailable IDs fail without fallback. The same client binary is reused across services.
 
 ## Performance policy
 

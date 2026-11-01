@@ -178,3 +178,9 @@ Offline installation ran under unshare -n; Docker accessed the host daemon throu
 109 tests and Ruff lint/format checks passed. Two local HTTP model servers with different model IDs exercised A → B → A routing, endpoint/model overrides, unchanged installation.json and separate history/state/cache directories. An unavailable model failed with advertised IDs and --model guidance, without fallback to another endpoint. Offline client installation covered optional defaults, preservation when omitted and explicit replacement without downloads.
 
 --check now reports the actual endpoint/model. Real OpenCode 1.19.5 contract checks passed session resume, disabled mouse capture, bracketed paste and clean exit. The multi-service routing test used local HTTP fixtures and a substituted client executor; it is not new acceptance for multiple physical GPU nodes or other models. No GPU service was restarted.
+
+## 2026-11-01: independent configuration and migration documentation
+
+116 tests, Ruff lint/format and documentation contracts passed. config show/set/unset were tested with network, subprocess and installation calls prohibited: read-only viewing, validated updates/removal, preserved metadata, direct file editing, malformed JSON/type errors, bundle verification receipts and offline reinstallation compatibility. Existing multi-endpoint routing tests still pass. Real OpenCode 1.19.5 resume/terminal contract checks passed.
+
+Complete export/transfer/offline-import instructions now live in the offline guide; README identifies source/target roles and links to both routes. This change did not repeat physical GPU migration or restart inference services.

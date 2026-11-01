@@ -21,8 +21,21 @@ def settings():
     for name in ["installation.json", "bundle.json"]:
         path = root() / name
         if path.is_file():
-            value = json.loads(path.read_text())
-            return value.get("installation", value)
+            try:
+                value = json.loads(path.read_text())
+            except ValueError as error:
+                raise ValueError(
+                    "Invalid JSON settings file " + str(path) + ": " + str(error)
+                ) from error
+            if not isinstance(value, dict):
+                raise ValueError("Settings must be a JSON object: " + str(path))
+            value = value.get("installation", value)
+            if not isinstance(value, dict):
+                raise ValueError("Installation settings must be a JSON object: " + str(path))
+            for key in ("endpoint", "model"):
+                if value.get(key) is not None and not isinstance(value[key], str):
+                    raise ValueError(key + " must be a string in settings file " + str(path))
+            return value
     return {}
 
 

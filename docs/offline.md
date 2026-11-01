@@ -1,4 +1,6 @@
-# 离线部署：两种完整流程
+# 导出、转移与离线安装
+
+本页统一维护完整迁移流程，与常规在线部署分开。场景一在旧 GPU 节点导出镜像和模型、在旧 BCM 导出客户端，再分别到目标端导入；场景二由联网准备机备齐两端材料。离线导入指校验、解压后执行 install --offline，没有另一个顶层 import 命令。
 
 解压目录就是安装目录，本文统一为 /raid/local-ai。local-ai 是启动脚本，src/ 是源码，docs/ 是手册；models/、images/、clients/ 存放模型、镜像归档及锁、公共客户端；dist/ 存放导出包。默认路径随目录移动和改名，本文不设置 LOCAL_AI_DATA_DIR 或 --data-dir。
 
@@ -36,7 +38,7 @@ cp dist/local-ai.tar dist/local-ai.tar.sha256 /media/local-ai/client/
 
 将介质依次带到 GPU001 和 bcm-headnode，各挂载到 /media/local-ai。
 
-### 1.3 在新 GPU 主机 GPU001 离线安装并启动
+### 1.3 在新 GPU 主机 GPU001 离线导入并启动
 
 安装校验材料并导入本地镜像，不启动 GPU 服务；随后核实本机 CDI 和 GPU 分配再启动。
 
@@ -55,7 +57,7 @@ nvidia-ctk cdi list
 
 成功标志：installed=true、offline=true，然后 READY、ready=true。
 
-### 1.4 在新 BCM 主机 bcm-headnode 离线安装并连接
+### 1.4 在新 BCM 主机 bcm-headnode 离线导入并连接
 
 ```bash
 cd /media/local-ai/client
@@ -98,7 +100,7 @@ cp dist/local-ai.tar dist/local-ai.tar.sha256 /media/local-ai/both/
 
 将同一介质依次带到两台新机器；包内含两种角色的材料，安装时选择角色。
 
-### 2.3 在新 GPU 主机 GPU001 离线安装并启动
+### 2.3 在新 GPU 主机 GPU001 离线导入并启动
 
 ```bash
 cd /media/local-ai/both
@@ -115,7 +117,7 @@ nvidia-ctk cdi list
 
 成功标志：installed=true、offline=true、READY 和 ready=true。
 
-### 2.4 在新 BCM 主机 bcm-headnode 离线安装并连接
+### 2.4 在新 BCM 主机 bcm-headnode 离线导入并连接
 
 ```bash
 cd /media/local-ai/both
@@ -166,9 +168,11 @@ cd /raid/local-ai
 ./local-ai export --client-dir /home/alice/.local/state/local-ai/clients/amd64
 ```
 
-CDI 若缺少所选 GPU 的 UUID 别名，先完成[CDI 配置](deployment.zh-CN.md#cdi-配置)再启动。每种角色仅使用已准备的材料；导出不会下载尚未准备的模型或客户端。
+## 导入后的配置与检查
 
-上面的客户端安装命令保存默认 API 地址。离线使用时仍可用 chat --endpoint URL 连接任意可达内网服务，无需重装；模型不同再传 --model ID。默认地址可省略，多服务覆盖与历史隔离见 [README](../README.md#从同一个-bcm-连接多个服务)。
+GPU 启动前若缺少 UUID 别名，先完成[CDI 配置](deployment.zh-CN.md#cdi-配置)。
+
+源端 endpoint 不随包迁移。新 BCM 示例在客户端初次安装时设置初始默认地址；后续用 config set endpoint URL，或编辑 config show 显示的文件，无需安装操作。本次连接用 chat --endpoint URL 选择其他可达内网服务；模型不同再传 --model ID。会话隔离见[多服务使用](../README.md#从同一个-bcm-连接多个服务)。
 
 ## 日志与失败处理
 

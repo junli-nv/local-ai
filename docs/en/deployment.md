@@ -121,7 +121,7 @@ cd /raid/local-ai
 ./local-ai chat --endpoint http://GPU001:18001/v1 --project /home/alice/project
 ```
 
-Without --endpoint, chat still uses the saved 18000 address. To change the saved default, run install --role client --endpoint URL again. Histories are separate per endpoint and are not migrated by changing ports.
+Without --endpoint, chat still uses the saved 18000 address. To change the saved default, use config set endpoint URL; no installation is required. Histories are separate per endpoint and are not migrated by changing ports.
 
 Use separate Linux accounts/private state, default ~/.local/state/local-ai/. Shared binaries do not share histories. Different directories under one account are not permission isolation; administrators can access user data. Exit clients before state backup.
 

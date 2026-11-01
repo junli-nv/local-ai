@@ -29,6 +29,9 @@
 
 | 命令 | 执行位置 | 作用与结果 |
 |---|---|---|
+| `config show` | BCM | 查看默认值及配置文件位置 |
+| `config set` | BCM | 仅修改 endpoint/model 默认值，不安装资源 |
+| `config unset` | BCM | 清除 endpoint/model 默认值 |
 | `install` | 目标主机或准备机 | 就地准备所选角色资源并保存安装设置 |
 | `export` | 已安装主机或准备机 | 完整离线包及 SHA256，默认 dist/ |
 | `profiles` | 任意一端 | 输出配置目录和验证状态，JSON 格式 |
@@ -70,7 +73,23 @@ cd /raid/local-ai
 
 BCM 使用 install --role client --endpoint http://GPU001:18000/v1，替代上述 server 安装命令；两台机器各自保存设置。兼容的准备机可用 --role both 准备两端资源。client install/export 是只处理客户端的低级命令，不能替代完整 install/export。
 
-install --endpoint 仅在安装成功后将地址写入安装根目录 installation.json 的 endpoint 字段。不传该参数时保留已有地址；首次安装不会自动发现服务端地址。未保存地址时，chat 必须传 --endpoint；chat --endpoint 只覆盖本次连接，不保存。GPU 安装与 BCM 客户端设置分开配置。
+初次安装的 install --endpoint 仅在安装成功后将地址写入安装根目录 installation.json 的 endpoint 字段。不传该参数时保留已有地址；首次安装不会自动发现服务端地址。未保存地址时，chat 必须传 --endpoint；chat --endpoint 只覆盖本次连接，不保存。GPU 安装与 BCM 客户端设置分开配置。
+
+## 配置客户端默认值
+
+config show 显示配置文件路径及已配置的 endpoint/model；config set KEY VALUE 修改一项默认值；config unset KEY 清除该项。KEY 只允许 endpoint 或 model。它们不安装、不下载、不请求 API，也不创建 install.log。
+
+在 BCM 的 /raid/local-ai 执行：
+
+```bash
+./local-ai config show
+./local-ai config set endpoint http://GPU001:18000/v1
+./local-ai config set model DeepSeek-V4.1-Flash
+```
+
+更换长期默认节点时替换 config set endpoint 的 URL。清除默认值用 config unset endpoint 或 config unset model。清除地址后 chat 必须带 --endpoint；清除模型后回退到配方默认模型。show 中 null 表示未显式配置。
+
+也可直接编辑现有 /raid/local-ai/installation.json 的 endpoint/model 字段，保留其他字段和合法 JSON；下一次命令读取新值。config set 会校验 URL/模型并保留安装元数据。config show 显示绝对路径，数据目录覆盖不改变配置文件位置。该安装目录使用者共享默认值，修改受文件权限控制；个人历史仍各自保留。
 
 ## 本地复用与安装日志
 

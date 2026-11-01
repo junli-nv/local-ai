@@ -24,6 +24,7 @@ BCM 负责 OpenCode、项目文件、Shell/Git/SSH 工具、用户凭据、历�
 | `readiness.py` | 端口与 HTTP 健康探测、启动等待、明确就绪日志；状态查询只读 |
 | `client.py` | 用户私有状态、本地工具、连接配置和完整日志 |
 | `installlog.py` | 安装步骤、实际命令、实时输出及失败诊断集中记录；只读操作无文件副作用 |
+| `configuration.py` | 独立读写客户端默认值，不安装或连接服务 |
 | `paths.py` / `program.py` | 可迁移路径与普通程序文件选择 |
 | `deployment.py` / `bundle.py` | 就地准备角色资源、完整导出与清单校验 |
 | `resume.py` / `operations.py` | 原生会话恢复与通用任务指引 |
@@ -72,7 +73,7 @@ GPU 服务按示例监听 0.0.0.0，默认参数仍为 127.0.0.1；监听地址�
 当前不提供 API key/HTTPS、租户网关、用户配额或负载均衡；应限制可信网络访问。
 工具可按任务需要使用 SSH，但这不参与模型 API 连接。
 
-install 可在 installation.json 保存可选的默认 endpoint 和模型；chat 的显式参数只覆盖本次，不写回安装设置。每次连接的 API 检查与客户端配置均使用所选 endpoint，--check 返回 endpoint/model。切换到不同模型时显式指定 --model ID；不匹配直接失败，不回退。多个服务复用同一客户端程序。
+初次 install 可保存初始默认值；后续通过 config show/set/unset 或直接编辑 installation.json 配置 endpoint/model；chat 的显式参数只覆盖本次，不写回安装设置。每次连接的 API 检查与客户端配置均使用所选 endpoint，--check 返回 endpoint/model。切换到不同模型时显式指定 --model ID；不匹配直接失败，不回退。多个服务复用同一客户端程序。
 
 ## 性能配置的依据
 

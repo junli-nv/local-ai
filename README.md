@@ -19,7 +19,7 @@
 
 | 文档 | 用途 |
 |---|---|
-| 本页 | 首次在线安装、启动、聊天和导出 |
+| 本页 | 首次在线安装、启动、聊天、配置及迁移入口 |
 | [部署指南](docs/deployment.zh-CN.md) | CDI、存储故障、实例重建、双实例与多人使用 |
 | [命令手册](docs/commands.md) | 参数、默认值、退出码、会话恢复与客户端版本 |
 | [离线部署](docs/offline.md) | 已安装环境迁移，或联网准备后离线安装 |
@@ -103,11 +103,11 @@ cd /raid/local-ai
 ./local-ai install --role client --endpoint http://GPU001:18000/v1
 ```
 
-只有该命令成功完成后，地址才写入 **BCM 本次安装根目录的 /raid/local-ai/installation.json** 的 endpoint 字段。它不是 GPU 服务端的安装设置，也不会自动从 GPU 主机推断。
+本例可选的初始地址在安装成功后写入 **BCM 的 /raid/local-ai/installation.json**。GPU 服务端安装不会设置 BCM 地址；后续通过下节的 config 修改。
 
 默认地址不是安装必填项。如果不想设默认值，改用 ./local-ai install --role client，之后每次 chat 带 --endpoint 即可。已有客户端无需为每个服务重复安装。
 
-若旧安装没有保存地址，可执行上面的安装命令设置默认值，也可只在 chat 中动态指定。修改长期默认值时才重新执行 install --endpoint；完整客户端会复用。
+已有客户端没有保存地址时，用 config set endpoint URL 配置默认值，或在 chat 中临时指定；修改连接配置无需安装操作。
 
 创建或选择当前用户的工作目录：
 
@@ -127,6 +127,19 @@ mkdir -p /home/alice/project
 ```
 
 三条命令连接同一个 GPU001:18000 服务，分别演示检查、交互和单次任务。临时覆盖连接用 chat --endpoint URL，不会改写已保存的地址。第二实例的端口见[双实例](docs/deployment.zh-CN.md#双实例与多人使用)。
+
+### 配置默认连接
+
+在 BCM 的 /raid/local-ai 执行。例如保存 GPU001 为默认地址；更换时将 URL 替换成目标地址：
+
+```bash
+./local-ai config show
+./local-ai config set endpoint http://GPU001:18000/v1
+```
+
+config 只修改设置，不安装、不下载，也不连接服务。config show 显示配置文件位置及已配置的 endpoint/model。也可直接编辑现有 /raid/local-ai/installation.json 的 endpoint/model 字段，保留其他字段和合法 JSON；下一次 chat 生效。show 中 null 表示未显式配置默认值。该文件属于本安装目录，目录使用者共享其默认值，修改需要文件写权限。
+
+长期默认模型用 config set model ID 设置。config unset endpoint 清除默认地址，之后 chat 必须带 --endpoint；config unset model 恢复配方默认模型。它们不删除客户端、模型或历史。chat --endpoint/--model 仍只覆盖本次连接。
 
 ### 从同一个 BCM 连接多个服务
 
@@ -155,23 +168,16 @@ chat --endpoint 不改写 installation.json，也不要求重新安装。--check
 
 助手可排查硬件、开发脚本、配置服务，以及准备、提交和跟踪 Slurm/Kubernetes 作业。要求通过 SSH 到 GPU001 查询硬件时，使用当前账户权限；推理配方不限制运维查询的硬件型号。规则见 [AGENTS.md](AGENTS.md)，纯计划不探测硬件的约束仅针对 server plan --inventory。
 
-## 3. 导出并迁移
+## 导出与离线安装
 
-在已安装目录执行：
+这是独立的迁移场景：服务端镜像和模型在**源 GPU 节点**导出，在**新 GPU 节点**校验、解压并执行 install --offline。BCM 导出通常只有客户端材料，不能替代 GPU 服务端部署包。
 
-```bash
-cd /raid/local-ai
-./local-ai export
-ls -lh dist/local-ai.tar dist/local-ai.tar.sha256
-```
+完整命令统一维护在[离线安装指南](docs/offline.md)，按起点选择：
 
-导出本目录已准备的程序、模型、Docker 镜像归档、公共客户端和配方。仅安装 server 的目录不会包含尚未准备的 BCM 客户端；联网准备两端材料用 install --role both，见[离线部署](docs/offline.md)。
+- [从已有安装导出，再到新环境离线导入](docs/offline.md#场景一从已安装环境导出并迁移)。
+- [从联网准备机备齐两端资源，再离线安装](docs/offline.md#场景二从联网环境下载并准备)。
 
-将 dist/ 中两个文件带到新环境，校验、解压到空目录，再执行 install --offline。目录可改名。dist/ 自身、旧实例、日志、个人历史和凭据不导出；新主机重新选择 GPU、端口及 endpoint。两种完整操作路线见[离线部署](docs/offline.md)。
-
-程序在 local-ai、src/、docs/，公共资源在 models/、images/、clients/。Docker 活动存储由宿主机管理；个人状态仍在 ~/.local/state/local-ai/，或设置 XDG_STATE_HOME 后的 XDG_STATE_HOME/local-ai/。
-
-开发检查及后续文档维护约定见[开发指南](docs/development.md)。
+两条路线均注明执行主机、转移文件、校验、离线导入和验收，包含 BCM 客户端部署。目标机驱动和 Docker 仍需预装，原实例和个人历史不随包迁移。开发检查见[开发指南](docs/development.md)。
 
 ---
 

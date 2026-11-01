@@ -21,7 +21,7 @@ Use appropriate sudo/Docker permissions; root may omit sudo. Data defaults follo
 
 | Document | Purpose |
 |---|---|
-| This page | First online installation, startup, chat and export |
+| This page | First online installation, startup, chat, configuration and migration links |
 | [Deployment](docs/en/deployment.md) | CDI, storage recovery, instance replacement and multiple instances/users |
 | [Command manual](docs/en/commands.md) | Options, defaults, exit codes, session resume and client versions |
 | [Offline deployment](docs/en/offline.md) | Existing-installation migration or online preparation |
@@ -105,11 +105,11 @@ cd /raid/local-ai
 ./local-ai install --role client --endpoint http://GPU001:18000/v1
 ```
 
-Only after this command succeeds is the endpoint field written to **BCM's installation-root /raid/local-ai/installation.json**. This is separate from GPU server installation; the client does not infer the GPU host address.
+This optional initial default is saved in **BCM's /raid/local-ai/installation.json** after installation succeeds. GPU server installation does not configure the BCM address. Later changes use config, as shown below.
 
 The default address is optional. To omit it, use ./local-ai install --role client and pass --endpoint to every chat invocation. One BCM client installation can connect to many services.
 
-For an older installation without a saved address, either configure a default with the install command above or specify an address dynamically in chat. Rerun install --endpoint only to change the persistent default; complete client assets are reused.
+For an existing client without a saved address, use config set endpoint URL or specify chat --endpoint URL. Changing connection settings does not require installation.
 
 Create or select the actual user's project directory:
 
@@ -129,6 +129,19 @@ This example saved GPU001:18000, so the following chat commands may omit --endpo
 ```
 
 All three commands use GPU001:18000. chat --endpoint URL overrides one invocation without changing the saved address. Another port is introduced only for a [second instance](docs/en/deployment.md#two-instances-and-multiple-users).
+
+### Configure the default connection
+
+Run on BCM from /raid/local-ai. For example, save GPU001 as the default (substitute another URL to change it):
+
+```bash
+./local-ai config show
+./local-ai config set endpoint http://GPU001:18000/v1
+```
+
+config only updates settings: it does not install, download or connect. config show reports the settings file and configured endpoint/model. You may directly edit endpoint/model in the existing /raid/local-ai/installation.json; preserve other fields and valid JSON. Changes apply to the next chat invocation. Null in show means no explicit default. The file belongs to this installation and is shared by users of that directory; edit permission is required.
+
+Use config set model ID for a persistent model default. config unset endpoint requires explicit --endpoint on subsequent chat commands; config unset model restores the catalog fallback. These do not remove resources or histories. chat --endpoint/--model remain invocation-only overrides.
 
 ### Connect to multiple services from one BCM
 
@@ -157,20 +170,13 @@ Resume with opencode -s ses_.... The first chat creates ~/.local/bin/opencode an
 
 Tasks include hardware troubleshooting, scripts, services and Slurm/Kubernetes jobs. SSH queries use current-user permissions, independently of inference profiles. Rules are in [AGENTS.md](AGENTS.md); the no-probing constraint applies only to pure server plan --inventory.
 
-## 3. Export and migrate
+## Export and offline installation
 
-From an installed directory:
+This is a separate migration scenario. Export server images/models on the **source GPU host**, then verify/extract and run install --offline on the **new GPU host**. A BCM export normally carries client assets and cannot replace the GPU server bundle.
 
-```bash
-cd /raid/local-ai
-./local-ai export
-ls -lh dist/local-ai.tar dist/local-ai.tar.sha256
-```
+Complete commands are maintained only in the [offline guide](docs/en/offline.md). Choose a route:
 
-Export carries prepared source, models, Docker image archives, public clients and recipes. A server-only installation does not include an unprepared BCM client. To prepare both roles online, use install --role both; see [offline deployment](docs/en/offline.md).
+- [Export an existing installation and import it elsewhere](docs/en/offline.md#scenario-1-export-an-installed-environment).
+- [Prepare both roles online, then install offline](docs/en/offline.md#scenario-2-download-on-an-online-preparation-host).
 
-Carry both dist/ files, verify, extract into an empty directory and run install --offline. Rename the directory if desired. dist/ itself, old instances, logs, histories and credentials are excluded. Configure local GPUs, ports and endpoints again. Both complete routes are in the [offline guide](docs/en/offline.md).
-
-Program: local-ai, src/, docs/. Public assets: models/, images/, clients/. Docker live storage is host-managed. Private state remains ~/.local/state/local-ai/ or XDG_STATE_HOME/local-ai/.
-
-Development checks and documentation requirements are in the [development guide](docs/en/development.md).
+Both routes specify execution hosts, files to transfer, checksums, offline import and acceptance, including BCM client deployment. Drivers/Docker remain target prerequisites; host-local instances and private histories are not carried. Development checks are in the [development guide](docs/en/development.md).

@@ -158,6 +158,19 @@ class PortableTests(unittest.TestCase):
                 self.assertFalse(result["client"]["network"])
                 self.assertEqual(parser().parse_args(["chat"]).endpoint, expected)
 
+    def test_configured_defaults_survive_offline_reinstallation(self):
+        for key, value in (
+            ("endpoint", "http://GPU002:18000/v1"),
+            ("model", "configured-model"),
+        ):
+            changed = self.invoke(self.base, "config", "set", key, value)
+            self.assertEqual(changed.returncode, 0, changed.stderr)
+        with patch("urllib.request.urlopen", side_effect=AssertionError("no network")):
+            deployment.install(parser().parse_args(["install", "--role", "client", "--offline"]))
+        args = parser().parse_args(["chat"])
+        self.assertEqual(args.endpoint, "http://GPU002:18000/v1")
+        self.assertEqual(args.model, "configured-model")
+
     def test_missing_offline_client_never_falls_back_to_download(self):
         (self.client / "manifest.json").unlink()
         with patch("urllib.request.urlopen", side_effect=AssertionError("no network")):

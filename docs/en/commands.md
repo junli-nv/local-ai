@@ -30,6 +30,9 @@ Syntax: ./local-ai GROUP COMMAND OPTIONS. install, export, profiles and chat hav
 
 | Command | Run on | Purpose and result |
 |---|---|---|
+| config show | BCM | Read saved defaults and configuration path |
+| config set | BCM | Change endpoint/model without installation |
+| config unset | BCM | Clear endpoint/model defaults |
 | install | Target host/preparation host | Prepare selected role and save settings in the installation root |
 | export | Installed/preparation host | Complete portable bundle and SHA256, default dist/ |
 | profiles | Either host | Profile catalog and validation status as JSON |
@@ -68,7 +71,23 @@ install --model selects the client model ID; server installs use --profile's mod
 
 On BCM, use install --role client --endpoint http://GPU001:18000/v1 instead of the server command. Each host keeps its own settings; --role both prepares both roles on a compatible host. client install/export are lower-level client-only operations and do not replace complete install/export.
 
-install --endpoint writes the address to endpoint in INSTALL_ROOT/installation.json only after successful installation. Omitting --endpoint preserves an existing saved address; a fresh installation does not discover one automatically. Without a saved address, chat requires --endpoint. chat --endpoint overrides one invocation without saving it. GPU installation and BCM client settings are separate.
+For initial installation, install --endpoint writes the address to endpoint in INSTALL_ROOT/installation.json only after successful installation. Omitting --endpoint preserves an existing saved address; a fresh installation does not discover one automatically. Without a saved address, chat requires --endpoint. chat --endpoint overrides one invocation without saving it. GPU installation and BCM client settings are separate.
+
+## Configure saved client defaults
+
+config show displays the settings file and configured endpoint/model. config set KEY VALUE changes one default; config unset KEY removes it. KEY is endpoint or model. These commands perform no installation, download or API request and do not create install.log.
+
+On BCM, from /raid/local-ai:
+
+```bash
+./local-ai config show
+./local-ai config set endpoint http://GPU001:18000/v1
+./local-ai config set model DeepSeek-V4.1-Flash
+```
+
+To change the persistent server, replace the URL in config set endpoint. To remove a default, use config unset endpoint or config unset model. Without an endpoint default, chat requires --endpoint; without a model default, it falls back to the catalog. Null in show means no explicit default.
+
+You can also directly edit endpoint/model in the existing /raid/local-ai/installation.json. Keep other fields and valid JSON; the next invocation reads changes. config set validates the URL/model and preserves installation metadata. config show reports the absolute path; data-directory overrides do not move this configuration. Defaults are shared within this installation, subject to file permissions; personal histories remain separate.
 
 ## Local reuse and installation journal
 
