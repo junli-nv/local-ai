@@ -104,6 +104,10 @@ downloads; absent caches and conflicting content are distinct outcomes. Missing 
 as unverified rather than fabricated. Complete content hashes belong to offline artifact acceptance.
 See the [command manual](commands.md).
 
+## Program update boundary
+
+scripts/update.py is a standalone standard-library helper so it can update an old installation without importing its modules. It replaces an explicit list of source paths, retains assets/configuration, backs up old code/installation metadata and invalidates the old bundle checksum receipt. It never calls install, Docker, model/client download or server restart. Backups remain outside the installation; scripts/ is included by ordinary exports, including the retained bootstrap helper.
+
 ## Portable installation directory
 
 The unpacked root retains complete program, models, image archives and public clients. Defaults follow its location. install prepares assets; server start creates host-local instances. export writes dist/ with relative checksums; install --offline verifies/imports after extraction elsewhere. Exclude dist/ itself, old instances, histories and credentials. Public clients contain only binaries/public cache; personal state stays isolated.

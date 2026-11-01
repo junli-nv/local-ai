@@ -135,7 +135,7 @@ The root Bash launcher adds src to PYTHONPATH and calls the same entry point. Mo
 
 ## Documentation delivery requirements
 
-Documentation correctness is a delivery condition. For every implementation, default or documentation change, carefully review both languages of README, command, deployment, offline, architecture, development, performance exploration and validation documents. Confirm unchanged documents do not conflict. Fixing one matching line is insufficient.
+Documentation correctness is a delivery condition. For every implementation, default or documentation change, carefully review both languages of README, command, deployment, offline, architecture, development, performance exploration, update and validation documents. Confirm unchanged documents do not conflict. Fixing one matching line is insufficient.
 
 1. **README is the entry point.** Walk the first-use path: prerequisites, source download, installation, configuration, startup, readiness, logs, client usage and migration links. Include necessary steps without hidden assumptions.
 2. **Match actual behavior.** Check options/defaults, saved settings, execution host, output and exit codes against --help, implementation and evidence. Distinguish program, runtime data and private user state.
@@ -285,6 +285,10 @@ original backup when downgrading across incompatible database migrations.
 v1.2.0 identifies this validated version; withdrawn v1.0.0/v1.1.0 tags are not reused. Development continues on main/exact commits, with support limited by the validation record. Tests and CI are basic requirements; future tags require an explicit user request and do not automatically create GitHub Releases.
 
 For routine delivery, review implementation and all documentation, validate appropriately, commit/push, and verify the remote commit/CI. For an explicitly requested version, assess installation paths, documentation consistency, compatibility and known issues. Align versions/evidence and create an annotated tag on the exact successful CI commit. Exact commits remain available for reproduction and rollback.
+
+## Program updater maintenance
+
+The standalone scripts/update.py must use only Python 3.10+ standard library and must not import target installation modules, execute install/Docker/client commands, or read/hash model shards. Keep its program-path allowlist separate from resources and custom catalogs. Preserve settings permissions/defaults, retire stale bundle receipts, keep backup format compatibility, and test source-only offline updates, malformed archives, rollback, partial failure and unchanged resource inodes. The helper remains in scripts/ when a target tag predates it, so existing source export includes it. Program upgrades do not justify moving an existing tag. Full operations live only in the [update guide](update.md).
 
 ## Directory installation implementation
 

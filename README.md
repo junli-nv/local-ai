@@ -202,6 +202,10 @@ chat --endpoint 不改写 installation.json，也不要求重新安装。--check
 
 助手可排查硬件、开发脚本、配置服务，以及准备、提交和跟踪 Slurm/Kubernetes 作业。要求通过 SSH 到 GPU001 查询硬件时，使用当前账户权限；推理配方不限制运维查询的硬件型号。规则见 [AGENTS.md](AGENTS.md)，纯计划不探测硬件的约束仅针对 server plan --inventory。
 
+## 更新已有安装
+
+按[程序更新指南](docs/update.md)分别更新 GPU 和 BCM 的实际程序目录，保留资源、配置与运行实例。独立 scripts/update.py 支持指定标签、本地源码包和备份回退，不执行 install 或资源准备。v1.2.0 标签固定时尚未包含脚本，指南给出首次获取方法。
+
 ## 导出与离线安装
 
 这是独立的迁移场景：服务端镜像和模型在**源 GPU 节点**导出，在**新 GPU 节点**校验、解压并执行 install --offline。BCM 导出通常只有客户端材料，不能替代 GPU 服务端部署包。

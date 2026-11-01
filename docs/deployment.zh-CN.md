@@ -4,6 +4,8 @@
 
 沿用 README：GPU001、bcm-headnode、alice、安装根 /raid/local-ai、实例 a、端口 18000。以下 local-ai 命令在 GPU001 的 /raid/local-ai 执行；标明 BCM 的命令才在 BCM 执行。本页不设置数据目录覆盖。
 
+已有安装只更新程序时，使用[更新指南](update.md)，保留运行实例和资源，无需准备镜像/模型；改变推理配方仍按下文显式重建实例。
+
 ## CDI 配置
 
 首次部署的检查、刷新/手动生成命令及 UUID 验收标准，统一放在 [README：配置 GPU 的 CDI 设备定义](../README.md#配置-gpu-的-cdi-设备定义首次部署必查)，排在模型安装和服务启动之前。请在目标 GPU 主机按该步骤执行，不能复制其他机器的定义。

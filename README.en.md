@@ -204,6 +204,10 @@ Resume with opencode -s ses_.... The first chat creates ~/.local/bin/opencode an
 
 Tasks include hardware troubleshooting, scripts, services and Slurm/Kubernetes jobs. SSH queries use current-user permissions, independently of inference profiles. Rules are in [AGENTS.md](AGENTS.md); the no-probing constraint applies only to pure server plan --inventory.
 
+## Update an existing installation
+
+Use the [program update guide](docs/en/update.md) to update GPU and BCM installations separately while retaining resources, configuration and running instances. The standalone scripts/update.py supports explicit tags, local source archives and backup rollback, without install or resource preparation. The fixed v1.2.0 tag predates the helper; the guide includes its one-time bootstrap.
+
 ## Export and offline installation
 
 This is a separate migration scenario. Export server images/models on the **source GPU host**, then verify/extract and run install --offline on the **new GPU host**. A BCM export normally carries client assets and cannot replace the GPU server bundle.

@@ -248,6 +248,10 @@ binary or restore a client export archive. Archives include executable, public
 cache, version manifest and checksums, excluding history and credentials.
 See [offline deployment](offline.md).
 
+## Program updates
+
+The standalone Python helper scripts/update.py is independent of ./local-ai subcommands. For --root, --version, --archive, --sha256 and --rollback, complete examples, backups and exit codes, use the [update guide](update.md). It never installs images/models/clients or restarts inference. Model/image changes and native OpenCode upgrades remain separate operations.
+
 ## Operations and troubleshooting
 
 | Symptom / operation | Action |

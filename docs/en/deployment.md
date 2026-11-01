@@ -6,6 +6,8 @@ Follow [README](../../README.en.md) for first online installation. This page exp
 
 Conventions: GPU001, bcm-headnode, alice, /raid/local-ai, instance a, port 18000. Run local-ai commands on GPU001 from /raid/local-ai unless explicitly marked BCM. No data-directory overrides are used.
 
+For program-only upgrades of an existing installation, use the [update guide](update.md). It preserves running instances/resources and needs no image/model preparation. Changes to inference recipes remain explicit instance replacement operations.
+
 ## CDI setup
 
 The complete first-deployment check, refresh/manual-generation commands and UUID acceptance criteria are in [README: configure GPU CDI definitions](../../README.en.md#configure-gpu-cdi-definitions-before-first-deployment), before model installation/startup. Follow that procedure on the target GPU host; do not copy another host's definitions.
