@@ -64,6 +64,70 @@ nvidia-ctk cdi list
 
 Verify UUID aliases again after refresh. Without a refresh service, follow NVIDIA's manual CDI procedure. Avoid duplicate definitions.
 
+### Check Docker storage before downloading
+
+Run on the GPU node:
+
+```bash
+docker version
+docker info --format 'Server={{.ServerVersion}} Driver={{.Driver}} Root={{.DockerRootDir}}'
+docker ps -a
+```
+
+The Docker server must be accessible. An active docker service only confirms a running process,
+not working image extraction or storage. A first image inspection reporting `No such image`
+is expected and triggers a pull; diagnose the subsequent pull error.
+
+`--data-dir` controls project weights, locks and runtime data, not Docker/containerd storage.
+With Docker 29's containerd image store, these services may use `/var/lib/docker` and
+`/var/lib/containerd` separately; check the actual configuration. Never delete or move storage
+while the services are running, or share runtime databases between nodes.
+
+### Recovery: missing metadata.db during image extraction
+
+Stop installation and inspect runtime storage if image pull reports:
+
+```text
+failed to prepare extraction snapshot
+/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/metadata.db: no such file or directory
+```
+
+One verified cause is storage deleted while services still hold open database files.
+An active Docker service does not rule this out. Restarting Docker alone does not restart
+the independent containerd service. First check configuration, mounts and original data.
+Restore storage containing data that must be retained instead of replacing it with empty directories.
+
+Inspect Docker containers and every containerd namespace before restarting:
+
+```bash
+docker ps -a
+sudo ctr namespaces list
+for ns in $(sudo ctr namespaces list -q); do
+    sudo ctr --namespace "$ns" tasks list
+    sudo ctr --namespace "$ns" containers list
+done
+```
+
+Arrange maintenance for running tasks. Empty lists do not replace administrator confirmation
+of other runtime users. Once interruption is acceptable and original storage need not be restored,
+run on the target GPU node; root may omit sudo:
+
+```bash
+sudo systemctl stop docker.service docker.socket
+sudo systemctl restart containerd.service
+sudo systemctl start docker.socket docker.service
+docker info
+```
+
+Retry the original image pull before downloading weights. Do not repeatedly restart services
+or delete databases. For continued failures inspect the installation journal's actual error and
+`journalctl -u containerd -u docker`.
+
+`metadata.db` may be created only on the first snapshot creation. Its absence immediately after
+restart does not prove failure; listing snapshots may not create it either. Successful image pull
+and extraction are the acceptance check. Never manually `touch metadata.db`.
+This recovery does not restore lost images, containers or volumes and is not a routine installation step.
+
 Complete local images/models are reused. Preparation decisions, commands and errors append to /raid/local-ai/install.log; see the [manual](commands.md).
 
 ```bash

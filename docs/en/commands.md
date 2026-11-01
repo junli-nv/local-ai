@@ -64,6 +64,8 @@ actual commands, live output, elapsed time, exit status and full exceptions. Lon
 liveness/output-byte counts every 15 seconds. JSON stays on stdout; progress goes to stderr.
 Read-only queries and plan do not create logs.
 
+A missing local image is an expected lookup result and triggers a pull. Docker daemon, permission, or storage inspection errors are reported directly. Failed commands display an error summary on terminal stderr, limited to the last five lines with long lines shortened; complete output remains in the journal. Image pull exceptions also retain Docker's error text.
+
 Put this global option before the command group to choose a fixed journal:
 
 ```bash
@@ -145,6 +147,7 @@ For model/image upgrades, validate a separate data directory and instance while 
 | Symptom / operation | Action |
 |---|---|
 | Service not ready | On GPU001 check server status and DATA_DIR/instances/a/server.log, then retry /health |
+| Image extraction reports missing metadata.db | Follow the [deployment recovery procedure](deployment.md); check runtime storage and workloads before restarting Docker and containerd. File existence immediately after restart is not an acceptance check. |
 | BCM cannot connect | Run ssh GPU001 hostname, client doctor and chat --server GPU001 --check; verify API port |
 | Client cannot see GPUs | Expected on BCM; inspect inference processes with nvidia-smi on GPU001 |
 | GPU or port conflict | Check allocations and workloads; choose free resources without stopping unrelated jobs |

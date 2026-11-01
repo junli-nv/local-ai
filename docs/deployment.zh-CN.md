@@ -72,6 +72,66 @@ nvidia-ctk cdi list
 ```
 刷新后再次确认 UUID 别名。若没有自动刷新服务，参考 NVIDIA 官方 CDI 手动生成流程；不要创建重复定义。
 
+### 下载前检查 Docker 存储
+
+先在 GPU 节点执行：
+
+```bash
+docker version
+docker info --format 'Server={{.ServerVersion}} Driver={{.Driver}} Root={{.DockerRootDir}}'
+docker ps -a
+```
+
+必须能访问 Docker 服务端。`systemctl status docker` 显示 active 只代表进程运行，
+不能证明镜像解包和存储正常。首次 `image inspect` 返回 `No such image` 属正常情况，
+程序会继续拉取；应根据随后 `docker pull` 的具体错误判断失败原因。
+
+`--data-dir` 只控制项目权重、锁文件和运行数据，不修改 Docker/containerd 的存储路径。
+Docker 29 使用 containerd 镜像存储时，两者可能分别使用 `/var/lib/docker` 和
+`/var/lib/containerd`；以实际配置为准。不要在服务运行时删除、移动这些目录，
+也不要把多节点的 Docker/containerd 数据库放在同一共享目录。
+
+### 故障恢复：镜像解包提示 metadata.db 不存在
+
+若 `image pull` 报以下错误，先停止安装，检查 Docker/containerd 存储：
+
+```text
+failed to prepare extraction snapshot
+/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/metadata.db: no such file or directory
+```
+
+已验证的一种原因是：服务运行时存储目录被删除，旧进程仍持有已删除的数据库句柄。
+Docker 的 active 状态不能排除该问题。仅重启 Docker 不会重启独立的 containerd。
+先由管理员核对配置、挂载点和原数据；如有需保留的数据，应先恢复存储，不要用空目录替代。
+
+重启前检查 Docker 容器和 containerd 的所有命名空间、任务：
+
+```bash
+docker ps -a
+sudo ctr namespaces list
+for ns in $(sudo ctr namespaces list -q); do
+    sudo ctr --namespace "$ns" tasks list
+    sudo ctr --namespace "$ns" containers list
+done
+```
+
+有运行任务时先安排维护窗口；空列表也不能替代管理员对共享运行时用途的确认。
+确认可以中断服务、原存储无需恢复后，在目标 GPU 节点执行；root 可省略 sudo：
+
+```bash
+sudo systemctl stop docker.service docker.socket
+sudo systemctl restart containerd.service
+sudo systemctl start docker.socket docker.service
+docker info
+```
+
+然后重试原来的 `image pull`，成功后再下载模型。不要反复重启或删除数据库；
+仍失败时检查安装日志中的具体错误，以及 `journalctl -u containerd -u docker`。
+
+`metadata.db` 可在首次创建快照时才生成；重启后立即 `ls` 找不到它不代表恢复失败。
+只读快照列表也不一定创建该文件。以实际镜像拉取和解包成功作为验收，不要手工
+`touch metadata.db`。上述步骤不会恢复已丢失的镜像、容器或卷数据，也不是正常安装必做项。
+
 镜像和模型完整时，下方准备命令会直接复用。安装判断、命令和错误集中记录在 `/raid/local-ai/install.log`；详细规则见[使用手册](commands.md)。
 
 下载固定镜像和完整模型：

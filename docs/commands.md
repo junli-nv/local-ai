@@ -62,6 +62,8 @@ BCM 客户端默认 `客户端目录/install.log`。每次操作有独立 ID，�
 真实命令、实时输出、耗时、退出码、完整异常；长命令每 15 秒报告存活和输出字节数。
 标准输出仍保留 JSON，进度提示写到标准错误。只读查询与 plan 不创建日志。
 
+本地镜像不存在属于正常探测结果，随后自动拉取；Docker 服务、权限或存储检查错误直接报告。失败命令的错误摘要显示在终端标准错误，长输出保留末五行并缩短单行；完整输出仍在安装日志中。镜像拉取失败还会在最终异常中保留 Docker 的错误正文。
+
 需要固定日志位置时，将全局参数放在命令组之前：
 
 ```bash
@@ -153,6 +155,7 @@ client install/doctor/export 均接受 `--client-dir`，默认是用户状态根
 
 | 现象 / 操作 | 检查方法 |
 |---|---|
+| 镜像解包提示 metadata.db 不存在 | 按[部署指南](deployment.zh-CN.md)检查 Docker/containerd 存储；确认任务影响后恢复服务，不能仅重启 Docker 或根据数据库文件是否立即出现判断恢复。 |
 | GPU 服务未就绪 | 在 GPU001 查询 server status，检查数据根目录下 instances/a/server.log，再重试 /health |
 | BCM 无法连接 | 先执行 ssh GPU001 hostname，再运行 client doctor 和 chat --server GPU001 --check；核对 API 端口 |
 | 客户端看不到 GPU | 工具在 BCM 执行属预期行为；在 GPU001 用 nvidia-smi 检查推理进程 |

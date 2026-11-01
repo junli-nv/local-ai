@@ -13,7 +13,16 @@ def inspect_image(reference, platform=None):
     if platform:
         command += ["--platform", platform]
     r = run(command + [reference], check=False)
-    return json.loads(r.stdout)[0] if r.returncode == 0 else None
+    if r.returncode == 0:
+        return json.loads(r.stdout)[0]
+    detail = (r.stderr or "").strip()
+    missing = "Error response from daemon: No such image: " + str(reference)
+    if detail == missing:
+        return None
+    raise RuntimeError(
+        "Docker image inspection failed (exit=%s): %s"
+        % (r.returncode, detail or "No diagnostic output")
+    )
 
 
 def image_identity(image):
@@ -98,7 +107,11 @@ def pull(root, policy, force=False):
     installlog.event("DOWNLOAD image; no reusable local image or --force requested")
     r = download_command(["docker", "pull", "--platform", policy["platform"], policy["image"]], log)
     if r.returncode:
-        raise RuntimeError("Image pull failed; complete output: " + str(log))
+        detail = (getattr(r, "stderr", None) or "").strip()
+        raise RuntimeError(
+            "Image pull failed (exit=%s); complete output: %s%s"
+            % (r.returncode, log, "\nDocker error: " + detail if detail else "")
+        )
     image = inspect_image(policy["image"], policy["platform"])
     if image is None:
         raise RuntimeError("Pull completed without a locally inspectable image")

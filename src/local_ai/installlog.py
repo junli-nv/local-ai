@@ -104,7 +104,7 @@ def session(options):
         )
         journal.write(traceback.format_exc(), "TRACEBACK", console=False)
         journal.write(
-            f"Inspect the failed COMMAND and STDERR above. Complete installation log: {journal.path}",
+            f"Inspect the failed command and error summary. Complete installation log: {journal.path}",
             "ERROR",
         )
         if group == "server":
@@ -205,6 +205,18 @@ def run(command, timeout=30, probe=False, **kwargs):
             f"STEP {step} {status} exit={code}; elapsed={time.monotonic() - started:.2f}s",
             "INFO" if code == 0 or probe else "ERROR",
         )
+        if code and not probe:
+            detail = buffers["stderr"].decode(errors="replace").strip()
+            source = "STDERR"
+            if not detail and not quiet_output:
+                detail = buffers["stdout"].decode(errors="replace").strip()
+                source = "STDOUT"
+            lines = detail.splitlines()
+            for line in lines[-5:]:
+                summary = line if len(line) <= 180 else line[:70] + " ... " + line[-100:]
+                journal.write(f"STEP {step} {source}: {summary}", "ERROR")
+            if len(lines) > 5:
+                journal.write(f"STEP {step} full output: {journal.path}", "ERROR")
         return subprocess.CompletedProcess(
             command,
             code,
