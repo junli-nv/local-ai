@@ -6,7 +6,7 @@ GPU 服务器负责模型推理；BCM 客户端负责文件编辑、Shell、Git 
 客户端不需要本地 GPU、CUDA、Docker、Node.js 或 npm。
 
 [使用手册与全部命令](docs/commands.md) · [部署指南](docs/deployment.zh-CN.md) · [架构设计](docs/architecture.md) ·
-[开发指南](docs/development.md) · [离线部署](docs/offline.md) · [验证记录](docs/validation.md)
+[开发指南](docs/development.md) · [开发接手与产品决策](docs/development.md#接手开发产品决策与工作顺序) · [离线部署](docs/offline.md) · [验证记录](docs/validation.md)
 
 ```mermaid
 flowchart LR

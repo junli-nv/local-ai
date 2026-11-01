@@ -2,6 +2,79 @@
 
 [中文（默认）](../development.md)
 
+## Developer handoff: decisions and working order
+
+These requirements were progressively agreed with the project owner on
+2026-11-01. They guide product development, not restrictions on assistant tasks.
+Update decisions, implementation and user docs together when requirements change.
+
+### Purpose and documentation
+
+local-ai is a daily-work assistant for diagnosis, scripts, data, services and
+Slurm/Kubernetes jobs. These examples are not allowlists. Gather real system
+evidence. Development rules, pure inventory planning and deployment checks must
+not prohibit ordinary hardware queries or requested compute jobs. Distinguish
+script preparation, job submission and completion.
+
+GPU hosts run inference; BCM tools run as the current user. Model API access
+and SSH operations are separate paths.
+
+| Material | Responsibility |
+|---|---|
+| [README](../../README.en.md) | First-use path, required prerequisites, startup/readiness/log hints; do not bury essential steps elsewhere |
+| [Deployment](deployment.md) | Platform, storage, CDI, network and recovery details linked from README |
+| [Commands](commands.md) | Commands, options, defaults, execution host, outputs and exit codes matching recursive help |
+| This page and [architecture](architecture.md) | Workflow, reasons, module responsibilities and extensions |
+| [Validation](validation.md) | Actual environment, method, results and untested limits |
+| [AGENTS](../../AGENTS.md) and [operations.py](../../src/local_ai/operations.py) | Repository rules versus general session guidance, with distinct scope |
+
+Chinese is primary; maintain English separately and synchronize both entry paths.
+
+### Agreed decisions
+
+| Feedback | Behavior to preserve |
+|---|---|
+| Pull failure appears to mean missing image | Separate expected inspect absence from pull failure; show actual error and full log path. Missing metadata.db concerns Docker/containerd storage |
+| Share image/model materials | Share weights/export archives separately from active databases. --data-dir does not move Docker/containerd storage. Validate new storage schemes |
+| BCM already reaches GPU | Use API endpoints; built-in model SSH tunnels/client doctor are removed. External frp/nginx handle forwarding; operational SSH remains available |
+| Connect via host IP | Explicit --host; 0.0.0.0 binds, while endpoints use a real host/IP. Preserve existing network/listener settings |
+| Container runs without visible progress | Show logs and startup/loading/readiness/failure. READY requires health, not docker ps, a port or blank curl output |
+| Unclear logs/status | install.log for preparation; instances/NAME/server.log for runtime. Clear messages, JSON stdout, progress stderr and meaningful exit codes |
+| Native resume loses context | opencode -s ID restores endpoint/project/private state using public metadata, handling empty lists and project scope without private database tables |
+| Application copying fails | Default terminal selection/copy/paste; disable application mouse/clipboard shortcuts. Explain disabled click/wheel behavior and verify terminal modes |
+| Fixed release blocks upgrades/offline use | Reference releases are validation records, not runtime allowlists. Reuse installs, detect imports, allow explicit releases/offline exports and test capabilities |
+| Models/revisions change | Configure recipe identities, directories, names, engine/client capabilities and separate locks; do not inherit hardware acceptance or DeepSeek-specific settings |
+| Around 400 ms TTFT seems high | Record method, input size, cache/load and timing first. Separate compilation, generation delay and reasoning content; avoid one-number conclusions |
+
+Use the [manual](commands.md) and [deployment guide](deployment.md) for operations;
+this section records design reasons.
+
+### Working order for each request
+
+1. **Understand result and host.** Read this section, AGENTS, README, relevant
+   modules/commands and evidence. Separate product changes from assistant tasks.
+2. **Reproduce with evidence.** Use authorized connections/accounts and confirm
+   hostname. Retrieve available logs directly. Read complete relevant output,
+   exit codes and errors; summaries or snapshots are not full evidence.
+3. **Locate the layer.** Separate runtime, storage/network, inference, client and
+   terminal. Containerd failure does not prove image absence; copying in another
+   window does not establish every clipboard path.
+4. **Implement reviewable configuration.** Exact identities provide reproducibility,
+   not version/model allowlists. Preserve services/state, validate candidates
+   separately, and include messages, logs, exit codes and recovery.
+5. **Validate appropriately.** Run unittest/Ruff/diff checks; native checks for
+   client adapters and streaming/reasoning/tool round trips for models. Test
+   rejection, old state and cleanup without weakening cases. Hardware/jobs need
+   actual authorization/resources. Disclose untested terminal/platform boundaries.
+6. **Update entry docs.** Synchronize recursive help, README, Chinese/English
+   manuals, deployment and validation. Walk through first use: execution location,
+   logs, success criteria and recovery.
+7. **Commit and deliver.** Inspect staging for artifacts, credentials and raw
+   infrastructure logs. Here, submitting code includes commit and push. Verify
+   the authorized push against the remote and inspect CI. Clean your temporary
+   resources without affecting production. Report change/reason/checks/limits/
+   activation; disclose pending CI or CPU-only validation.
+
 ## Scope of development rules
 
 These conventions apply when changing this repository, not to ordinary operations
@@ -64,8 +137,8 @@ in a project virtualenv, not OS-managed Python:
 python3 -m venv .venv
 .venv/bin/python -m pip install -e '.[dev]'
 .venv/bin/python -m unittest discover -s tests -v
-.venv/bin/ruff check src tests
-.venv/bin/ruff format --check src tests
+.venv/bin/ruff check src tests scripts
+.venv/bin/ruff format --check src tests scripts
 git diff --check
 ```
 
@@ -122,7 +195,7 @@ executables are architecture-specific. Never reuse AMD64 caches on ARM64.
 
 ## Testing and review rules
 
-- Keep plan generation deterministic and free of subprocesses/writes.
+- Keep inventory-based plan generation deterministic and free of subprocesses/writes.
 - Test rejected states and cleanup, not just a happy-path command.
 - Require image config/layer identity after import; a tag alone is insufficient.
 - Test two sessions keep stable history but separate endpoint connection configs.

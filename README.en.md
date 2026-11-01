@@ -9,7 +9,7 @@ edits, shell commands, git, and SSH to other cluster nodes. A client does not ne
 a local GPU, CUDA, Docker, Node.js, or npm.
 
 [User manual and all commands](docs/en/commands.md) · [Deployment guide](docs/en/deployment.md) · [Architecture](docs/en/architecture.md) ·
-[Development](docs/en/development.md) · [Offline deployment](docs/en/offline.md) ·
+[Development](docs/en/development.md) · [Developer handoff and decisions](docs/en/development.md#developer-handoff-decisions-and-working-order) · [Offline deployment](docs/en/offline.md) ·
 [Validation](docs/en/validation.md)
 
 ```mermaid

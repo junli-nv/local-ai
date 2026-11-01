@@ -22,6 +22,10 @@ documentation. Do not reinterpret them as restrictions on ordinary operations ta
 
 ## Repository development rules
 
+Read the [product decisions and working order](development.md#developer-handoff-decisions-and-working-order) before taking over. Update implementation, entry docs and evidence together when changing a decision.
+
+- Here, submitting code includes commit and push; verify the authorized push against the remote and inspect CI.
+
 - Keep GPU-server and BCM-client roles separate.
 - Runtime code uses Python 3.10+ standard library only.
 - Use Bash launchers and a project virtualenv for optional development tools.
