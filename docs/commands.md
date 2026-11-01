@@ -70,6 +70,8 @@ cd /raid/local-ai
 
 BCM 使用 install --role client --endpoint http://GPU001:18000/v1，替代上述 server 安装命令；两台机器各自保存设置。兼容的准备机可用 --role both 准备两端资源。client install/export 是只处理客户端的低级命令，不能替代完整 install/export。
 
+install --endpoint 仅在安装成功后将地址写入安装根目录 installation.json 的 endpoint 字段。不传该参数时保留已有地址；首次安装不会自动发现服务端地址。未保存地址时，chat 必须传 --endpoint；chat --endpoint 只覆盖本次连接，不保存。GPU 安装与 BCM 客户端设置分开配置。
+
 ## 本地复用与安装日志
 
 准备命令默认先检查本地：镜像的平台及固定摘要匹配，就不访问仓库；模型配置、分词器、
@@ -163,12 +165,12 @@ client install/export 均接受 `--client-dir`，默认是安装根目录下的 
 
 | 参数 | 含义与默认值 |
 |---|---|
-| `--endpoint URL` | 可访问的 HTTP(S) 模型 API 基础地址，包含端口与 /v1；已用 install 保存时可省略 |
+| `--endpoint URL` | 本次连接的 HTTP(S) 模型 API 地址，包含端口与 /v1；覆盖可选的安装默认值，不写回设置 |
 | `--project` | BCM 上已存在的工作目录，默认当前目录 |
 | `--client-dir` | 原生客户端目录，须与安装位置一致 |
 | `--state-dir` | 私有历史、缓存和会话日志根目录，默认见上节 |
 | `--model` | API 中的服务模型 ID，默认取安装记录，未配置时读取配方的 served_name |
-| `--check` | 只检查连接和模型可用性，输出 ready 与日志位置后退出 |
+| `--check` | 只检查连接和模型可用性，输出 ready、实际 endpoint、model 与日志位置后退出 |
 | `--run '任务'` | 单次任务，流式输出 JSON 事件并保存完整日志后退出；不加则交互使用 |
 
 在 bcm-headnode 上以 alice 执行：
@@ -185,6 +187,8 @@ client install/export 均接受 `--client-dir`，默认是安装根目录下的 
 ```
 
 升级模型或镜像时，使用独立的数据目录和实例进行验收，保留旧源码、权重和镜像锁。不要在原生产数据目录中强制覆盖权重后再尝试回退。
+
+一套 BCM 安装可连接多个 endpoint，见[多服务示例](../README.md#从同一个-bcm-连接多个服务)。模型相同可沿用安装默认模型；目标服务模型不同时，使用 chat --model ID，本次覆盖不改写默认值。不匹配时列出服务发布的 ID，不会静默挑选其他模型或回退到默认节点。恢复参数作用于选定 endpoint 的私有历史。
 
 ### 恢复会话与终端复制
 

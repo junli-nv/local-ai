@@ -40,8 +40,15 @@ def wait_endpoint(base, model, seconds=15):
         try:
             with urllib.request.urlopen(base.rstrip("/") + "/models", timeout=2) as response:
                 data = json.load(response)
-            if model not in {row["id"] for row in data["data"]}:
-                raise ValueError("Server does not advertise model " + model)
+            models = {row["id"] for row in data["data"]}
+            if model not in models:
+                raise ValueError(
+                    "Server does not advertise model "
+                    + model
+                    + "; available models: "
+                    + (", ".join(sorted(models)) or "(none)")
+                    + ". Select the target model with chat --model ID"
+                )
             return
         except (OSError, KeyError, TypeError, json.JSONDecodeError) as error:
             last = str(error)

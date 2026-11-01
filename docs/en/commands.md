@@ -68,6 +68,8 @@ install --model selects the client model ID; server installs use --profile's mod
 
 On BCM, use install --role client --endpoint http://GPU001:18000/v1 instead of the server command. Each host keeps its own settings; --role both prepares both roles on a compatible host. client install/export are lower-level client-only operations and do not replace complete install/export.
 
+install --endpoint writes the address to endpoint in INSTALL_ROOT/installation.json only after successful installation. Omitting --endpoint preserves an existing saved address; a fresh installation does not discover one automatically. Without a saved address, chat requires --endpoint. chat --endpoint overrides one invocation without saving it. GPU installation and BCM client settings are separate.
+
 ## Local reuse and installation journal
 
 Preparation checks local artifacts first. A matching pinned/platform image skips registry access.
@@ -159,12 +161,12 @@ Choose [installed-environment migration](offline.md#scenario-1-export-an-install
 
 | Option | Meaning and default |
 |---|---|
-| --endpoint URL | Reachable HTTP(S); may be saved by install --endpoint; model API base including port and /v1 |
+| --endpoint URL | Invocation-only reachable HTTP(S) API URL including port and /v1; overrides the optional install default without saving |
 | --project | Existing BCM project directory, default current directory |
 | --client-dir | Native client asset directory; match installation location |
 | --state-dir | Private history/cache/log root, default described above |
 | --model | Served API model ID; installed model first, otherwise the catalog default served_name |
-| --check | Check connection and model availability; report ready/log path and exit |
+| --check | Check connection/model; report ready, actual endpoint, model and log path, then exit |
 | --run 'task' | Run one prompt, stream JSON events, save full logs and exit; omit for interactive use |
 
 On bcm-headnode as alice:
@@ -176,6 +178,8 @@ On bcm-headnode as alice:
 ```
 
 For model/image upgrades, validate a separate data directory and instance while retaining the old source, weights and image locks. Avoid forcing a replacement over production weights as a rollback strategy.
+
+One BCM installation can connect to many endpoints. See [multiple-service examples](../../README.en.md#connect-to-multiple-services-from-one-bcm). Keep the installed model default for same-model services; use chat --model ID when the selected endpoint advertises a different model. This override does not change the default. A mismatch lists available IDs instead of silently selecting a model or another endpoint. Resume flags operate within the selected endpoint's private history.
 
 ### Resume and terminal clipboard
 

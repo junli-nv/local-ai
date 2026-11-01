@@ -149,6 +149,7 @@ def chat(options):
                     "client_arch": manifest["arch"],
                     "log_directory": str(session),
                     "endpoint": base,
+                    "model": options.model,
                 }
             )
         )

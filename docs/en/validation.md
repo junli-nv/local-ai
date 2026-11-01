@@ -172,3 +172,9 @@ The following workflow ran on another idle AMD64 B300 host:
 Separately downloaded an exact GitHub commit, installed the client online, exported it, verified the checksum and extracted it into a renamed directory. Client installation under unshare -n with --role client --offline passed, followed by the real native-client contract check. The large bundle came from the directory-installation candidate snapshot; final default-setting and version changes were checked separately with the 1.1.0 runtime. Archive sizes describe the test bundle, not the source-tag download.
 
 Offline installation ran under unshare -n; Docker accessed the host daemon through its local Unix socket. The entire host was not physically disconnected. These results do not cover fresh OS/driver setup, another Docker storage backend, GB300, ARM64 or another model. Raw evidence remains in internal test directories; only summaries are published.
+
+## 2026-11-01: multiple endpoint defaults and overrides
+
+109 tests and Ruff lint/format checks passed. Two local HTTP model servers with different model IDs exercised A → B → A routing, endpoint/model overrides, unchanged installation.json and separate history/state/cache directories. An unavailable model failed with advertised IDs and --model guidance, without fallback to another endpoint. Offline client installation covered optional defaults, preservation when omitted and explicit replacement without downloads.
+
+--check now reports the actual endpoint/model. Real OpenCode 1.19.5 contract checks passed session resume, disabled mouse capture, bracketed paste and clean exit. The multi-service routing test used local HTTP fixtures and a substituted client executor; it is not new acceptance for multiple physical GPU nodes or other models. No GPU service was restarted.

@@ -84,6 +84,8 @@ Health probes use 127.0.0.1 for wildcard binding, otherwise the configured IP. C
 
 Administrators manage nginx/frp forwarding separately. Clients use the final reachable endpoint; model access does not require SSH. Operational tools may still use SSH. Add GPU001/the actual IP to NO_PROXY/no_proxy if proxy variables interfere.
 
+A single BCM client can also choose services on other GPU hosts with chat --endpoint URL; this is independent of the two-instance-on-one-host example below. See [multi-node usage](../../README.en.md#connect-to-multiple-services-from-one-bcm) for optional defaults, model selection and session isolation.
+
 ## Replace an instance
 
 For GPU, port, address or recipe changes, confirm a is the intended instance and record old/new parameters. Stop and explicitly remove its container, then start with new arguments. Restarting the same container does not change arguments.

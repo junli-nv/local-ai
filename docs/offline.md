@@ -168,6 +168,8 @@ cd /raid/local-ai
 
 CDI 若缺少所选 GPU 的 UUID 别名，先完成[CDI 配置](deployment.zh-CN.md#cdi-配置)再启动。每种角色仅使用已准备的材料；导出不会下载尚未准备的模型或客户端。
 
+上面的客户端安装命令保存默认 API 地址。离线使用时仍可用 chat --endpoint URL 连接任意可达内网服务，无需重装；模型不同再传 --model ID。默认地址可省略，多服务覆盖与历史隔离见 [README](../README.md#从同一个-bcm-连接多个服务)。
+
 ## 日志与失败处理
 
 安装/导出看安装根目录的 install.log；启动看 instances/a/server.log。READY 由健康检查确认，容器存在不代表就绪。客户端输出私有会话 Log 路径。离线缺文件或校验失败会停止，不自动联网补下载。解决 CDI、网络、架构或资源错误后再继续。

@@ -168,6 +168,8 @@ For legacy BCM client assets outside the installation, include the actual asset 
 
 If CDI lacks the selected GPU UUID aliases, resolve [CDI setup](deployment.md#cdi-setup) before startup. Each role uses only its prepared assets; exports do not download unprepared models/clients.
 
+The client installation commands above save a default API address. Offline use still allows chat --endpoint URL to select any reachable internal service without reinstalling; use --model ID too for a different model. Defaults are optional; [README](../../README.en.md#connect-to-multiple-services-from-one-bcm) explains overrides and history isolation.
+
 ## Logs and failures
 
 Installation/export: INSTALL_ROOT/install.log. Startup: instances/a/server.log. READY requires a health check, not merely a running container. Clients print their private session Log path. Offline missing-file/checksum errors stop without download fallback. Resolve CDI, network, architecture or resource errors before continuing.

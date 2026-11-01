@@ -81,6 +81,8 @@ Administrators can still access user data.
 API keys/HTTPS, tenant gateways, quotas and load balancing are not configured. Restrict
 network access. Tools may use SSH for onward tasks, independently of inference transport.
 
+install can save an optional default endpoint/model in installation.json. CLI arguments override those defaults for one invocation without writing them back. Each chat uses its selected endpoint for checks and provider configuration; --check reports endpoint/model. Switching to a different model requires its explicit --model ID; unavailable IDs fail without fallback. The same client binary is reused across services.
+
 ## Performance policy
 
 GPU Engram placement and CUDA Graph choices belong to each model/profile. GB300 memory/interconnect differences require separate validation. Measurements, methods and limits live in the [validation record](validation.md), not duplicated performance claims here.

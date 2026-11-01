@@ -186,6 +186,66 @@ class EndpointTests(unittest.TestCase):
             self.assertEqual(invocation["endpoint"], base)
             self.assertNotIn("ssh_command", invocation)
 
+    def test_switch_endpoints_keeps_saved_defaults_and_separate_state(self):
+        with (
+            tempfile.TemporaryDirectory() as directory,
+            model_api("model-a") as (base_a, requests_a),
+            model_api("model-b") as (base_b, requests_b),
+        ):
+            root = Path(directory)
+            assets = self.assets(root)
+            settings_path = root / "installation.json"
+            original = json.dumps({"endpoint": base_a, "model": "model-a"})
+            settings_path.write_text(original)
+            common = [
+                "--client-dir",
+                str(assets),
+                "--state-dir",
+                str(root / "state"),
+                "--project",
+                str(root),
+            ]
+            output = io.StringIO()
+            with (
+                patch.dict(os.environ, {"LOCAL_AI_ROOT": str(root)}),
+                patch("local_ai.client.validate", return_value={"arch": "amd64"}),
+                patch("local_ai.client.register") as register,
+                patch("local_ai.client.execute", return_value=0) as execute,
+                contextlib.redirect_stderr(io.StringIO()),
+                contextlib.redirect_stdout(output),
+            ):
+                for extra in ([], ["--endpoint", base_b, "--model", "model-b"], []):
+                    self.assertEqual(main(["chat", *common, "--run", "hostname", *extra]), 0)
+                self.assertEqual(
+                    main(["chat", *common, "--endpoint", base_b, "--model", "model-b", "--check"]),
+                    0,
+                )
+                errors = io.StringIO()
+                with contextlib.redirect_stderr(errors):
+                    self.assertEqual(main(["chat", *common, "--endpoint", base_b, "--check"]), 1)
+                self.assertIn("available models: model-b", errors.getvalue())
+                self.assertIn("chat --model ID", errors.getvalue())
+            first, switched, returned = execute.call_args_list
+            environments = [call.args[2] for call in (first, switched, returned)]
+            for env, base, model in zip(
+                environments, (base_a, base_b, base_a), ("model-a", "model-b", "model-a")
+            ):
+                cfg = json.loads(env["OPENCODE_CONFIG_CONTENT"])
+                self.assertEqual(cfg["provider"]["local-deepseek"]["options"]["baseURL"], base)
+                self.assertEqual(cfg["model"], "local-deepseek/" + model)
+            for variable in ("XDG_DATA_HOME", "XDG_STATE_HOME", "XDG_CACHE_HOME"):
+                self.assertEqual(environments[0][variable], environments[2][variable])
+                self.assertNotEqual(environments[0][variable], environments[1][variable])
+            self.assertEqual(len(list((root / "state/services").iterdir())), 2)
+            self.assertEqual(settings_path.read_text(), original)
+            result = json.loads(output.getvalue())
+            self.assertEqual((result["endpoint"], result["model"]), (base_b, "model-b"))
+            self.assertEqual(
+                [call.args[3] for call in register.call_args_list], [base_a, base_b, base_a, base_b]
+            )
+            self.assertEqual(requests_a, ["/v1/models"] * 2)
+            self.assertEqual(requests_b, ["/v1/models"] * 3)
+
     def test_invalid_endpoint_rejected_before_writes(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / "absent"

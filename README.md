@@ -71,7 +71,7 @@ Docker 必须能访问服务端，CDI 应列出所选 GPU 的 nvidia.com/gpu=GPU
 ./local-ai server status --name a
 ```
 
-install 保存配方，优先复用本地资源，不启动 GPU。plan 生成计划；start 检查实时占用并启动，不会终止其他任务。
+这条 server 安装命令保存推理配方，不设置 BCM 客户端的 endpoint；连接地址在第 2 步配置。install 优先复用本地资源，不启动 GPU。plan 生成计划；start 检查实时占用并启动，不会终止其他任务。
 
 start 默认等待 600 秒，加载和编译期间显示 NOT READY 及日志位置。容器运行且 /health 返回 HTTP 200 后，终端和实例日志写入 READY。status 检查当前状态：就绪退出 0，未就绪退出 1，并说明原因。
 
@@ -95,11 +95,27 @@ sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
 curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/heads/main.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
+```
+
+**安装客户端，并可选设置默认连接地址：** 在 BCM 执行下面这条命令，将 GPU001 换成实际服务端地址：
+
+```bash
 ./local-ai install --role client --endpoint http://GPU001:18000/v1
+```
+
+只有该命令成功完成后，地址才写入 **BCM 本次安装根目录的 /raid/local-ai/installation.json** 的 endpoint 字段。它不是 GPU 服务端的安装设置，也不会自动从 GPU 主机推断。
+
+默认地址不是安装必填项。如果不想设默认值，改用 ./local-ai install --role client，之后每次 chat 带 --endpoint 即可。已有客户端无需为每个服务重复安装。
+
+若旧安装没有保存地址，可执行上面的安装命令设置默认值，也可只在 chat 中动态指定。修改长期默认值时才重新执行 install --endpoint；完整客户端会复用。
+
+创建或选择当前用户的工作目录：
+
+```bash
 mkdir -p /home/alice/project
 ```
 
-install 已保存 endpoint，后续 chat 可省略它。将项目路径换成当前用户的实际工作目录。
+本例安装时保存了 GPU001:18000，所以下面的 chat 可省略 --endpoint；没有保存默认值时，请在每条 chat 后加 --endpoint URL。
 
 ```bash
 # 只检查 API 和模型，不生成内容
@@ -111,6 +127,29 @@ install 已保存 endpoint，后续 chat 可省略它。将项目路径换成当
 ```
 
 三条命令连接同一个 GPU001:18000 服务，分别演示检查、交互和单次任务。临时覆盖连接用 chat --endpoint URL，不会改写已保存的地址。第二实例的端口见[双实例](docs/deployment.zh-CN.md#双实例与多人使用)。
+
+### 从同一个 BCM 连接多个服务
+
+一套 BCM 客户端可连接多个节点。下面新增 GPU002，它已部署模型服务，API 同样使用 18000；本例两个节点的服务模型 ID 相同：
+
+```bash
+# 本次检查 GPU002
+./local-ai chat --endpoint http://GPU002:18000/v1 --check
+# 本次在 GPU002 上推理，工具仍在 BCM 执行
+./local-ai chat --endpoint http://GPU002:18000/v1 --project /home/alice/project
+# 不带覆盖参数，仍回到已保存的 GPU001
+./local-ai chat --project /home/alice/project
+```
+
+chat --endpoint 不改写 installation.json，也不要求重新安装。--check 输出实际 endpoint 和 model，便于确认连到哪台服务。
+
+如果 GPU002 使用不同模型，同时传 --model 服务模型ID。假设它发布的 ID 是 other-model，则本次检查为：
+
+```bash
+./local-ai chat --endpoint http://GPU002:18000/v1 --model other-model --check
+```
+
+--model 也只对本次生效；省略时仍用安装默认模型，不会自动猜测另一节点的模型。不匹配时错误会列出服务端发布的 ID。不同 endpoint 的历史和缓存分开保存；返回原 endpoint 可继续其原会话。用 chat --session ID 或 --continue 时，也须选择对应 endpoint；原生 opencode -s ID 恢复入口会查找原地址。
 
 退出后可用原生提示的 opencode -s ses_... 恢复。首次 chat 创建 ~/.local/bin/opencode 恢复入口，并提示 PATH 或同名程序冲突；也可用 chat --session ID 或 chat --continue。默认关闭鼠标捕获及内置剪贴板快捷键，使用终端复制粘贴、键盘导航，详见[会话恢复与终端复制](docs/commands.md#恢复会话与终端复制)。
 

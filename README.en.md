@@ -73,7 +73,7 @@ After preflight:
 ./local-ai server status --name a
 ```
 
-install saves the profile and reuses complete assets without starting GPUs. plan produces a plan; start checks live occupancy without terminating other tasks.
+This server install command saves the inference profile, not the BCM endpoint; configure the client address in step 2. install reuses complete assets without starting GPUs. plan produces a plan; start checks live occupancy without terminating other tasks.
 
 start waits up to 600 seconds, showing NOT READY/log paths during loading and compilation. A running container and /health HTTP 200 produce READY in terminal/runtime logs. status checks current readiness: exit 0 when ready, exit 1 with a reason otherwise.
 
@@ -97,11 +97,27 @@ sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
 curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/heads/main.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
+```
+
+**Install the client, optionally saving a default address:** run this on BCM, substituting the actual server address:
+
+```bash
 ./local-ai install --role client --endpoint http://GPU001:18000/v1
+```
+
+Only after this command succeeds is the endpoint field written to **BCM's installation-root /raid/local-ai/installation.json**. This is separate from GPU server installation; the client does not infer the GPU host address.
+
+The default address is optional. To omit it, use ./local-ai install --role client and pass --endpoint to every chat invocation. One BCM client installation can connect to many services.
+
+For an older installation without a saved address, either configure a default with the install command above or specify an address dynamically in chat. Rerun install --endpoint only to change the persistent default; complete client assets are reused.
+
+Create or select the actual user's project directory:
+
+```bash
 mkdir -p /home/alice/project
 ```
 
-install saved the endpoint. Subsequent chat commands may omit it. Substitute the actual project directory.
+This example saved GPU001:18000, so the following chat commands may omit --endpoint. Without a saved default, add --endpoint URL to each chat command.
 
 ```bash
 # API/model check without generation
@@ -113,6 +129,29 @@ install saved the endpoint. Subsequent chat commands may omit it. Substitute the
 ```
 
 All three commands use GPU001:18000. chat --endpoint URL overrides one invocation without changing the saved address. Another port is introduced only for a [second instance](docs/en/deployment.md#two-instances-and-multiple-users).
+
+### Connect to multiple services from one BCM
+
+One client installation can connect to many nodes. GPU002 below is another deployed model server, also on port 18000. Both nodes advertise the same model ID in this example:
+
+```bash
+# Check GPU002 for this invocation
+./local-ai chat --endpoint http://GPU002:18000/v1 --check
+# GPU002 runs inference; tools still execute on BCM
+./local-ai chat --endpoint http://GPU002:18000/v1 --project /home/alice/project
+# Without an override, return to the saved GPU001 default
+./local-ai chat --project /home/alice/project
+```
+
+chat --endpoint neither rewrites installation.json nor requires reinstallation. --check reports the actual endpoint and model.
+
+For a different model on GPU002, also pass --model with its advertised ID. If that ID is other-model:
+
+```bash
+./local-ai chat --endpoint http://GPU002:18000/v1 --model other-model --check
+```
+
+--model is also invocation-only. Omitting it uses the installed model default, without guessing another node's model; mismatch errors list advertised IDs. Histories/caches are separate per endpoint. Return to the original endpoint to continue its history. chat --session ID/--continue must select that endpoint too; the native opencode -s ID launcher locates the original address.
 
 Resume with opencode -s ses_.... The first chat creates ~/.local/bin/opencode and reports PATH/name conflicts. chat --session ID and chat --continue are alternatives. Mouse capture/clipboard bindings are disabled by default; use terminal copying/pasting and keyboard navigation. See [session resume and terminal copying](docs/en/commands.md#resume-and-terminal-clipboard).
 

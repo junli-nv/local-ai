@@ -79,7 +79,10 @@ def parser():
         default=data_root(),
         help="Runtime data directory; defaults to the unpacked program root",
     )
-    b.add_argument("--endpoint", help="Save the client API URL; optional until chat")
+    b.add_argument(
+        "--endpoint",
+        help="Save a default client API URL; optional. chat --endpoint overrides one invocation",
+    )
     b.add_argument(
         "--model", help="Client model ID; server installations follow the selected profile"
     )
@@ -315,7 +318,7 @@ def parser():
     b.add_argument(
         "--endpoint",
         default=settings().get("endpoint"),
-        help="Reachable OpenAI-compatible HTTP(S) base URL including /v1; or set it with install --endpoint",
+        help="API URL for this invocation only; overrides the default saved by install --endpoint without changing it",
     )
     b.add_argument(
         "--client-dir",
@@ -338,7 +341,7 @@ def parser():
     b.add_argument(
         "--model",
         default=settings().get("model") or catalog()["model"]["served_name"],
-        help="Served model ID; must match the remote API model list",
+        help="Served model ID at the selected endpoint; overrides the installed model default for this invocation",
     )
     b.add_argument(
         "--check", action="store_true", help="Check model API connectivity without chatting"
