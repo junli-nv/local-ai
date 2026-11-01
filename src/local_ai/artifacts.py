@@ -13,7 +13,7 @@ import time
 import urllib.request
 from pathlib import Path
 
-from . import installlog
+from . import __version__, installlog
 from .common import arch, atomic_json, private_dir, run, sha256, verify_elf
 
 VERSION = "1.19.5"
@@ -34,7 +34,7 @@ def verify_integrity(path, integrity):
 def fetch(url, destination):
     if not url.startswith("https://"):
         raise ValueError("Download URL must use HTTPS")
-    req = urllib.request.Request(url, headers={"User-Agent": "cluster-local-ai/0.1"})
+    req = urllib.request.Request(url, headers={"User-Agent": "cluster-local-ai/" + __version__})
     with urllib.request.urlopen(req, timeout=60) as response, Path(destination).open("wb") as out:
         total = int(response.headers.get("Content-Length", 0))
         received = 0
@@ -135,7 +135,9 @@ def install(root, binary=None, seed=None, version=None, expected_sha256=None):
         else:
             package = "opencode-linux-" + ("x64" if cpu == "amd64" else "arm64")
             metadata = "https://registry.npmjs.org/" + package + "/" + version
-            req = urllib.request.Request(metadata, headers={"User-Agent": "cluster-local-ai/0.1"})
+            req = urllib.request.Request(
+                metadata, headers={"User-Agent": "cluster-local-ai/" + __version__}
+            )
             installlog.event("DOWNLOAD NPM metadata: " + metadata)
             with urllib.request.urlopen(req, timeout=30) as response:
                 info = json.load(response)

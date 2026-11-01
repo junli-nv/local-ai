@@ -1,0 +1,5 @@
+include AGENTS.md README.en.md local-ai
+recursive-include docs *.md
+recursive-include scripts *.py
+recursive-include tests *.json
+recursive-include .github *.yml

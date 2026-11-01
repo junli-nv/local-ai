@@ -1,5 +1,7 @@
 # local-ai
 
+当前正式版本：[1.0.0](https://github.com/junli-nv/local-ai/releases/tag/v1.0.0)。使用 `./local-ai --version` 查询项目版本；该版本号与可选的 OpenCode、模型及 vLLM 版本分别管理。
+
 在 GPU 服务器上运行容器化推理服务，在 BCM 头节点上运行每位用户自己的 OpenCode 客户端。
 
 GPU 服务器负责模型推理；BCM 客户端负责文件编辑、Shell、Git 和到其他集群节点的 SSH。

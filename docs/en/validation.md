@@ -132,3 +132,15 @@ CPU regressions cover external recipes, revision/environment identity,
 per-model locks and client-release reuse. Configurability does not raise
 hardware validation levels. Native checks and candidate-version selection
 are included in CI.
+
+## 1.0.0 release validation
+
+2026-11-01: 95 unit tests, Ruff lint/format and diff checks passed.
+Built wheel/sdist and installed the wheel offline with --no-index --no-deps in
+an isolated Python 3.12 environment. Outside the checkout, metadata/CLI reported
+1.0.0, all three profiles loaded, and pure planning created no data directory.
+Native OpenCode 1.19.5 checks from the installed wheel passed session restore,
+disabled mouse capture, bracketed paste and clean exit.
+The sdist includes docs, launcher, compatibility script and inventory fixtures.
+Existing platform/model validation levels are unchanged. No inference service
+was restarted or scheduler job submitted. Publication requires passing commit CI.

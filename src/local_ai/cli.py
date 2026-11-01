@@ -8,7 +8,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from . import artifacts, client, images, installlog, readiness, server
+from . import __version__, artifacts, client, images, installlog, readiness, server
 from .common import arch, client_home
 from .profiles import catalog, profile
 
@@ -28,6 +28,12 @@ def parser():
         epilog="Manual in source checkout: docs/commands.md (Chinese), docs/en/commands.md (English). "
         "Online: https://github.com/junli-nv/local-ai/blob/main/docs/commands.md. "
         "Use COMMAND --help or GROUP COMMAND --help for options.",
+    )
+    a.add_argument(
+        "--version",
+        action="version",
+        version="%(prog)s " + __version__,
+        help="Show local-ai package version and exit",
     )
     a.add_argument(
         "--debug",

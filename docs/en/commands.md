@@ -1,5 +1,7 @@
 # User manual and command reference
 
+Global `./local-ai --version` prints the project version and exits. It differs from `client install --version`, which selects the native client release.
+
 [中文（默认）](../commands.md)
 
 ## Getting started

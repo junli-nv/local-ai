@@ -120,7 +120,7 @@ pyproject.toml configures Python packaging and developer tools; ordinary source-
 | Section | Purpose here |
 |---|---|
 | build-system | setuptools>=68 build backend |
-| project | cluster-local-ai 0.1.0, Python>=3.10, no third-party runtime dependencies |
+| project | cluster-local-ai 1.0.0, Python>=3.10, no third-party runtime dependencies |
 | project.scripts | Installed local-ai entry point: local_ai.cli:main |
 | tool.setuptools | Find packages under src and include profiles.json |
 | project.optional-dependencies | dev extra installs Ruff 0.14.2 |
@@ -252,3 +252,12 @@ reference release; manual workflow client_version selects candidates.
 Also verify actual terminal copying, model tool round trips and history
 migration. Exit clients and back up history before switching. Restore the
 original backup when downgrading across incompatible database migrations.
+
+## Stable release procedure
+
+1. Align pyproject.toml, local_ai.__version__, release notes and both entry docs. Project, client, model and image versions are independent.
+2. Run the documented checks, build wheel/sdist, install the wheel offline in an isolated environment, verify version/resources/pure planning, then run native client acceptance.
+3. Push the reviewed release commit and require its CI to pass. Point the tag at that exact commit; never move a published tag.
+4. Use git archive for the complete source package and generate SHA256SUMS. Exclude working-directory state, weights, caches, credentials and user histories.
+5. Create a matching GitHub Release with source, Python packages and checksums. Verify the tag, asset sizes and digests before publishing.
+6. Record features, upgrade steps, compatibility limits and actual validation. Version 1.0 does not imply acceptance of every platform, model or scheduler cluster.

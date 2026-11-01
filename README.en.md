@@ -1,5 +1,7 @@
 # local-ai
 
+Current release: [1.0.0](https://github.com/junli-nv/local-ai/releases/tag/v1.0.0). Use `./local-ai --version` for the project version; OpenCode, model and vLLM versions are selected separately.
+
 [中文（默认）](README.md)
 
 Containerized GPU inference with per-user OpenCode clients on a BCM headnode.

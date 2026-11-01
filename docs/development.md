@@ -87,7 +87,7 @@ GPU 服务端负责推理；BCM 客户端用当前用户权限执行文件、She
 | 配置节 | 本项目的用途 |
 |---|---|
 | `build-system` | 使用 setuptools>=68 构建安装包 |
-| `project` | 包名 cluster-local-ai、版本 0.1.0、Python>=3.10；运行时第三方依赖为空 |
+| `project` | 包名 cluster-local-ai、版本 1.0.0、Python>=3.10；运行时第三方依赖为空 |
 | `project.scripts` | 安装后的 local-ai 命令调用 local_ai.cli:main |
 | `tool.setuptools` | 从 src 查找模块，并将 profiles.json 包含到安装包 |
 | `project.optional-dependencies` | dev 组包含 Ruff 0.14.2，仅开发时安装 |
@@ -230,6 +230,15 @@ PYTHONPATH=src .venv/bin/python scripts/check-client.py --client-dir /home/alice
 鼠标关闭和终端粘贴模式，不调用 GPU 或模型生成。CI 自动检查参考版本；
 手动工作流的 client_version 可测试候选版本。外层终端真实复制、模型工具往返和
 历史迁移仍需验证。切换前退出客户端并备份历史；跨数据库迁移回退时恢复原备份。
+
+## 正式版本发布流程
+
+1. 同步 pyproject.toml、local_ai.__version__、版本说明及中英文入口；项目版本与客户端、模型和镜像版本独立。
+2. 运行本页的检查，构建 wheel/sdist；在独立环境离线安装 wheel，核对 --version、配置资源和纯计划命令，再运行原生客户端验收。
+3. 审查并推送发布提交，确认对应 CI 成功；标签指向经过验证的确切提交，不能移动已发布标签。
+4. 用 git archive 从该提交生成完整源码包，为发布文件生成 SHA256SUMS；不打包工作目录、权重、缓存、凭据或用户历史。
+5. 创建对应版本的 GitHub Release，上传源码包、Python 安装包和校验清单；核对标签、文件大小及校验值后发布。
+6. 发布说明列出功能、升级方法、兼容边界和实测范围；版本 1.0 不代表所有硬件、模型或调度集群均已验收。
 
 ---
 
