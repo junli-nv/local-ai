@@ -111,6 +111,10 @@ plan 不预留 GPU，也不检查当前端口/GPU 进程占用；start 才检查
 客户端仅连接 --endpoint 指定的 API。需要转发时由管理员配置 nginx/frp 等外部工具。
 当前不配置 API key/HTTPS，应限制可信网络访问。完整操作见 [README](../README.md)。
 
+server start 成功返回时会在终端标准错误显示 Runtime log、Follow startup 和 Check API，
+分别给出实际实例日志路径、可复制的 tail -f 和健康检查命令；已运行实例也会提示。
+这不表示 API 已就绪。模型加载和编译日志在实例目录 server.log，安装管理过程在 install.log。
+
 ## 客户端参数
 
 client install/export 均接受 `--client-dir`，默认是用户状态根目录下的 `clients/本机架构/`。

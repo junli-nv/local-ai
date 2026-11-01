@@ -3,6 +3,7 @@
 import argparse
 import json
 import os
+import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -270,7 +271,20 @@ def dispatch(q):
             else server.inventory()
         )
         value = server.plan(q.data_dir, policy, q.gpus, q.name, q.port, hardware, host=q.host)
-        return value if q.action == "plan" else server.start(value, policy)
+        if q.action == "plan":
+            return value
+        result = server.start(value, policy)
+        runtime_log = Path(value["spec"]["data_dir"]) / "instances" / q.name / "server.log"
+        host = value["spec"].get("host", "127.0.0.1")
+        health = "http://%s:%d/health" % ("127.0.0.1" if host == "0.0.0.0" else host, q.port)
+        installlog.event(
+            "Container is running; API readiness has not been checked. "
+            "Initial model loading and compilation may take several minutes."
+        )
+        installlog.event("Runtime log: " + str(runtime_log))
+        installlog.event("Follow startup: " + shlex.join(["tail", "-f", str(runtime_log)]))
+        installlog.event("Check API: " + shlex.join(["curl", "--fail", health]))
+        return result
     if q.group == "image":
         policy = profile(q.profile)
         if q.action == "pull":

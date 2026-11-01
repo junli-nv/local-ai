@@ -109,6 +109,11 @@ Managed instances still reserve the API port across interfaces.
 Clients only connect to --endpoint. Administrators configure nginx/frp or other forwarding separately.
 API keys/HTTPS are not configured; restrict network access. See [README](../../README.en.md).
 
+Successful server start prints Runtime log, Follow startup and Check API guidance to stderr,
+including the actual instance log path, a shell-quoted tail -f command and health check.
+Already-running instances receive the same guidance; API readiness is not implied.
+Model loading/compilation output is in the instance server.log, not the installation journal.
+
 ## Client parameters
 
 client install/export accept --client-dir, defaulting to clients/ARCH under the private user-state root. The root is ~/.local/state/local-ai, or $XDG_STATE_HOME/local-ai when set. Select native binaries for BCM's architecture independently of the GPU server.

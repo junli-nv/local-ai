@@ -199,6 +199,22 @@ For a GB300 host with four local GPUs, select `--profile gb300-tp4`. With two
 local GPUs and sufficient host memory, select `--profile gb300-tp2 --gpus 0,1`.
 GB300 profiles require hardware acceptance testing before production.
 
+After server start returns, terminal guidance explains that model loading and
+compilation may take several minutes and prints:
+
+```text
+Runtime log: /raid/local-ai/instances/a/server.log
+Follow startup: tail -f /raid/local-ai/instances/a/server.log
+Check API: curl --fail http://127.0.0.1:18000/health
+```
+
+Paths follow --data-dir and the instance name. install.log records installation
+and container launch commands; instances/a/server.log contains weight loading,
+kernel compilation, CUDA Graph capture and runtime errors. A running container
+does not prove readiness; the port may not listen during initialization.
+Follow the runtime log for progress. Ctrl+C stops log viewing, not the container.
+Guidance goes to stderr; stdout remains JSON.
+
 ### Listen address and existing instances
 
 The server commands above use --host 0.0.0.0 for all IPv4 interfaces. BCM connects

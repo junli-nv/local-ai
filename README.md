@@ -178,6 +178,19 @@ GPU 进程占用、实例分配和端口，不会终止其他作业。
 四卡 GB300 使用 `--profile gb300-tp4`；两卡 GB300 使用 `--profile gb300-tp2 --gpus 0,1`。
 GB300 配置用于生产前须完成实机验收。容器处于 running 状态不代表 API 已就绪。
 
+`server start` 返回后，终端会直接提示模型加载和编译可能仍需数分钟，并打印：
+
+```text
+Runtime log: /raid/local-ai/instances/a/server.log
+Follow startup: tail -f /raid/local-ai/instances/a/server.log
+Check API: curl --fail http://127.0.0.1:18000/health
+```
+
+路径随 `--data-dir` 和实例名变化。`install.log` 记录安装与容器启动命令；
+`instances/a/server.log` 记录权重加载、内核编译、CUDA Graph 捕获和服务错误。
+容器 Up 不代表 API 已就绪，初始化期间端口可能尚未监听。用上面的 `tail -f` 查看进展；
+Ctrl+C 只退出日志查看，不停止容器。终端提示写标准错误，标准输出仍是 JSON。
+
 ### 监听地址与已有实例
 
 上面的服务端命令使用 `--host 0.0.0.0`，监听所有 IPv4 网卡，BCM 直接访问宿主机 IP
