@@ -112,6 +112,8 @@ cd local-ai
 # List profiles and validation status
 ./local-ai profiles
 docker version
+docker info --format 'Server={{.ServerVersion}} Driver={{.Driver}} Root={{.DockerRootDir}}'
+docker ps -a
 nvidia-ctk cdi list
 ```
 
@@ -124,6 +126,57 @@ nvidia-ctk cdi list
 ```
 
 Without this service, follow the manual CDI guidance in the [deployment guide](docs/en/deployment.md).
+### Storage checks and recovery before downloading
+
+The `docker version` and `docker info` commands above must reach the daemon.
+An active service does not prove image storage works. A first inspection reporting
+`No such image` is expected and triggers a download; diagnose a failed pull using
+the terminal's `Docker error` and the installation journal.
+
+`--data-dir` does not change Docker/containerd image storage. Never delete or move
+`/var/lib/docker` or `/var/lib/containerd` while services are running, or share these
+databases between nodes.
+
+**Use the following recovery only for a failed pull; skip it for a normal installation.**
+If the error contains `failed to prepare extraction snapshot` and
+`/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/metadata.db: no such file or directory`,
+have an administrator check original storage, mounts and configuration first.
+Restore original storage if it contains data that must be retained. Services may
+still hold deleted database files open; restarting Docker alone does not restart
+the independent containerd service.
+
+Inspect containers and every containerd namespace before restarting. Arrange maintenance
+if tasks or other runtime users could be affected:
+
+```bash
+docker ps -a
+sudo ctr namespaces list
+for ns in $(sudo ctr namespaces list -q); do
+    sudo ctr --namespace "$ns" tasks list
+    sudo ctr --namespace "$ns" containers list
+done
+```
+
+Once interruption is acceptable and original storage need not be restored, run
+**on the GPU server**; root may omit sudo:
+
+```bash
+sudo systemctl stop docker.service docker.socket
+sudo systemctl restart containerd.service
+sudo systemctl start docker.socket docker.service
+docker info
+```
+
+Restarting does not restore lost images, containers or volumes. `metadata.db` may only
+be created on the first snapshot creation; its absence immediately after restart is
+not a failure. Never manually `touch` it. Retry the image pull below and accept recovery
+only after successful download and extraction, before downloading weights or starting
+inference. If it still fails, stop installation and inspect `/raid/local-ai/install.log`
+and `journalctl -u containerd -u docker`.
+See the [storage recovery details](docs/en/deployment.md).
+
+### Download artifacts and start
+
 After prerequisites pass, prepare artifacts and start:
 
 ```bash

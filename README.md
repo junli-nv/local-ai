@@ -100,6 +100,8 @@ cd local-ai
 # 查看配置及验证状态
 ./local-ai profiles
 docker version
+docker info --format 'Server={{.ServerVersion}} Driver={{.Driver}} Root={{.DockerRootDir}}'
+docker ps -a
 nvidia-ctk cdi list
 ```
 
@@ -112,6 +114,49 @@ nvidia-ctk cdi list
 ```
 
 没有该服务时使用[部署指南](docs/deployment.zh-CN.md)中的 CDI 手动生成指引。
+### 下载前检查与故障恢复
+
+上面的 `docker version` 和 `docker info` 必须能访问服务端。Docker 显示 active
+只说明进程运行，不能证明镜像存储正常。首次检查出现 `No such image` 属正常情况，
+程序会继续下载；若随后拉取失败，应看终端的 `Docker error` 和安装日志。
+
+`--data-dir` 不改变 Docker/containerd 的镜像存储路径。不要在服务运行时删除或
+移动 `/var/lib/docker`、`/var/lib/containerd`，也不要让多节点共享这些数据库。
+
+**仅在拉取报错时执行以下排障，正常安装跳过。** 若看到
+`failed to prepare extraction snapshot`，并提示
+`/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/metadata.db: no such file or directory`，
+先让管理员检查原存储、挂载和配置；有需保留的数据时先恢复原存储。
+运行中的服务可能仍持有已删除的数据库句柄，仅重启 Docker 不会重启独立的 containerd。
+
+重启前检查容器和 containerd 的所有命名空间；有任务或其他用户使用运行时时先安排维护：
+
+```bash
+docker ps -a
+sudo ctr namespaces list
+for ns in $(sudo ctr namespaces list -q); do
+    sudo ctr --namespace "$ns" tasks list
+    sudo ctr --namespace "$ns" containers list
+done
+```
+
+确认允许中断服务且原存储无需恢复后，在 **GPU 服务器**执行；root 可省略 sudo：
+
+```bash
+sudo systemctl stop docker.service docker.socket
+sudo systemctl restart containerd.service
+sudo systemctl start docker.socket docker.service
+docker info
+```
+
+重启不会恢复已丢失的镜像、容器或卷数据。`metadata.db` 可能在首次创建快照时才生成，
+重启后立即找不到它不代表失败，也不要手工 `touch`。重试下方镜像下载，以实际拉取和
+解包成功验收；成功后再下载模型和启动服务。仍失败时停止后续安装，检查
+`/raid/local-ai/install.log` 和 `journalctl -u containerd -u docker`，
+详见[部署指南的存储恢复说明](docs/deployment.zh-CN.md)。
+
+### 下载模型并启动服务
+
 确认前置条件后，再下载和启动：
 
 ```bash
