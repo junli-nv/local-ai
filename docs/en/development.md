@@ -136,3 +136,46 @@ Before pushing, inspect staged files for models, binaries, caches, credentials
 or private paths. Run all checks. Commit source, tests, docs and CI together.
 Use small changes when adding a new profile; include its acceptance evidence
 before changing its advertised validation status.
+
+## Model and client compatibility
+
+The default DeepSeek recipe is not a model allowlist. profiles.json stores models
+with repo/revision, model_directory, served_name, image, engine_options,
+environment and client capabilities. default_model selects the client default;
+hardware profiles reference a model. Profile engine_options override model
+options; objects/arrays become JSON, true emits a flag and false/null omits it.
+Listener, port, model path and TP remain managed. DeepSeek parsers, Engram and
+reasoning metadata belong only to its recipe.
+
+Copy the bundled catalog, add a model/profile and select your file:
+
+```bash
+export LOCAL_AI_CATALOG=/home/alice/local-ai-profiles.json
+./local-ai profiles
+```
+
+Use a distinct model_directory for each model/revision. Each contains its own
+model.lock.json; matching legacy root locks remain readable. chat --model
+selects another OpenAI-compatible model. Declare reasoning, tool_call,
+interleaved and limit in its client metadata. Unknown models do not inherit
+DeepSeek metadata. New recipes do not inherit previous hardware validation.
+
+Downloading currently uses Hugging Face snapshots; validation covers indexed
+sharded safetensors and serving uses vLLM. Other formats/engines need adapters.
+Generating a configuration does not validate hardware or model tool calls.
+
+There is no runtime client-version allowlist. With no --version, installation
+reuses the installed release or detects the imported binary's version. Only a
+first online download uses the reference release. Explicit versions, local
+binaries and offline archives remain available. Test candidates separately:
+
+```bash
+PYTHONPATH=src .venv/bin/python scripts/check-client.py --client-dir /home/alice/client-candidate
+```
+
+This checks native session HTTP APIs, public JSON, resume and terminal
+mouse/paste modes in temporary state without GPUs or inference. CI checks the
+reference release; manual workflow client_version selects candidates.
+Also verify actual terminal copying, model tool round trips and history
+migration. Exit clients and back up history before switching. Restore the
+original backup when downgrading across incompatible database migrations.

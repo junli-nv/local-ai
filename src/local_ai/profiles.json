@@ -1,11 +1,59 @@
 {
-  "model": {
-    "repo": "deepseek-ai/DeepSeek-V4.1-Flash",
-    "revision": "314113f8a7dadb388215396ba5fbee2c610a04d6",
-    "model_directory": "DeepSeek-V4.1-Flash",
-    "served_name": "DeepSeek-V4.1-Flash",
-    "image": "vllm/vllm-openai@sha256:ef74f0f30e704546aa671746e1da6b1a25094b0b0914a29d33384dec86f88cac",
-    "image_tag": "vllm/vllm-openai:v0.32.0-ubuntu2404"
+  "default_model": "deepseek-v4.1-flash",
+  "models": {
+    "deepseek-v4.1-flash": {
+      "repo": "deepseek-ai/DeepSeek-V4.1-Flash",
+      "revision": "314113f8a7dadb388215396ba5fbee2c610a04d6",
+      "model_directory": "DeepSeek-V4.1-Flash",
+      "served_name": "DeepSeek-V4.1-Flash",
+      "image": "vllm/vllm-openai@sha256:ef74f0f30e704546aa671746e1da6b1a25094b0b0914a29d33384dec86f88cac",
+      "image_tag": "vllm/vllm-openai:v0.32.0-ubuntu2404",
+      "engine_options": {
+        "--tokenizer-mode": "deepseek_v41",
+        "--tool-call-parser": "deepseek_v41",
+        "--reasoning-parser": "deepseek_v41",
+        "--enable-auto-tool-choice": true,
+        "--max-model-len": "131072",
+        "--max-num-seqs": "4",
+        "--max-num-batched-tokens": "8192",
+        "--gpu-memory-utilization": "0.80",
+        "--kv-cache-dtype": "fp8",
+        "--attention-config": {
+          "backend": "FLASHINFER_MLA_SPARSE_DSV41",
+          "indexer_kv_dtype": "mxfp4",
+          "indexer_sparse_logits": true
+        },
+        "--engram-config": {
+          "cpu_offload": false
+        },
+        "--kernel-config": {
+          "enable_flashinfer_autotune": false
+        },
+        "--compilation-config": {
+          "mode": 0,
+          "cudagraph_mode": "FULL_DECODE_ONLY",
+          "cudagraph_capture_sizes": [
+            1,
+            2,
+            4
+          ]
+        }
+      },
+      "environment": {
+        "VLLM_USE_RUST_FRONTEND": "1"
+      },
+      "client": {
+        "reasoning": true,
+        "tool_call": true,
+        "interleaved": {
+          "field": "reasoning_content"
+        },
+        "limit": {
+          "context": 131072,
+          "output": 32768
+        }
+      }
+    }
   },
   "profiles": {
     "b300-tp4": {
@@ -18,7 +66,8 @@
         "B300"
       ],
       "validation": "hardware-verified",
-      "platform_digest": "sha256:327eb19763b5c91a06e750082348170eafb99e476f91eb0cb60328dc18b04961"
+      "platform_digest": "sha256:327eb19763b5c91a06e750082348170eafb99e476f91eb0cb60328dc18b04961",
+      "model": "deepseek-v4.1-flash"
     },
     "gb300-tp4": {
       "arch": "arm64",
@@ -31,7 +80,8 @@
         "B300"
       ],
       "validation": "experimental-no-local-hardware",
-      "platform_digest": "sha256:b1bea6490db94268e68577929ae4b800a662b91a3cd4a1fcba81cfb3946ddcff"
+      "platform_digest": "sha256:b1bea6490db94268e68577929ae4b800a662b91a3cd4a1fcba81cfb3946ddcff",
+      "model": "deepseek-v4.1-flash"
     },
     "gb300-tp2": {
       "arch": "arm64",
@@ -46,7 +96,20 @@
       "validation": "recipe-derived-no-local-hardware",
       "host_memory_note": "Engram offload alone is about 189 GiB across this replica; budget host memory for loading and the OS as well.",
       "platform_digest": "sha256:b1bea6490db94268e68577929ae4b800a662b91a3cd4a1fcba81cfb3946ddcff",
-      "min_host_available_gib": 256
+      "min_host_available_gib": 256,
+      "model": "deepseek-v4.1-flash",
+      "engine_options": {
+        "--engram-config": {
+          "cpu_offload": true
+        }
+      }
     }
+  },
+  "legacy_environment": {
+    "VLLM_USE_RUST_FRONTEND": "1"
+  },
+  "legacy_model_identity": {
+    "repo": "deepseek-ai/DeepSeek-V4.1-Flash",
+    "revision": "314113f8a7dadb388215396ba5fbee2c610a04d6"
   }
 }

@@ -117,3 +117,18 @@ the workflow runs. Local test/lint/build results do not imply remote CI passed.
 
 Raw integration evidence remains in ignored runtime paths with the operator;
 it is not a repository artifact.
+
+## Client resume and configurable-model validation
+
+2026-11-01: Real OpenCode 1.19.5, temporary user state, native HTTP session
+creation and a pseudo-terminal verified opencode -s resume, disabled mouse
+capture, bracketed paste and clean exit. Existing session endpoint/project
+lookup also passed. No Slurm/Kubernetes job was submitted, and no additional
+model or client release was validated. Assistant guidance covers these tasks;
+it does not constitute cluster acceptance.
+
+All three existing vLLM argument lists match their pre-change values.
+CPU regressions cover external recipes, revision/environment identity,
+per-model locks and client-release reuse. Configurability does not raise
+hardware validation levels. Native checks and candidate-version selection
+are included in CI.

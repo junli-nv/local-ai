@@ -11,7 +11,7 @@ from pathlib import Path
 from . import readiness
 from .common import arch, atomic_json, fingerprint, run
 from .images import resolve_image
-from .profiles import engine_args, select_gpus
+from .profiles import engine_args, legacy_environment, legacy_model_identity, select_gpus
 
 
 def inventory():
@@ -82,6 +82,11 @@ def plan(root, policy, gpus, name, port, hardware, host="127.0.0.1"):
         "gpus": [g["uuid"] for g in chosen],
         "args": engine_args(policy, port, host),
     }
+    identity = {key: policy[key] for key in ["repo", "revision"]}
+    if identity != legacy_model_identity():
+        spec["model_identity"] = identity
+    if policy.get("environment", {}) != legacy_environment():
+        spec["environment"] = policy.get("environment", {})
     # Preserve the existing default deployment fingerprint.
     if host != "127.0.0.1":
         spec["host"] = host
@@ -114,12 +119,15 @@ def plan(root, policy, gpus, name, port, hardware, host="127.0.0.1"):
         "TRANSFORMERS_OFFLINE=1",
         "PYTHONUNBUFFERED=1",
         "VLLM_ENGINE_READY_TIMEOUT_S=3600",
-        "VLLM_USE_RUST_FRONTEND=1",
         "NCCL_SOCKET_IFNAME=lo",
         "GLOO_SOCKET_IFNAME=lo",
         "CUDA_VISIBLE_DEVICES=" + ",".join(spec["gpus"]),
     ]:
         command += ["-e", value]
+    for key, value in policy.get("environment", {}).items():
+        if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", key):
+            raise ValueError("Invalid engine environment name: " + key)
+        command += ["-e", key + "=" + str(value)]
     entry = "import os,json,datetime; f=open('/instance/server.log','a',buffering=1); f.write('\\nSTART '+datetime.datetime.now().isoformat()+'\\n'); os.dup2(f.fileno(),1); os.dup2(f.fileno(),2); os.execvp('vllm',['vllm']+json.load(open('/instance/args.json')))"
     command += ["--entrypoint", "python3", policy["image"], "-c", entry]
     return {

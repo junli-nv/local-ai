@@ -186,7 +186,7 @@ def parser():
     ).add_subparsers(dest="action", required=True)
     for action in ["install", "export"]:
         details = {
-            "install": "Install a pinned native client online or from local assets",
+            "install": "Install a selected native client online or from local assets",
             "export": "Export client assets without personal history or credentials",
         }[action]
         b = clients.add_parser(action, help=details, description=details)
@@ -209,8 +209,9 @@ def parser():
             )
             b.add_argument(
                 "--version",
-                default=artifacts.VERSION,
-                help="Expected OpenCode version for download or local binary validation",
+                default=None,
+                help="Select a release; otherwise reuse installed or detect imported version; first online download reference: "
+                + artifacts.VERSION,
             )
             b.add_argument("--sha256", help="Expected checksum for imported binary")
         if action == "export":
@@ -258,6 +259,20 @@ def parser():
         "--check", action="store_true", help="Check model API connectivity without chatting"
     )
     b.add_argument("--run", help="One prompt; stream JSON events, save full logs, then exit")
+    resume = b.add_mutually_exclusive_group()
+    resume.add_argument(
+        "-s", "--session", help="Resume this OpenCode session in the endpoint's private history"
+    )
+    resume.add_argument(
+        "-c",
+        "--continue",
+        dest="continue_session",
+        action="store_true",
+        help="Continue the latest OpenCode session for this project and endpoint",
+    )
+    a.epilog = (
+        a.epilog or ""
+    ) + " Model recipes: set LOCAL_AI_CATALOG to an external profiles JSON file."
     return a
 
 

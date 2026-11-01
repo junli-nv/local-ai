@@ -1,9 +1,13 @@
-# Operations tasks and contributor instructions
+# Daily-work assistant and contributor instructions
 
-## Operations task scope
+## Daily-work scope
 
-local-ai primarily helps users diagnose and resolve system, hardware, network, storage
-and service problems. It is not limited to coding. Use the current account's access
+local-ai is a general daily-work assistant: system diagnosis, scripts and code, files
+and data, service configuration, and Slurm/Kubernetes job preparation, submission and
+tracking are examples, not a task allowlist. Deliver reviewable artifacts and suitable
+validation. For requested job submission, respect the specified cluster/resources and
+report job IDs, state and logs, distinguishing preparation, submission, queueing,
+running and completion. Use the current account's access
 to inspect the local host or the remote host named by the user. Read-only hardware
 queries are not GPU workload acceptance tests and require neither an inventory
 fixture nor a hardware model allowlist.

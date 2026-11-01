@@ -18,7 +18,7 @@ flowchart LR
 
 ## 运维用途与项目指令
 
-local-ai 用于诊断和处理系统、硬件、网络、存储及服务问题，也能完成代码任务。
+local-ai 是日常工作助手：排查系统与硬件问题、开发脚本、处理文件和数据、配置服务，以及准备、提交和跟踪 Slurm/Kubernetes 作业等都可以直接交给它。
 在 BCM 客户端直接提出任务，例如“通过 SSH 到 GPU001，查询 CPU、内存和 GPU 的实际型号与数量”。
 客户端使用当前账户已有的工具和 SSH 访问权限采集真实信息；推理配置表不限制运维查询的硬件型号。
 `--project` 指定任务工作目录，查询远端硬件不需要修改项目代码或准备硬件清单文件。
@@ -66,8 +66,8 @@ local-ai 用于诊断和处理系统、硬件、网络、存储及服务问题�
 当前不提供跨主机张量并行或整柜 NVL72 调度。
 
 固定的 vLLM `0.32.0-ubuntu2404` 镜像同时提供 AMD64 和 ARM64 版本，配置记录了清单及各平台摘要，
-启动前检查 CPU 与镜像是否匹配。模型固定为 `deepseek-ai/DeepSeek-V4.1-Flash`，
-revision 为 `314113f8a7dadb388215396ba5fbee2c610a04d6`，不会自动更换模型变体。
+启动前检查 CPU 与镜像是否匹配。默认模型配方为 `deepseek-ai/DeepSeek-V4.1-Flash`，
+revision 为 `314113f8a7dadb388215396ba5fbee2c610a04d6`，不会自动更换模型变体。可用 `LOCAL_AI_CATALOG` 选择外部配方；参见[模型扩展与兼容性](docs/development.md#模型与客户端兼容性)。
 
 ## 环境要求
 
@@ -275,6 +275,17 @@ BCM 以当前用户权限执行，推理在 GPU 服务端进行。
 若需要跨网络转发或反向代理，由管理员使用 frp、nginx 等外部工具部署，然后把可访问的
 地址填入 `--endpoint`；无需为 local-ai 配置 GPU 节点的 SSH 登录。内网请求受代理环境
 影响时，将服务端加入 `NO_PROXY`/`no_proxy`。BCM 不需要 Docker、CUDA、Node.js 或 npm。
+
+### 会话恢复、复制粘贴和版本选择
+
+退出后可直接运行提示中的 `opencode -s ses_...`，找回原 endpoint、项目和聊天历史。
+首次 chat 会创建 `~/.local/bin/opencode` 恢复入口；PATH 缺失或已有同名程序时会给出提示。
+也可使用 `chat --session ID` 或 `chat --continue`。默认关闭 OpenCode 的鼠标捕获与内置剪贴板快捷键，
+用终端自己的文本选取、复制和粘贴；界面内改用键盘导航，长对话可 `/export`。
+
+OpenCode 的默认下载版本只是验收参考，可用 `client install --version X.Y.Z` 或 `--binary` 选择。
+不设置运行时版本白名单；升级按实际接口验收，并在切换前备份历史。
+本地安装和客户端离线包可避免依赖某个下载源长期可用。完整步骤见[使用手册](docs/commands.md#恢复会话与终端复制)。
 
 ## 单机双实例与多人使用
 

@@ -38,7 +38,7 @@ Syntax: ./local-ai GROUP COMMAND OPTIONS. profiles and chat have no child comman
 | image export | Docker preparation host | Image archive and companion lock file |
 | image import | Offline GPU host | Verify archive and lock, then load the image |
 | model download | Connected preparation host | Pinned config, tokenizer, index and all weight shards |
-| client install | bcm-headnode | Install a pinned native client online or import local assets |
+| client install | bcm-headnode | Install a selected native client release online or import local assets |
 | client export | BCM preparation host | Client/public-cache archive without private history or credentials |
 | chat | bcm-headnode | Connect to inference; execute tools locally as the current user |
 
@@ -128,7 +128,7 @@ client install/export accept --client-dir, defaulting to clients/ARCH under the 
 |---|---|---|
 | --binary | client install | Import local OpenCode executable; omit for online installation |
 | --seed-cache | client install | Optional offline public cache directory |
-| --version | client install | Expected download/import version, default 1.19.5 |
+| --version | client install | Explicit release; otherwise reuse installed or detect imported version; first online reference 1.19.5 |
 | --sha256 | client install | Optional expected checksum from a trusted binary manifest |
 | --output | client export | Required archive destination; also creates .sha256 |
 
@@ -155,6 +155,44 @@ On bcm-headnode as alice:
 ```
 
 For model/image upgrades, validate a separate data directory and instance while retaining the old source, weights and image locks. Avoid forcing a replacement over production weights as a rollback strategy.
+
+### Resume and terminal clipboard
+
+The first chat invocation (including --check) creates a per-user resume launcher
+at `~/.local/bin/opencode`. Run the exit hint `opencode -s ses_...` directly to
+restore the original endpoint, project and private history. If needed, run
+`export PATH="$HOME/.local/bin:$PATH"` and add it to `~/.profile`.
+An existing unrelated opencode executable is preserved; use the explicit entry instead:
+
+```bash
+./local-ai chat --endpoint http://GPU001:18000/v1 --project /home/alice/project --session ses_example
+./local-ai chat --endpoint http://GPU001:18000/v1 --project /home/alice/project --continue
+```
+
+`--session` (`-s`) restores a session; `--continue` (`-c`) resumes the latest for
+this project. They are mutually exclusive. The launcher supports `opencode -s ID`,
+not the entire native CLI. OpenCode mouse capture, copy on selection and built-in
+clipboard copy/read shortcuts are disabled by default. Use terminal selection,
+copy and paste, and keyboard navigation; UI mouse clicks and wheel scrolling
+are disabled. tmux selection settings remain user-managed. Use `/export` for
+long transcripts. Changes apply to new or resumed clients.
+
+### Client versions and offline recovery
+
+Select a release with `client install --version X.Y.Z`, or import a local
+executable with --binary. The default download release is a validation reference,
+not a runtime version allowlist. Resume uses public `session list --format json`,
+not private database tables. An incompatible interface reports the failing
+capability; arbitrary future releases may still require adaptation.
+Validate upgrades in a separate client directory and temporary history: resume
+flags, JSON session metadata, mouse disablement and terminal paste. Exit old
+clients and back up history before switching. Downgrades may require restoring
+the pre-upgrade history backup after database migrations.
+
+If downloads become unavailable, reuse the local installation, import an existing
+binary or restore a client export archive. Archives include executable, public
+cache, version manifest and checksums, excluding history and credentials.
+See [offline deployment](offline.md).
 
 ## Operations and troubleshooting
 
@@ -183,3 +221,5 @@ Exit relevant clients before backing up their private state. Never commit histor
 Most management commands return JSON. chat returns the client's exit code; single-prompt runs stream JSON events. Invalid arguments and failures exit nonzero. For a traceback, use ./local-ai --debug GROUP COMMAND OPTIONS.
 
 No automatic load balancing, user quotas, boot startup, cross-host TP or GPU scheduling is provided. Allocate dedicated, available GPU resources before startup. The application does not require a cluster scheduler. See [validation](validation.md) for B300/GB300 evidence and remaining acceptance work.
+
+Select external model recipes with LOCAL_AI_CATALOG; see [compatibility](development.md#model-and-client-compatibility).

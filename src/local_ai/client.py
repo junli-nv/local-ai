@@ -14,13 +14,15 @@ from .artifacts import validate
 from .common import atomic_json, fingerprint, private_dir
 from .endpoint import endpoint_url, wait_endpoint
 from .operations import GUIDANCE
+from .profiles import client_options
+from .resume import register
 
 
 def service_key(endpoint):
     return fingerprint({"endpoint": endpoint_url(endpoint)})[:20]
 
 
-def config(base, model):
+def config(base, model, options=None):
     return {
         "$schema": "https://opencode.ai/config.json",
         "model": "local-deepseek/" + model,
@@ -28,15 +30,13 @@ def config(base, model):
         "provider": {
             "local-deepseek": {
                 "npm": "@ai-sdk/openai-compatible",
-                "name": "Cluster local DeepSeek",
+                "name": "Cluster local model",
                 "options": {"baseURL": base, "apiKey": "local"},
                 "models": {
                     model: {
                         "name": model,
-                        "reasoning": True,
                         "tool_call": True,
-                        "interleaved": {"field": "reasoning_content"},
-                        "limit": {"context": 131072, "output": 32768},
+                        **(client_options(model) if options is None else options),
                     }
                 },
             }
@@ -64,9 +64,12 @@ def prepare(state, assets, session, base, model, project):
     instructions.chmod(0o600)
     cfg = config(base, model)
     cfg["instructions"] = [str(instructions)]
+    tui = session / "tui.json"
+    atomic_json(tui, {"mouse": False, "keybinds": {"messages_copy": "none", "input_paste": "none"}})
     atomic_json(file, cfg)
     env = os.environ.copy()
     env.update(
+        OPENCODE_TUI_CONFIG=str(tui),
         OPENCODE_CONFIG=str(file),
         OPENCODE_CONFIG_CONTENT=json.dumps(cfg),
         XDG_CONFIG_HOME=str(session / "config"),
@@ -75,6 +78,8 @@ def prepare(state, assets, session, base, model, project):
         XDG_STATE_HOME=str(state / "state"),
         SHELL="/bin/bash",
         PWD=str(project),
+        OPENCODE_DISABLE_MOUSE="true",
+        OPENCODE_EXPERIMENTAL_DISABLE_COPY_ON_SELECT="true",
         OPENCODE_DISABLE_AUTOUPDATE="true",
         OPENCODE_DISABLE_MODELS_FETCH="true",
         OPENCODE_DISABLE_LSP_DOWNLOAD="true",
@@ -135,6 +140,7 @@ def chat(options):
         raise ValueError("Interactive chat requires a terminal; use --run for batch execution")
     wait_endpoint(base, options.model)
     env = prepare(state, assets, session, base, options.model, project)
+    register(state_root, state, assets, base, options.model, project)
     if options.check:
         print(
             json.dumps(
@@ -153,6 +159,10 @@ def chat(options):
         if options.run is not None
         else [str(project)]
     )
+    if getattr(options, "session", None):
+        command += ["--session", options.session]
+    if getattr(options, "continue_session", False):
+        command += ["--continue"]
     atomic_json(
         session / "invocation.json",
         {

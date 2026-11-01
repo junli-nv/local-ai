@@ -98,12 +98,19 @@ def seed_cache(source, destination, expected_arch):
             shutil.copy2(item, target)
 
 
-def install(root, binary=None, seed=None, version=VERSION, expected_sha256=None):
-    if not re.fullmatch(r"\d+\.\d+\.\d+", version):
+def install(root, binary=None, seed=None, version=None, expected_sha256=None):
+    if version is not None and not re.fullmatch(r"\d+\.\d+\.\d+", version):
         raise ValueError("Use an explicit numeric OpenCode release")
     root = private_dir(root)
     cpu = arch()
-    installlog.event("CHECK native client; architecture=" + cpu + "; expected_version=" + version)
+    if version is None and binary is None:
+        version = validate(root)["version"] if (root / "manifest.json").is_file() else VERSION
+    installlog.event(
+        "CHECK native client; architecture="
+        + cpu
+        + "; expected_version="
+        + (version or "detect-from-local-binary")
+    )
     if binary is None and seed is None and (root / "manifest.json").is_file():
         existing = validate(root)
         if existing["version"] == version:
@@ -144,8 +151,12 @@ def install(root, binary=None, seed=None, version=VERSION, expected_sha256=None)
         installlog.event("VERIFY ELF architecture and requested binary version")
         verify_elf(target, cpu)
         target.chmod(0o755)
-        if run([str(target), "--version"]).stdout.strip() != version:
+        actual_version = run([str(target), "--version"]).stdout.strip()
+        if not re.fullmatch(r"\d+\.\d+\.\d+", actual_version):
+            raise ValueError("Local OpenCode binary did not report a numeric release")
+        if version is not None and actual_version != version:
             raise ValueError("Client version differs from requested release")
+        version = actual_version
         os.replace(target, root / "bin/opencode")
     cache = root / "seed-cache"
     cache.mkdir(exist_ok=True)

@@ -37,7 +37,7 @@
 | `image export` | Docker 准备机 | 导出镜像归档及配套锁文件 |
 | `image import` | 离线 GPU 节点 | 校验归档与锁文件后导入镜像 |
 | `model download` | 联网准备机 | 下载固定模型配置、分词器、索引和全部权重分片 |
-| `client install` | bcm-headnode | 安装固定版本原生客户端，或导入本地程序 |
+| `client install` | bcm-headnode | 安装所选版本原生客户端，或导入本地程序 |
 | `client export` | BCM 准备机 | 打包客户端与公共缓存，不包含个人历史和凭据 |
 | `chat` | bcm-headnode | 连接推理服务，在本机以当前用户权限执行工具 |
 
@@ -130,7 +130,7 @@ client install/export 均接受 `--client-dir`，默认是用户状态根目录�
 |---|---|---|
 | `--binary` | client install | 导入本地 OpenCode 程序；省略则在线下载 |
 | `--seed-cache` | client install | 导入离线公共缓存目录；可选 |
-| `--version` | client install | 下载或校验的 OpenCode 版本，默认 1.19.5 |
+| `--version` | client install | 显式选择版本；省略时复用安装或识别导入程序；首次在线下载参考版本 1.19.5 |
 | `--sha256` | client install | 本地导入程序的预期 SHA256；可选，来自可信材料清单 |
 | `--output` | client export | 必填，客户端归档输出路径；同时生成 .sha256 |
 
@@ -162,6 +162,37 @@ client install/export 均接受 `--client-dir`，默认是用户状态根目录�
 ```
 
 升级模型或镜像时，使用独立的数据目录和实例进行验收，保留旧源码、权重和镜像锁。不要在原生产数据目录中强制覆盖权重后再尝试回退。
+
+### 恢复会话与终端复制
+
+首次运行 chat（包括 --check）会在 `~/.local/bin/opencode` 创建当前用户的恢复入口。
+退出提示中的 `opencode -s ses_...` 可直接执行，自动找回原 endpoint、项目目录和私有历史。
+若该目录不在 PATH，按提示执行 `export PATH="$HOME/.local/bin:$PATH"`，并按需加入 `~/.profile`。
+不会覆盖已有的其他 opencode 程序；有名称冲突时使用下面的显式入口：
+
+```bash
+./local-ai chat --endpoint http://GPU001:18000/v1 --project /home/alice/project --session ses_example
+./local-ai chat --endpoint http://GPU001:18000/v1 --project /home/alice/project --continue
+```
+
+`--session`（`-s`）恢复指定会话，`--continue`（`-c`）继续本项目最近会话，二者互斥。
+自动恢复入口只负责 `opencode -s ID`，不是全套原生 CLI 的替代品。
+默认关闭 OpenCode 鼠标捕获、选中自动复制和内置复制/剪贴板读取快捷键，让终端处理文本选取与复制粘贴。
+代价是界面内鼠标点击和滚轮操作停用；继续使用键盘导航，粘贴使用终端自己的快捷键。
+tmux 自身的选取设置仍由用户管理；长对话可用 `/export` 导出。
+新开或恢复会话后生效，不必重启推理服务。
+
+### 客户端版本与离线恢复
+
+客户端版本可以通过 `client install --version X.Y.Z` 选择，也可用 `--binary` 导入现有程序。
+默认下载版本是验收参考，不是运行时版本白名单；程序不因版本号不同拒绝运行。
+会话定位调用公开的 `session list --format json`，不读取 OpenCode 私有数据库表结构。
+接口不兼容时明确报告失败的能力；不能保证任意未来版本无需适配。
+升级应在独立客户端目录和临时历史中检查恢复参数、JSON 会话列表、鼠标关闭与终端粘贴，
+再退出旧客户端、备份原历史并切换。旧版本不一定能读取新版本迁移后的数据库，回退应恢复升级前备份。
+
+下载源不可用时可复用完整本地安装、导入本地程序，或使用 `client export` 的离线包；
+包中包含客户端、公共缓存、版本清单及校验值，不含聊天历史或凭据。导入步骤见[离线部署](offline.md)。
 
 ## 运行维护与排障
 
@@ -198,3 +229,5 @@ B300 与 GB300 的实际验收范围见[验证记录](validation.md)，不能用
 ---
 
 [English version](en/commands.md)
+
+外部模型配方：设置 LOCAL_AI_CATALOG，格式及验收见[开发指南](development.md#模型与客户端兼容性)。

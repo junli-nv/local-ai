@@ -22,8 +22,9 @@ flowchart LR
 
 ## Operations and project instructions
 
-local-ai helps diagnose and resolve system, hardware, network, storage and service
-problems, as well as code tasks. Ask the BCM client to SSH to GPU001 and report its
+local-ai is a daily-work assistant for system diagnosis, scripts and code, file/data
+processing, service configuration, and preparing, submitting and tracking Slurm or
+Kubernetes jobs. Ask the BCM client to SSH to GPU001 and report its
 actual CPU, memory and GPU models and counts. It uses the current account's tools
 and SSH access; inference profiles do not restrict which hardware it can inspect.
 `--project` selects the working directory. Remote hardware queries do not require
@@ -80,8 +81,8 @@ NVL72-wide scheduler.
 
 The pinned vLLM `0.32.0-ubuntu2404` image is a multi-platform manifest. Both
 AMD64 and ARM64 child digests were checked; CPU/image mismatches are rejected.
-The model is `deepseek-ai/DeepSeek-V4.1-Flash`, pinned to revision
-`314113f8a7dadb388215396ba5fbee2c610a04d6`. It is not silently updated to another variant.
+The default recipe uses `deepseek-ai/DeepSeek-V4.1-Flash`, pinned to revision
+`314113f8a7dadb388215396ba5fbee2c610a04d6`. It is not silently updated to another variant. Select external recipes with LOCAL_AI_CATALOG; see [model and client compatibility](docs/en/development.md#model-and-client-compatibility).
 
 ## Prerequisites
 
@@ -311,6 +312,21 @@ such as frp or nginx, then supply its reachable URL as --endpoint. GPU-node SSH
 login is not required for model access. Add the server to NO_PROXY/no_proxy if
 proxy environment settings affect internal requests. BCM needs no Docker, CUDA,
 Node.js or npm.
+
+### Resume, clipboard and version selection
+
+Run the exit hint `opencode -s ses_...` to restore the original endpoint, project
+and chat history. The first chat creates `~/.local/bin/opencode` for resume and
+reports PATH or name conflicts. Explicit alternatives are `chat --session ID`
+and `chat --continue`. Mouse capture and built-in clipboard shortcuts are
+disabled by default; use terminal selection/copy/paste and keyboard navigation.
+Use `/export` for long transcripts.
+
+The default OpenCode download version is a validation reference. Choose another
+with `client install --version X.Y.Z` or --binary; there is no runtime version
+allowlist. Validate actual interfaces and back up history before upgrading.
+Local installations and offline exports avoid reliance on a permanent download
+source. See the [manual](docs/en/commands.md#resume-and-terminal-clipboard).
 
 ## Two instances and multiple users
 

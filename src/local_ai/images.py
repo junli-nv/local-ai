@@ -158,7 +158,15 @@ def cached_model(root, policy):
     if not model.is_dir():
         installlog.event("LOCAL MODEL ABSENT: " + str(model))
         return None
-    lockfile = root / "models/model.lock.json"
+    lockfile = model / "model.lock.json"
+    legacy = root / "models/model.lock.json"
+    if not lockfile.is_file() and legacy.is_file():
+        old = json.loads(legacy.read_text())
+        if (
+            old.get("repo") == policy["repo"]
+            and policy["model_directory"] == policy["repo"].rsplit("/", 1)[-1]
+        ):
+            lockfile = legacy
     verified = False
     if lockfile.is_file():
         lock = json.loads(lockfile.read_text())
@@ -240,7 +248,8 @@ def download_model(root, policy, force=False):
         "VERIFY downloaded model: configuration, tokenizer, index and all shard lengths passed"
     )
     atomic_json(
-        root / "models/model.lock.json", {"repo": policy["repo"], "revision": policy["revision"]}
+        root / "models" / policy["model_directory"] / "model.lock.json",
+        {"repo": policy["repo"], "revision": policy["revision"]},
     )
     return {
         "model": str(root / "models" / policy["model_directory"]),

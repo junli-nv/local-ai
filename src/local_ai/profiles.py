@@ -1,20 +1,68 @@
 """Hardware policy and deterministic vLLM argument construction."""
 
 import json
+import os
+import re
 from importlib.resources import files
+from pathlib import Path
 
 from .common import arch
 
 
 def catalog():
-    return json.loads(files("local_ai").joinpath("profiles.json").read_text())
+    path = os.environ.get("LOCAL_AI_CATALOG")
+    text = (
+        Path(path).expanduser().read_text()
+        if path
+        else files("local_ai").joinpath("profiles.json").read_text()
+    )
+    data = json.loads(text)
+    if "models" in data:
+        default = data.get("default_model")
+        if default not in data["models"]:
+            raise ValueError("default_model must name a model in models")
+        data["model"] = data["models"][default]
+    return data
 
 
 def profile(name):
     data = catalog()
     if name not in data["profiles"]:
         raise ValueError("Unknown profile: " + name)
-    return {**data["model"], **data["profiles"][name], "name": name}
+    hardware = data["profiles"][name]
+    model_key = hardware.get("model", data.get("default_model"))
+    if model_key is not None:
+        if model_key not in data.get("models", {}):
+            raise ValueError("Unknown model recipe: " + str(model_key))
+        model = data["models"][model_key]
+    else:
+        model = data["model"]
+    directory = Path(model["model_directory"])
+    if directory.is_absolute() or ".." in directory.parts or str(directory) in {"", "."}:
+        raise ValueError("model_directory must be a relative directory below models")
+    options = {**model.get("engine_options", {}), **hardware.get("engine_options", {})}
+    return {**model, **hardware, "engine_options": options, "name": name}
+
+
+def legacy_environment():
+    # Historical launch environment: preserve old default instance fingerprints.
+    bundled = json.loads(files("local_ai").joinpath("profiles.json").read_text())
+    return bundled["legacy_environment"]
+
+
+def legacy_model_identity():
+    # Migration metadata, not an allowlist of model releases.
+    bundled = json.loads(files("local_ai").joinpath("profiles.json").read_text())
+    return bundled["legacy_model_identity"]
+
+
+def client_options(served_name):
+    data = catalog()
+    models = data.get("models", {"default": data["model"]})
+    for model in models.values():
+        if model["served_name"] == served_name:
+            return model.get("client", {})
+    return {}
 
 
 def select_gpus(inventory, selectors, policy):
@@ -40,7 +88,7 @@ def select_gpus(inventory, selectors, policy):
 
 
 def engine_args(policy, port, host="127.0.0.1"):
-    return [
+    args = [
         "serve",
         "/models/" + policy["model_directory"],
         "--served-model-name",
@@ -51,37 +99,14 @@ def engine_args(policy, port, host="127.0.0.1"):
         str(port),
         "--tensor-parallel-size",
         str(policy["tp"]),
-        "--tokenizer-mode",
-        "deepseek_v41",
-        "--tool-call-parser",
-        "deepseek_v41",
-        "--reasoning-parser",
-        "deepseek_v41",
-        "--enable-auto-tool-choice",
-        "--max-model-len",
-        "131072",
-        "--max-num-seqs",
-        "4",
-        "--max-num-batched-tokens",
-        "8192",
-        "--gpu-memory-utilization",
-        "0.80",
-        "--kv-cache-dtype",
-        "fp8",
-        "--attention-config",
-        json.dumps(
-            {
-                "backend": "FLASHINFER_MLA_SPARSE_DSV41",
-                "indexer_kv_dtype": "mxfp4",
-                "indexer_sparse_logits": True,
-            }
-        ),
-        "--engram-config",
-        json.dumps({"cpu_offload": policy["cpu_offload"]}),
-        "--kernel-config",
-        json.dumps({"enable_flashinfer_autotune": False}),
-        "--compilation-config",
-        json.dumps(
-            {"mode": 0, "cudagraph_mode": "FULL_DECODE_ONLY", "cudagraph_capture_sizes": [1, 2, 4]}
-        ),
     ]
+    reserved = {"--model", "--served-model-name", "--host", "--port", "--tensor-parallel-size"}
+    for flag, value in policy.get("engine_options", {}).items():
+        if not re.fullmatch(r"--[a-z][a-z0-9-]*", flag) or flag in reserved:
+            raise ValueError("Invalid or reserved engine option: " + flag)
+        if value is False or value is None:
+            continue
+        args.append(flag)
+        if value is not True:
+            args.append(json.dumps(value) if isinstance(value, (dict, list)) else str(value))
+    return args

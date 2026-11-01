@@ -124,3 +124,40 @@ CPU 架构一致不等于完整 ABI 兼容，还需检查发行版、共享库�
 ---
 
 [English version](en/development.md)
+
+## 模型与客户端兼容性
+
+默认 DeepSeek 配方不是模型白名单。profiles.json 的 models 保存仓库、revision、
+model_directory、served_name、镜像、engine_options、environment 和 client 能力；
+default_model 选择默认客户端模型，硬件 profile 的 model 字段选择服务端配方。
+profile 的 engine_options 覆盖模型的同名选项；对象/数组编码为 JSON，true 发出独立开关，
+false/null 省略。监听、端口、模型路径和 TP 参数仍由管理命令控制。
+DeepSeek 解析器、Engram 和推理格式只属于其配方，不自动用于其他模型。
+
+复制内置 profiles.json 到自己的文件，添加模型与 profile，再设置：
+
+```bash
+export LOCAL_AI_CATALOG=/home/alice/local-ai-profiles.json
+./local-ai profiles
+```
+
+每个新模型/revision 使用独立 model_directory。锁位于该目录内的 model.lock.json；
+旧版根级锁仅在仓库与目录匹配时复用。客户端可用 chat --model 选择其他
+OpenAI-compatible 模型，在 client 中声明 reasoning、tool_call、interleaved 和 limit。
+未登记模型不自动套用 DeepSeek 的上下文或推理格式。新增配方不继承原配方的实机验证等级。
+
+当前下载器面向 Hugging Face snapshot，权重校验面向带索引的分片 safetensors，
+服务端使用 vLLM；其他权重格式或引擎须增加适配。配置可生成不等于模型工具调用或硬件已验收。
+
+客户端不设运行时版本白名单。省略 client install --version 时复用已安装版本，
+导入本地程序时识别其版本，仅首次在线下载使用参考版本；也可显式指定版本。
+在线源失效时使用现有安装、本地程序或离线包。升级候选放在独立 --client-dir，运行：
+
+```bash
+PYTHONPATH=src .venv/bin/python scripts/check-client.py --client-dir /home/alice/client-candidate
+```
+
+脚本用临时状态、原生会话 HTTP API 和伪终端检查恢复、公开 JSON 元数据、
+鼠标关闭和终端粘贴模式，不调用 GPU 或模型生成。CI 自动检查参考版本；
+手动工作流的 client_version 可测试候选版本。外层终端真实复制、模型工具往返和
+历史迁移仍需验证。切换前退出客户端并备份历史；跨数据库迁移回退时恢复原备份。
