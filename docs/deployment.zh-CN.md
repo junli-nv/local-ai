@@ -60,7 +60,7 @@ Python3 至少 3.10，Docker API 至少 1.49。完整程序与部署材料均在
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/heads/main.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.1.0.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ./local-ai --version
@@ -188,7 +188,7 @@ BCM 可通过 --endpoint http://GPU001:18000/v1 直连。现有容器改地址�
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/heads/main.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.1.0.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ./local-ai --version
@@ -265,7 +265,7 @@ SSH 仅是访问其他节点的可选工具，不是模型连接的前提。
 
 ## 完整目录导出
 
-安装成功后，下面命令将程序、镜像归档、模型、客户端和可迁移配置一并导出；只携带 dist/ 中两个文件即可。dist/ 不被重复打包。新机器校验并解压后运行 install --offline，再配置本机 GPU 和 endpoint。本页下载 main 中的目录式安装流程；旧 v1.0.0 标签不包含这些新增命令。
+安装成功后，下面命令将程序、镜像归档、模型、客户端和可迁移配置一并导出；只携带 dist/ 中两个文件即可。dist/ 不被重复打包。新机器校验并解压后运行 install --offline，再配置本机 GPU 和 endpoint。本页固定下载 v1.1.0；旧 v1.0.0 标签不包含目录式安装与完整导出命令。
 
 ```bash
 cd /raid/local-ai

@@ -2,7 +2,7 @@
 
 [中文（默认）](../validation.md)
 
-Date: 2026-10-31. Infrastructure hostnames, IPs, GPU UUIDs, credentials and raw
+Dates: 2026-10-31 through 2026-11-01. Infrastructure hostnames, IPs, GPU UUIDs, credentials and raw
 user logs are intentionally omitted from this public record.
 
 The 2026-10-31 integration records below describe the previous client. Tunnel entries are historical; the current client uses API endpoints without built-in forwarding or a separate environment-doctor command. New local HTTP regressions cover direct connections, model checks, retry and no SSH subprocess. They do not constitute new GPU acceptance.
@@ -145,6 +145,28 @@ The sdist includes docs, launcher, compatibility script and inventory fixtures.
 Existing platform/model validation levels are unchanged. No inference service
 was restarted or scheduler job submitted. Publication requires passing commit CI.
 
-## 2026-11-01: directory installation and complete offline bundles
+## 2026-11-01: 1.1.0 directory installation and complete offline bundles
 
-107 unit/documentation tests passed, covering default dist/, recursive-export exclusion, ordinary source, renamed installation, compressed archives, saved defaults, legacy clients, initial checksums, repeat installation and corruption rejection. Fresh online installation on another idle AMD64 B300 host downloaded the image, complete model and native client in about 479 seconds; model size about 476 GiB and image archive 9,205,795,328 bytes. GPU startup and complete offline recovery remain under separate acceptance, to be recorded below; this does not raise GB300/other-model validation levels.
+107 unit/documentation tests, Ruff lint/format and diff checks passed. Coverage includes default dist/, recursive-export exclusion, ordinary source, renamed installation, compressed archives, saved defaults, legacy clients, initial checksums, repeat installation and corruption rejection. Real OpenCode 1.19.5 checks again passed session restore, disabled mouse capture, bracketed paste and clean exit.
+
+The following workflow ran on another idle AMD64 B300 host:
+
+| Step | Result |
+|---|---|
+| Fresh online server + client installation | Downloaded image, complete model and native client in about 479 seconds; installation did not start GPUs |
+| Default export into installation-root dist/ | 519,734,251,520-byte archive in about 1327 seconds, containing ordinary source, all 48 model shards, image and client |
+| Portable image archive | 9,205,795,328 bytes, carried inside the bundle |
+| Whole-archive SHA256 and extraction | Standard sha256sum passed; extracted into an empty directory with a different name |
+| Export exclusions | Actual manifest excluded dist/; regressions cover personal histories, credentials, instances and caches |
+| Offline installation after removing original test image references | All file checksums passed; docker image load imported the local archive in about 168 seconds |
+| Offline model and client | Complete model reported revision_verified=true; model/client already-present and network=false, with no pull, model or NPM download commands |
+| Complete offline installation duration | About 768 seconds including initial per-file SHA256 and image import |
+| Four-GPU cold start and status output | Healthy HTTP 200 after about 382 seconds; startup/runtime logs displayed READY and status returned ready=true, listening=true |
+| GPU isolation | Only selected GPUs 0–3 allocated memory; GPUs 4–7 stayed at zero |
+| Actual BCM tool call | Direct API connection to the restored service; real bash hostname execution returned the BCM hostname |
+| Final 1.1.0 runtime recheck | Offline reuse of the same model, image and native client passed; existing ready instance returned HTTP 200 |
+| Temporary service cleanup | Test container and temporary CDI file removed; all eight GPUs returned to zero memory usage |
+
+Separately downloaded an exact GitHub commit, installed the client online, exported it, verified the checksum and extracted it into a renamed directory. Client installation under unshare -n with --role client --offline passed, followed by the real native-client contract check. The large bundle came from the directory-installation candidate snapshot; final default-setting and version changes were checked separately with the 1.1.0 runtime. Archive sizes describe the test bundle, not the source-tag download.
+
+Offline installation ran under unshare -n; Docker accessed the host daemon through its local Unix socket. The entire host was not physically disconnected. These results do not cover fresh OS/driver setup, another Docker storage backend, GB300, ARM64 or another model. Raw evidence remains in internal test directories; only summaries are published.

@@ -1,6 +1,6 @@
 # local-ai
 
-Latest stable version tag: [1.0.0](https://github.com/junli-nv/local-ai/tree/v1.0.0). Use `./local-ai --version` for the project version; OpenCode, model and vLLM versions are selected separately.
+Latest stable version tag: [1.1.0](https://github.com/junli-nv/local-ai/tree/v1.1.0). Use `./local-ai --version` for the project version; OpenCode, model and vLLM versions are selected separately.
 
 [中文（默认）](README.md)
 
@@ -129,7 +129,7 @@ Download the complete program from GitHub into a new empty /raid/local-ai. The u
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/heads/main.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.1.0.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ./local-ai --version
@@ -283,7 +283,7 @@ Run **on BCM** as the user who will execute tools:
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/heads/main.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.1.0.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ./local-ai --version
@@ -387,7 +387,7 @@ GPU hardware acceptance is a separate, explicitly documented step.
 
 ## Export the complete directory
 
-After installation, export program, image archives, models, clients and portable configuration together. Carry the two files in dist/. dist/ itself is excluded. Verify/extract on the new host and run install --offline before choosing its GPUs and endpoint. These instructions download main with directory-based installation; older v1.0.0 lacks these new commands.
+After installation, export program, image archives, models, clients and portable configuration together. Carry the two files in dist/. dist/ itself is excluded. Verify/extract on the new host and run install --offline before choosing its GPUs and endpoint. These instructions download v1.1.0; the older v1.0.0 tag lacks directory installation and complete export commands.
 
 ```bash
 cd /raid/local-ai

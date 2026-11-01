@@ -122,7 +122,7 @@ pyproject.toml configures Python packaging and developer tools; ordinary source-
 | Section | Purpose here |
 |---|---|
 | build-system | setuptools>=68 build backend |
-| project | cluster-local-ai 1.0.0, Python>=3.10, no third-party runtime dependencies |
+| project | cluster-local-ai 1.1.0, Python>=3.10, no third-party runtime dependencies |
 | project.scripts | Installed local-ai entry point: local_ai.cli:main |
 | tool.setuptools | Find packages under src and include profiles.json |
 | project.optional-dependencies | dev extra installs Ruff 0.14.2 |

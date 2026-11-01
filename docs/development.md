@@ -89,7 +89,7 @@ GPU 服务端负责推理；BCM 客户端用当前用户权限执行文件、She
 | 配置节 | 本项目的用途 |
 |---|---|
 | `build-system` | 使用 setuptools>=68 构建安装包 |
-| `project` | 包名 cluster-local-ai、版本 1.0.0、Python>=3.10；运行时第三方依赖为空 |
+| `project` | 包名 cluster-local-ai、版本 1.1.0、Python>=3.10；运行时第三方依赖为空 |
 | `project.scripts` | 安装后的 local-ai 命令调用 local_ai.cli:main |
 | `tool.setuptools` | 从 src 查找模块，并将 profiles.json 包含到安装包 |
 | `project.optional-dependencies` | dev 组包含 Ruff 0.14.2，仅开发时安装 |
