@@ -20,10 +20,12 @@
 | 文档 | 用途 |
 |---|---|
 | 本页 | 首次在线安装、启动、聊天、配置及迁移入口 |
-| [部署指南](docs/deployment.zh-CN.md) | CDI、存储故障、实例重建、双实例与多人使用 |
+| [部署指南](docs/deployment.zh-CN.md) | CDI、存储故障、实例重建、DSpark/预热与双实例 |
 | [命令手册](docs/commands.md) | 参数、默认值、退出码、会话恢复与客户端版本 |
 | [离线部署](docs/offline.md) | 已安装环境迁移，或联网准备后离线安装 |
 | [架构](docs/architecture.md)、[开发指南](docs/development.md) | 模块设计、扩展和接手开发 |
+
+[推理优化与引擎探索记录](docs/performance.md)保存 DSpark 参数依据、首次编译处理、SGLang 探索及后续复测方法，供继续开发参考。
 
 ## 安装前提
 
@@ -34,6 +36,7 @@ BCM 需 Linux AMD64 或 ARM64、Python 3.10+、Bash、curl、tar、Git、rg 和 
 | 配置 | 服务端 CPU / 镜像平台 | 本机 GPU | Engram | 验证状态 |
 |---|---|---|---|---|
 | b300-tp4 | AMD64 / linux/amd64 | 4 张 B300 | GPU | 已实机验证 |
+| b300-tp4-dspark | AMD64 / linux/amd64 | 4 张 B300 | GPU | 可选单用户配方，范围见验证记录 |
 | gb300-tp4 | ARM64 / linux/arm64 | 4 张 GB300/B300 | GPU | 未实机验证 |
 | gb300-tp2 | ARM64 / linux/arm64 | 2 张 GB300/B300 | CPU | 上游配方，未实机验证 |
 
@@ -114,6 +117,8 @@ start 默认等待 600 秒，加载和编译期间显示 NOT READY 及日志位�
 等待不足可在 start 中加 --wait-timeout 1200。超时退出 1，Ctrl+C 返回 130，均保留容器；先查日志和 status。日志 READY 只代表当时结果，容器 running 或端口监听不代表当前就绪。
 
 --host 0.0.0.0 监听所有 IPv4 网卡，参数默认仍为 127.0.0.1。BCM 使用宿主机地址，不能把 0.0.0.0 填入 endpoint。当前未配置 API key/HTTPS，应限制可信网络访问；已有实例改地址须[显式重建](docs/deployment.zh-CN.md#实例重建)。
+
+偏向单用户生成速度时，可选 b300-tp4-dspark，并显式使用 --warmup 提前触发部分首次编译，操作见[部署指南](docs/deployment.zh-CN.md#单用户-dspark-与显式预热)。READY 只表示 API 健康，WARMUP COMPLETE 表示有限推理预热完成；已有实例更换配方须显式重建。
 
 ## 2. 在 BCM 安装并使用
 

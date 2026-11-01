@@ -47,6 +47,7 @@ Chinese is primary; maintain English separately and synchronize both entry paths
 | Directory installation and migration | The unpacked directory is the root, with ordinary src/. install prepares assets in place; export writes a complete dist/ bundle excluding dist/, instance state, histories and credentials. Reinstall/reconfigure after moving |
 | One BCM, multiple model services | Initial installation endpoint is optional; change defaults through config or direct file editing, not reinstallation. chat --endpoint/--model override one invocation without rewriting defaults. Separate endpoint history/cache and resume original connection; never silently fall back to the default node |
 | Source-script delivery | Deliver main/exact commits during development; passing checks does not trigger tags; formal versions require explicit request and quality review |
+| Single-user speed and first-use compilation spikes | Keep the baseline unchanged; opt into DSpark and explicit bounded warmup. Separate API READY from WARMUP COMPLETE, persist compiler caches per recipe, invalidate completion on restart, and report actual coverage and concurrency tradeoffs |
 | Around 400 ms TTFT seems high | Record method, input size, cache/load and timing first. Separate compilation, generation delay and reasoning content; avoid one-number conclusions |
 
 Use the [manual](commands.md) and [deployment guide](deployment.md) for operations;
@@ -134,7 +135,7 @@ The root Bash launcher adds src to PYTHONPATH and calls the same entry point. Mo
 
 ## Documentation delivery requirements
 
-Documentation correctness is a delivery condition. For every implementation, default or documentation change, carefully review both languages of README, command, deployment, offline, architecture, development and validation documents. Confirm unchanged documents do not conflict. Fixing one matching line is insufficient.
+Documentation correctness is a delivery condition. For every implementation, default or documentation change, carefully review both languages of README, command, deployment, offline, architecture, development, performance exploration and validation documents. Confirm unchanged documents do not conflict. Fixing one matching line is insufficient.
 
 1. **README is the entry point.** Walk the first-use path: prerequisites, source download, installation, configuration, startup, readiness, logs, client usage and migration links. Include necessary steps without hidden assumptions.
 2. **Match actual behavior.** Check options/defaults, saved settings, execution host, output and exit codes against --help, implementation and evidence. Distinguish program, runtime data and private user state.
@@ -208,6 +209,16 @@ Asset exports include only the installed binary, allowlisted public cache and
 manifest. They exclude histories, auth files and SSH keys.
 Model weights are architecture-independent; images, client binaries and cached
 executables are architecture-specific. Never reuse AMD64 caches on ARM64.
+
+## Performance investigation handoff
+
+Keep optimization rationale, tested engine settings, failed approaches and follow-up questions in the [exploration record](performance.md). Keep measurements in validation.md and operational commands in deployment.md. Update these together when experiments change a decision; preserve SGLang findings even while vLLM remains the only managed engine.
+
+## Inference warmup changes
+
+Keep model-specific speculation and graph sizes in the profile, not global engine defaults. warmup.py runs only after explicit server warmup or start --warmup. Imports, plan, status and install must never trigger synthetic inference. Status reads warmup.json and verifies spec fingerprint and container StartedAt.
+
+Changes must cover partial failure, deadline/cancellation, duplicate warmup rejection, wrong deployment metadata, exact API token counts, and stale records after restart. On allocated GPUs compare identical streaming payloads in separate processes/caches, with and without explicit warmup. Measure first requests as well as warmed requests, preserve production, and record cache reuse separately from in-memory graph reuse. Do not describe finite coverage as eliminating all JIT. See [validation](validation.md) for evidence.
 
 ## Testing and review rules
 

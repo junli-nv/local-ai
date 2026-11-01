@@ -174,6 +174,8 @@ GPU 启动前若缺少 UUID 别名，先完成[CDI 配置](deployment.zh-CN.md#c
 
 源端 endpoint 不随包迁移。新 BCM 示例在客户端初次安装时设置初始默认地址；后续用 config set endpoint URL，或编辑 config show 显示的文件，无需安装操作。本次连接用 chat --endpoint URL 选择其他可达内网服务；模型不同再传 --model ID。会话隔离见[多服务使用](../README.md#从同一个-bcm-连接多个服务)。
 
+编译缓存和预热记录随实例状态一并排除。目标机安装、API 启动后按需执行[显式预热](deployment.zh-CN.md#单用户-dspark-与显式预热)；联网准备阶段不运行推理。
+
 ## 日志与失败处理
 
 安装/导出看安装根目录的 install.log；启动看 instances/a/server.log。READY 由健康检查确认，容器存在不代表就绪。客户端输出私有会话 Log 路径。离线缺文件或校验失败会停止，不自动联网补下载。解决 CDI、网络、架构或资源错误后再继续。

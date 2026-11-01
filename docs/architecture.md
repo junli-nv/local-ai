@@ -22,6 +22,7 @@ BCM 负责 OpenCode、项目文件、Shell/Git/SSH 工具、用户凭据、历�
 | `artifacts.py` | 客户端完整性与架构检查、公共资源导出 |
 | `endpoint.py` | HTTP(S) API 地址校验和模型就绪检查 |
 | `readiness.py` | 端口与 HTTP 健康探测、启动等待、明确就绪日志；状态查询只读 |
+| `warmup.py` | 显式有限推理预热、取消、进度与绑定容器启动时间的记录；状态查询不触发推理 |
 | `client.py` | 用户私有状态、本地工具、连接配置和完整日志 |
 | `installlog.py` | 安装步骤、实际命令、实时输出及失败诊断集中记录；只读操作无文件副作用 |
 | `configuration.py` | 独立读写客户端默认值，不安装或连接服务 |
@@ -44,7 +45,8 @@ flowchart TD
     Checks --> Lock[串行创建与配置漂移检查]
     Lock --> Container[容器启动]
     Container --> Warm[载入权重并编译内核]
-    Warm --> Ready[API 健康与真实请求验收]
+    Warm --> Ready[API 健康]
+    Ready --> Opt[可选显式推理预热]
 ```
 
 启动前将宿主机 GPU 编号解析成 UUID。CDI 只暴露选中的设备，
@@ -77,7 +79,9 @@ GPU 服务按示例监听 0.0.0.0，默认参数仍为 127.0.0.1；监听地址�
 
 ## 性能配置的依据
 
-Engram 放置、CUDA Graph 等策略属于具体模型和硬件配方。GB300 主存与互联不同，须独立验收。具体测量值、方法和限制统一记录在[验证记录](validation.md)，本页不重复性能数字。
+Engram 放置、CUDA Graph 等策略属于具体模型和硬件配方。GB300 主存与互联不同，须独立验收。具体测量值、方法和限制统一记录在[验证记录](validation.md)，优化路径、参数依据及 SGLang 探索保存在[性能探索记录](performance.md)。
+
+预热完成记录绑定配置摘要与容器 StartedAt，重启后失效。API 就绪与推理预热分开表示；有限形状覆盖不保证后续没有 JIT。配方专属持久编译缓存属于本机实例，导出包不携带。
 
 ## 安装准备的可观测性
 

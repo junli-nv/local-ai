@@ -8,7 +8,7 @@ import re
 import socket
 from pathlib import Path
 
-from . import readiness
+from . import readiness, warmup
 from .common import arch, atomic_json, fingerprint, run
 from .images import resolve_image
 from .profiles import engine_args, legacy_environment, legacy_model_identity, select_gpus
@@ -55,6 +55,8 @@ def listen_address(host):
 
 def check_port(host, port):
     with socket.socket() as sock:
+        # Allow a stopped HTTP listener's TIME_WAIT sockets, not active listeners.
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         try:
             sock.bind((host, port))
         except OSError as error:
@@ -285,6 +287,31 @@ def start(value, policy):
     }
 
 
+def managed_spec(root, name):
+    if not re.fullmatch(r"[a-z][a-z0-9-]{0,31}", name):
+        raise ValueError("Invalid instance name")
+    root = Path(root).expanduser().resolve()
+    container = inspect_container("local-ai-" + name)
+    labels = (container["Config"].get("Labels") or {}) if container else {}
+    if labels.get("local-ai.project") != "cluster-local-ai" or labels.get(
+        "local-ai.data-dir"
+    ) != str(root):
+        raise ValueError("Refusing warmup of an unmanaged instance or another deployment")
+    directory = root / "instances" / name
+    spec = json.loads((directory / "spec.json").read_text())
+    if (
+        not isinstance(spec, dict)
+        or spec.get("container") != "local-ai-" + name
+        or spec.get("data_dir") != str(root)
+        or spec.get("instance") != name
+        or fingerprint(spec) != labels.get("local-ai.spec")
+    ):
+        raise ValueError("Instance metadata mismatch")
+    if json.loads((directory / "args.json").read_text()) != spec["args"]:
+        raise ValueError("Managed args.json drift detected")
+    return spec
+
+
 def status(name, probe=True):
     if not re.fullmatch(r"[a-z][a-z0-9-]{0,31}", name):
         raise ValueError("Invalid instance name")
@@ -301,6 +328,7 @@ def status(name, probe=True):
         health=None,
         log=None,
         detail="容器未运行 / container not running",
+        warmup={"state": "not-run", "completed": False},
     )
     if labels.get("local-ai.project") != "cluster-local-ai" or not labels.get("local-ai.data-dir"):
         value["detail"] = "不是 local-ai 管理的实例 / unmanaged container"
@@ -313,6 +341,7 @@ def status(name, probe=True):
                 "local-ai.port"
             ):
                 raise ValueError("Instance metadata mismatch")
+            value["warmup"] = warmup.progress(spec, old)
             spec["host"] = listen_address(spec.get("host", "127.0.0.1"))
             spec["port"] = int(spec["port"])
             if not 1024 <= spec["port"] <= 65535:

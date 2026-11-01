@@ -82,6 +82,21 @@ class ListenTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "Cannot bind model API at 0.0.0.0"):
                 server.check_port("0.0.0.0", port)
 
+    def test_stopped_http_listener_time_wait_does_not_block_restart(self):
+        with socket.socket() as listener:
+            listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            listener.bind(("127.0.0.1", 0))
+            listener.listen()
+            port = listener.getsockname()[1]
+            with self.assertRaisesRegex(RuntimeError, "Cannot bind"):
+                server.check_port("127.0.0.1", port)
+            with socket.create_connection(("127.0.0.1", port), timeout=2) as client:
+                accepted, _ = listener.accept()
+                with accepted:
+                    accepted.shutdown(socket.SHUT_WR)
+                    self.assertEqual(client.recv(1), b"")
+        server.check_port("127.0.0.1", port)
+
     def test_start_parser_accepts_specific_ipv4(self):
         args = parser().parse_args(["server", "start", "--gpus", "0,1,2,3", "--host", "192.0.2.10"])
         self.assertEqual(args.host, "192.0.2.10")

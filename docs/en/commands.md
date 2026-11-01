@@ -40,6 +40,7 @@ Syntax: ./local-ai GROUP COMMAND OPTIONS. install, export, profiles and chat hav
 | server plan | GPU001 | JSON plan with selected devices, engine args and Docker command; no container creation |
 | server start | GPU001 | Validate resources, start and wait for API readiness; report result and log |
 | server status | GPU001 | Explicit READY/NOT READY result with reason, listener and log |
+| server warmup | GPU001 | Explicit bounded inference warmup on a healthy managed instance; logs progress |
 | server stop | GPU001 | Stop the named instance; retain weights and host logs |
 | image pull | Connected GPU preparation host | Pull the pinned image and record platform identity |
 | image export | Docker preparation host | Image archive and companion lock file |
@@ -120,13 +121,20 @@ Ongoing model output remains in instances/NAME/server.log; chat history and sess
 
 | Option | Commands | Meaning and default |
 |---|---|---|
-| --data-dir | server plan/start/status/stop; image; model download | Data root: LOCAL_AI_DATA_DIR, otherwise the unpacked program directory. status actually looks up the instance by name. |
+| --data-dir | server plan/start/status/stop/warmup; image; model download | Data root: LOCAL_AI_DATA_DIR, otherwise the unpacked program directory. status actually looks up the instance by name. |
 | --profile | plan/start; image; model download | Hardware/engine preset; required for image. plan/start/model default to the installed profile, otherwise b300-tp4 |
 | --gpus | plan/start | Required comma-separated server indices or full UUIDs; count must match the profile |
-| --name | plan/start/status/stop | Default a; lowercase letter followed by lowercase letters, digits or hyphens; at most 32 characters |
+| --name | plan/start/status/stop/warmup | Default a; lowercase letter followed by lowercase letters, digits or hyphens; at most 32 characters |
 | --host | plan/start | IPv4 listen address, default 127.0.0.1; 0.0.0.0 for all IPv4 interfaces or a local IP; no hostnames or IPv6 |
 | --port | plan/start | Model API port, default 18000, range 1024–65535 |
 | --wait-timeout | start only | Positive seconds to wait for API readiness, default 600; timeout exits 1 and retains the container |
+| --warmup | start only | Opt in to real inference warmup after API readiness; disabled by default |
+| --warmup-timeout | start only | Separate positive warmup deadline, default 600 seconds; used with --warmup |
+| --timeout | warmup only | Positive total warmup deadline, default 600 seconds |
+| --input-tokens | warmup only | Comma-separated positive exact input lengths; default 1024,8192,32768 as context permits |
+| --concurrency | warmup only | Comma-separated positive request counts; default 1,2,4,8 capped at twice max-num-seqs |
+| --output-tokens | warmup only | Positive generated length, default 256; input plus output must fit context |
+| --repeats | warmup only | Positive passes per input/concurrency group, default 2 |
 | --inventory | plan only | JSON hardware fixture instead of discovery; start does not accept it |
 | --output | image export | Required destination archive path |
 | --archive; --lock | image import | Required image archive and matching .lock.json |
@@ -161,6 +169,8 @@ records FAILED. Ctrl+C cancels waiting with exit 130 without stopping the contai
 Use status afterward, or start with identical arguments to resume waiting and record readiness;
 a matching running instance is not restarted. Status prints a human-readable result to stderr
 and JSON ready/listening/health/log fields to stdout. It probes the container and API, not old logs.
+
+Explicit server warmup --name a works only on a running, healthy instance owned by the selected data root, using its saved spec.json/args.json. It does not change the profile. start --warmup performs the same step after API readiness. A failure/timeout exits 1; interruption exits 130 and retains the container. Status reports warmup separately from API readiness; it never generates requests. Logs and bounded-coverage examples are in [DSpark and warmup](deployment.md#single-user-dspark-and-explicit-warmup).
 
 ## Client parameters
 

@@ -24,6 +24,7 @@ These identities are independent:
 | artifacts.py | Native client integrity/architecture and public asset exports |
 | endpoint.py | HTTP(S) API address validation and model readiness checks |
 | readiness.py | Port/HTTP health probes, startup waiting and explicit runtime-log readiness; status is read-only |
+| warmup.py | Explicit bounded real inference, cancellation, progress and start-time-bound markers; no implicit status generation |
 | client.py | Private user state, local tools, config and full transcripts |
 | configuration.py | Read/write client defaults without installing or connecting |
 | paths.py / program.py | Relocatable roots and ordinary program-file selection |
@@ -46,7 +47,8 @@ flowchart TD
     Checks --> Lock[Serialized creation + drift checks]
     Lock --> Container[Container started]
     Container --> Warm[Load weights + compile kernels]
-    Warm --> Ready[Health + real API request]
+    Warm --> Ready[API health]
+    Ready --> Opt[Optional explicit inference warmup]
 ```
 
 Host GPU indices resolve to UUIDs before launch. CDI exposes only selected GPUs;
@@ -86,7 +88,9 @@ Initial install can save optional defaults in installation.json; later changes u
 
 ## Performance policy
 
-GPU Engram placement and CUDA Graph choices belong to each model/profile. GB300 memory/interconnect differences require separate validation. Measurements, methods and limits live in the [validation record](validation.md), not duplicated performance claims here.
+GPU Engram placement and CUDA Graph choices belong to each model/profile. GB300 memory/interconnect differences require separate validation. Measurements, methods and limits live in the [validation record](validation.md); optimization rationale, parameter choices and SGLang exploration live in the [performance record](performance.md).
+
+Warmup completion is bound to the spec fingerprint and container StartedAt. Restart invalidates it. API readiness and inference warmup are separate states; finite shape coverage does not guarantee no future JIT. Profile-specific persisted compilation caches remain host-local and are excluded from portable bundles.
 
 ## Installation observability
 

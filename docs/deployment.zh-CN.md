@@ -97,6 +97,43 @@ docker rm local-ai-a
 
 权重与宿主机实例日志保留。程序不会静默覆盖配置不同的同名容器。尚未就绪时的查询、超时和日志含义见 [README](../README.md#1-在-gpu001-安装并启动)；完整退出码见命令手册。
 
+启动预检允许已停止 HTTP 服务的 TCP TIME_WAIT 连接复用，但仍拒绝实际监听进程占用的端口。其他程序占用时应更换端口或由操作者明确处理。
+
+## 单用户 DSpark 与显式预热
+
+默认 b300-tp4 保留原参数；可选 b300-tp4-dspark 偏向单用户生成速度，并发吞吐可能下降。DSpark 通过草稿和目标模型校验的投机解码提高生成阶段速度，不保证 TTFT 下降。两者使用相同镜像和权重，无需另下模型。测量方法和适用范围见[验证记录](validation.md)。GB300 未验证，不直接套用此配方。
+
+以下在 GPU001 的 /raid/local-ai 执行，要求所选 GPU 和端口空闲。已有实例 a 时，先按[实例重建](#实例重建)确认并停止、移除对应容器，再更换配方。
+
+```bash
+./local-ai server plan --profile b300-tp4-dspark --host 0.0.0.0 --gpus 0,1,2,3 --name a --port 18000
+./local-ai server start --profile b300-tp4-dspark --host 0.0.0.0 --gpus 0,1,2,3 --name a --port 18000 --wait-timeout 1200 --warmup --warmup-timeout 600
+./local-ai server status --name a
+```
+
+--wait-timeout 只控制 API 启动等待；API 健康后 --warmup 才发送真实生成请求，另受 --warmup-timeout 控制。普通 start 默认不生成请求。READY 表示 API 可用，WARMUP COMPLETE 才表示本次显式预热完成。
+
+已有运行中且健康的实例也可单独预热，无需重新安装或重启，原配方同样适用：
+
+```bash
+./local-ai server warmup --name a
+./local-ai server status --name a
+```
+
+预热会占用 GPU 并与业务请求竞争，建议在正式接入前执行。默认覆盖上下文允许的 1024、8192、32768 个输入 token，256 个输出 token，并发 1、2、4、8，每组两遍；本配方共 90 个请求。超过四个活动序列的请求会排队。每个请求使用不同前缀，避免把前缀缓存命中当作编译完成。有限请求不能保证所有后续长度、批次都不再触发 JIT。
+
+可根据实际负载调整范围，例如：
+
+```bash
+./local-ai server warmup --name a --input-tokens 1024,8192 --concurrency 1,4 --output-tokens 256 --repeats 2 --timeout 600
+```
+
+install.log 和 instances/a/server.log 显示 WARMING、进度及 WARMUP COMPLETE，失败显示 WARMUP INCOMPLETE。instances/a/warmup.json 保存输入范围、耗时和完成数量；status 只读取记录，不触发生成。只有记录匹配当前配置与容器启动时间时才显示 completed=true；重启后为 stale，需重新显式预热。超时或失败退出 1，Ctrl+C 返回 130，均保留容器；API 仍可能健康，应分别查看 ready 与 warmup 字段。
+
+DSpark 配方将 TileLang 与 CUDA 编译缓存放到持久化的 instances/a/cache 下，便于同一实例后续启动复用。不同引擎版本、GPU 架构或参数可能需要重新编译；这不能消除权重加载及所有首次编译。导出不携带实例缓存，迁移后在目标 GPU 重新预热。
+
+若设置了 LOCAL_AI_CATALOG 或安装目录 config/catalog.json，外部目录是完整替代，不自动追加新内置配方；先按[开发指南](development.md#模型与客户端兼容性)合并配置并验收。
+
 ## 双实例与多人使用
 
 只有本节引入第二个服务：八卡 B300 上 a 使用 0–3 卡和 18000，b 使用 4–7 卡和 18001。先确认另外四卡和端口可用，再在 GPU001 执行：

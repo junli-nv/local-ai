@@ -77,7 +77,7 @@ def session(options):
         (group in {"image", "install", "export"})
         or (group == "model")
         or (group == "client" and action in {"install", "export"})
-        or (group == "server" and action == "start")
+        or (group == "server" and action in {"start", "warmup"})
     )
     if not enabled:
         yield

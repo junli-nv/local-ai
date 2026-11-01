@@ -22,10 +22,12 @@ Use appropriate sudo/Docker permissions; root may omit sudo. Data defaults follo
 | Document | Purpose |
 |---|---|
 | This page | First online installation, startup, chat, configuration and migration links |
-| [Deployment](docs/en/deployment.md) | CDI, storage recovery, instance replacement and multiple instances/users |
+| [Deployment](docs/en/deployment.md) | CDI, storage recovery, instance replacement, DSpark/warmup and multiple instances |
 | [Command manual](docs/en/commands.md) | Options, defaults, exit codes, session resume and client versions |
 | [Offline deployment](docs/en/offline.md) | Existing-installation migration or online preparation |
 | [Architecture](docs/en/architecture.md), [development](docs/en/development.md) | Design, extension and contributor handoff |
+
+The [optimization and engine exploration record](docs/en/performance.md) preserves DSpark parameter choices, first-use compilation work, SGLang experiments and future comparison methods.
 
 ## Prerequisites
 
@@ -36,6 +38,7 @@ BCM: Linux AMD64/ARM64, Python 3.10+, Bash, curl, tar, Git, rg, util-linux scrip
 | Profile | Server CPU / image | Local GPUs | Engram | Validation |
 |---|---|---|---|---|
 | b300-tp4 | AMD64 / linux/amd64 | 4 B300 | GPU | Hardware validated |
+| b300-tp4-dspark | AMD64 / linux/amd64 | 4 B300 | GPU | Optional single-user recipe; see validation |
 | gb300-tp4 | ARM64 / linux/arm64 | 4 GB300/B300 | GPU | Not hardware validated |
 | gb300-tp2 | ARM64 / linux/arm64 | 2 GB300/B300 | CPU | Upstream recipe, unvalidated |
 
@@ -116,6 +119,8 @@ start waits up to 600 seconds, showing NOT READY/log paths during loading and co
 Add --wait-timeout 1200 for longer startup. Timeout exits 1; Ctrl+C returns 130; both retain the container. Check logs/status first. A historical READY, running container or listening port alone is insufficient.
 
 --host 0.0.0.0 listens on all IPv4 interfaces; default is 127.0.0.1. BCM uses the host address, never 0.0.0.0. API keys/HTTPS are not configured; restrict network access. Address changes require [instance replacement](docs/en/deployment.md#replace-an-instance).
+
+For single-user generation, optional b300-tp4-dspark and explicit --warmup are described in [deployment](docs/en/deployment.md#single-user-dspark-and-explicit-warmup). READY confirms API health; WARMUP COMPLETE confirms the bounded inference suite. Existing instances require explicit replacement to change recipes.
 
 ## 2. Install and use on BCM
 

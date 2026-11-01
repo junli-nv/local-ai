@@ -88,6 +88,43 @@ docker rm local-ai-a
 
 Weights and host logs remain. Different specs are never silently substituted. Readiness/timeouts/logging are described in [README](../../README.en.md#1-install-and-start-on-gpu001); exit codes are in the manual.
 
+Startup checks permit TCP TIME_WAIT reuse after a stopped HTTP service, while rejecting active listeners. Other applications owning the port still require a different port or explicit operator action.
+
+## Single-user DSpark and explicit warmup
+
+The default b300-tp4 keeps its existing settings. Optional b300-tp4-dspark favors single-user generation speed, with a possible concurrency throughput cost. DSpark uses speculative decoding with target-model verification to improve the decode phase; lower TTFT is not guaranteed. It uses the same image and weights. See [validation](validation.md) for measurements and limits. This recipe is not validated on GB300.
+
+Run on GPU001 from /raid/local-ai with free GPUs and port. If a already exists, first confirm and follow [instance replacement](#replace-an-instance) to stop and remove its container.
+
+```bash
+./local-ai server plan --profile b300-tp4-dspark --host 0.0.0.0 --gpus 0,1,2,3 --name a --port 18000
+./local-ai server start --profile b300-tp4-dspark --host 0.0.0.0 --gpus 0,1,2,3 --name a --port 18000 --wait-timeout 1200 --warmup --warmup-timeout 600
+./local-ai server status --name a
+```
+
+--wait-timeout covers API startup only. After API health succeeds, --warmup sends real generation requests under a separate --warmup-timeout. Ordinary start does not generate requests. READY means API health; WARMUP COMPLETE means explicit warmup finished.
+
+A healthy running instance can also be warmed separately, without installation or restart, including the baseline recipe:
+
+```bash
+./local-ai server warmup --name a
+./local-ai server status --name a
+```
+
+Warmup consumes GPU resources and competes with traffic; run before admitting users. Defaults cover exact input lengths 1024, 8192 and 32768 tokens when context permits, output length 256, concurrency 1, 2, 4 and 8, twice per group: 90 requests for this recipe. Requests beyond four active sequences queue. Fresh prefixes avoid mistaking prefix-cache hits for compilation coverage. Finite warmup cannot eliminate JIT for every later length or batch.
+
+For a smaller workload-specific suite:
+
+```bash
+./local-ai server warmup --name a --input-tokens 1024,8192 --concurrency 1,4 --output-tokens 256 --repeats 2 --timeout 600
+```
+
+install.log and instances/a/server.log show WARMING, progress and WARMUP COMPLETE, or WARMUP INCOMPLETE. instances/a/warmup.json records shapes, elapsed time and completed counts. Status only reads this record and sends no generation requests. completed=true requires matching configuration and container start time; after restart it becomes stale and needs explicit warmup again. Failure/timeout exits 1; Ctrl+C exits 130. Both retain the container, whose API may remain healthy: inspect ready and warmup separately.
+
+The DSpark recipe places TileLang and CUDA compilation caches inside persisted instances/a/cache for reuse by the same instance. Engine versions, GPU architectures or settings may require recompilation; weight loading and all first-use compilation are not eliminated. Exports exclude instance caches; warm again on the target GPU after migration.
+
+LOCAL_AI_CATALOG or installation config/catalog.json fully replaces the built-in catalog and does not automatically acquire new recipes. Merge and validate the desired recipe using the [development guide](development.md#model-and-client-compatibility).
+
 ## Two instances and multiple users
 
 Only this section introduces another service: on eight B300 GPUs, a uses GPUs 0–3/port 18000 and b uses GPUs 4–7/port 18001. Confirm spare devices and port availability, then run on GPU001:

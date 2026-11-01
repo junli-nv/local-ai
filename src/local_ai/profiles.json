@@ -103,6 +103,43 @@
           "cpu_offload": true
         }
       }
+    },
+    "b300-tp4-dspark": {
+      "arch": "amd64",
+      "platform": "linux/amd64",
+      "tp": 4,
+      "cpu_offload": false,
+      "min_vram_mib": 250000,
+      "gpu_names": [
+        "B300"
+      ],
+      "validation": "hardware-validated-streaming-warmup",
+      "platform_digest": "sha256:327eb19763b5c91a06e750082348170eafb99e476f91eb0cb60328dc18b04961",
+      "model": "deepseek-v4.1-flash",
+      "purpose": "Single-user generation latency; concurrent throughput may be lower",
+      "engine_options": {
+        "--speculative-config": {
+          "method": "dspark",
+          "num_speculative_tokens": 5,
+          "draft_sample_method": "probabilistic",
+          "rejection_sample_method": "block",
+          "enable_adaptive_verification": false
+        },
+        "--compilation-config": {
+          "mode": 0,
+          "cudagraph_mode": "FULL_DECODE_ONLY",
+          "cudagraph_capture_sizes": [
+            6,
+            12,
+            24
+          ]
+        }
+      },
+      "environment": {
+        "VLLM_USE_RUST_FRONTEND": "1",
+        "TILELANG_CACHE_DIR": "/root/.cache/tilelang",
+        "CUDA_CACHE_PATH": "/root/.cache/nvidia"
+      }
     }
   },
   "legacy_environment": {

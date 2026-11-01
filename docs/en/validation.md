@@ -184,3 +184,50 @@ Offline installation ran under unshare -n; Docker accessed the host daemon throu
 116 tests, Ruff lint/format and documentation contracts passed. config show/set/unset were tested with network, subprocess and installation calls prohibited: read-only viewing, validated updates/removal, preserved metadata, direct file editing, malformed JSON/type errors, bundle verification receipts and offline reinstallation compatibility. Existing multi-endpoint routing tests still pass. Real OpenCode 1.19.5 resume/terminal contract checks passed.
 
 Complete export/transfer/offline-import instructions now live in the offline guide; README identifies source/target roles and links to both routes. This change did not repeat physical GPU migration or restart inference services.
+
+## 2026-11-01: single-node engines and DSpark
+
+Compared the same four B300 GPUs, TP4, model revision, 131072 context and four active sequences using vLLM 0.32.0 and SGLang 0.0.0.dev1+gda64c5cbb. SGLang used a separately pinned development image and EP4; vLLM did not enable EP. These results compare those configurations, not all framework workloads. The existing service on four other GPUs was unchanged.
+
+Identical uncached synthetic logs used 9272 input tokens, 256 output tokens, temperature=1 and top_p=0.95. Single-request groups had two samples; four-concurrency groups had eight. Decode rates exclude prefill. TTFT includes the first reasoning token, not the final answer.
+
+| Configuration | Single TTFT median ms | Single decode tokens/s P50 | Four-concurrency aggregate tokens/s |
+|---|---:|---:|---:|
+| vLLM baseline | 377.5 | 236.2 | 422.2 |
+| vLLM DSpark | 381.8 | 459.9 | 352.0 |
+| SGLang baseline | 549.2 | 166.6 | 267.8 |
+| SGLang DSpark | 591.6 | 303.5 | 300.6 |
+
+vLLM DSpark decoded about 1.95 times faster for one request, while four-concurrency throughput fell about 16.6%. This supports an optional single-user recipe, not replacing every concurrent service. The vLLM recipe uses five draft tokens, probabilistic drafts, real block rejection sampling, adaptive verification disabled, and graph capture sizes 6/12/24. No synthetic acceptance was used. Counter deltas show 40.97% draft-token acceptance and 2.05 accepted tokens per iteration. The default profile is unchanged.
+
+The ordering also changed with workload: at 1208 input tokens and eight-concurrency, aggregate throughput was 470.1 tokens/s for SGLang baseline and 561.7 for SGLang DSpark, versus 268.8 and 441.9 for the two vLLM configurations. The vLLM baseline included a JIT tail. Preserve these results and repeat with longer steady-state samples before generalizing; the 9K table alone does not dismiss SGLang.
+
+Each configuration had 101 formal-stage requests: 93 performance requests plus warmup, cache seeding and three basic checks. Payloads/token counts matched across configurations, with zero request errors; arithmetic, Bash syntax and tool-format checks passed. Generated Bash was not executed. Most capped output was reasoning, samples were small, and complete quality or complex tool round trips were not validated. SGLang was not added as a project engine.
+
+First-use shapes produced a 13.9-second TTFT spike; the vLLM baseline still showed a 10.75-second short-input/eight-concurrency tail after one shape-preparation pass. Best warmed numbers alone are insufficient. Logs identified inference-time CuTeDSL MXFP8QuantizeSwizzledKernel and Triton _block_scores_kernel JIT. Separate explicit-warmup validation follows. Raw arguments, requests, metrics and model-configuration hashes remain internal.
+
+## 2026-11-01: DSpark recipe and explicit warmup acceptance
+
+Native project commands validated b300-tp4-dspark on four allocated B300 GPUs. Both groups used the same image/model/settings and separate empty compilation caches. Host page caches were not cleared; CPU/RAM/disk were shared. Control waited for API health only; the other group ran start --warmup. All 90 real warmup requests completed in about 104.8 seconds, with completion in runtime logs and warmup.json.
+
+Each group measured 78 streaming requests: exact inputs 1024/8192/32768 tokens, concurrency 1/4/8, twice the concurrency in requests per group, 256 output tokens, temperature=1, top_p=0.95 and ignore_eos=true. Integer token-ID prompts and fresh prefixes were used. This is not full chat-template or quality acceptance. Streaming was measured separately after non-streaming warmup.
+
+| Input tokens | Concurrency | Requests/group | API-only max TTFT seconds | After explicit warmup max TTFT seconds |
+|---|---:|---:|---:|---:|
+| 1024 | 1 | 2 | 14.405 | 0.191 |
+| 1024 | 4 | 8 | 22.948 | 0.584 |
+| 1024 | 8 | 16 | 6.816 | 7.785 |
+| 8192 | 1 | 2 | 0.885 | 0.386 |
+| 8192 | 4 | 8 | 4.327 | 1.173 |
+| 8192 | 8 | 16 | 3.320 | 3.276 |
+| 32768 | 1 | 2 | 0.968 | 0.959 |
+| 32768 | 4 | 8 | 6.163 | 3.375 |
+| 32768 | 8 | 16 | 7.717 | 7.627 |
+
+The first single 1024-token request changed from 14.405 to 0.188 seconds. No monitored inference-JIT warnings appeared during post-warmup measurements, but eight-concurrency still had an approximately 7.8-second tail, including queueing beyond four active sequences. Not every latency tail is compilation. Finite shapes and small samples do not establish arbitrary-workload JIT elimination or production SLAs; these results support an optional single-user-oriented configuration.
+
+Cold-cache start commands took about 428.1 seconds for control and 523.1 including explicit warmup. Warmup moves some first-request work before traffic, without eliminating the compilation cost. Stopping/starting the same container restored API health in 167.8 seconds, with 321 host-cache files and the TileLang directory present. The old warmup record correctly became stale/completed=false. This checks the same container, not cache compatibility across recreated containers, engine versions or GPU architectures. All paired payload hashes matched, and all 156 measurement plus 90 warmup requests succeeded. Test containers were removed, the four test GPUs returned to zero allocated memory, and the unchanged production service remained HTTP 200.
+
+131 CPU unit/documentation tests, Ruff lint/format, diff checks and package-content checks passed. CPU coverage includes real TCP TIME_WAIT reuse with active-listener rejection, bounded HTTP warmup, partial failure, cancellation, duplicate locks, wrong deployment metadata and stale restart markers. GB300 and complete DSpark tool round trips remain unvalidated.
+
+The first instance switch exposed a TIME_WAIT false port conflict. After confirming no listener, preflight was fixed with SO_REUSEADDR and a real TCP regression; active listeners remain rejected. All control requests were retained and only the unfinished warmup group resumed. This change affects preflight, not engine arguments or payloads. See the [performance record](performance.md) for the full optimization and SGLang investigation.

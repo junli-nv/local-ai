@@ -18,6 +18,7 @@ from . import (
     installlog,
     readiness,
     server,
+    warmup,
 )
 from .common import arch, client_home
 from .paths import client_assets, data_root, root, settings
@@ -149,12 +150,13 @@ def parser():
         help="Show this server CPU architecture and GPU inventory",
         description="Run on GPU001. Read hardware inventory without starting a service.",
     )
-    for action in ["plan", "start", "status", "stop"]:
+    for action in ["plan", "start", "status", "stop", "warmup"]:
         details = {
             "plan": "GPU001: print a plan without starting a container",
             "start": "GPU001: validate resources, start an instance and wait for API readiness",
             "status": "GPU001: report whether the named service API is ready",
             "stop": "GPU001: stop the named instance and preserve host data",
+            "warmup": "GPU001: explicitly generate bounded synthetic requests to warm inference kernels",
         }[action]
         b = gpu.add_parser(action, help=details, description=details)
         b.add_argument(
@@ -166,6 +168,30 @@ def parser():
         b.add_argument(
             "--name", default="a", help="Instance identifier (for example a or b), not a hostname"
         )
+        if action == "warmup":
+            b.add_argument(
+                "--timeout",
+                type=int,
+                default=600,
+                help="Overall warmup deadline in seconds; failure leaves the container running",
+            )
+            b.add_argument(
+                "--input-tokens",
+                help="Comma-separated exact input lengths; default 1024,8192,32768 where context permits",
+            )
+            b.add_argument(
+                "--concurrency",
+                help="Comma-separated simultaneous request counts; default 1,2,4,8 capped at twice max-num-seqs",
+            )
+            b.add_argument(
+                "--output-tokens",
+                type=int,
+                default=256,
+                help="Generated tokens per synthetic request",
+            )
+            b.add_argument(
+                "--repeats", type=int, default=2, help="Passes over the input/concurrency matrix"
+            )
         if action in ["plan", "start"]:
             b.add_argument(
                 "--profile",
@@ -196,6 +222,18 @@ def parser():
                     type=int,
                     default=600,
                     help="Maximum seconds to wait for API readiness; timeout leaves the container running",
+                )
+            if action == "start":
+                b.add_argument(
+                    "--warmup",
+                    action="store_true",
+                    help="After API readiness, run explicit inference warmup; generates synthetic requests",
+                )
+                b.add_argument(
+                    "--warmup-timeout",
+                    type=int,
+                    default=600,
+                    help="Additional overall warmup deadline in seconds; used only with --warmup",
                 )
             if action == "plan":
                 b.add_argument(
@@ -393,11 +431,35 @@ def dispatch(q):
         if q.action == "status":
             value = server.status(q.name)
             print(value["message"], file=sys.stderr, flush=True)
+            if "warmup" in value:
+                print(
+                    "推理预热（Warmup）: " + value["warmup"]["state"], file=sys.stderr, flush=True
+                )
             if value.get("log"):
                 print("运行日志（Runtime log）： " + value["log"], file=sys.stderr, flush=True)
             return value
         if q.action == "stop":
             return server.stop(q.data_dir, q.name)
+        if q.action == "warmup":
+            spec = server.managed_spec(q.data_dir, q.name)
+            result = warmup.run(
+                spec,
+                server.inspect_container,
+                timeout=q.timeout,
+                inputs=q.input_tokens,
+                concurrency=q.concurrency,
+                output_tokens=q.output_tokens,
+                repeats=q.repeats,
+            )
+            return {
+                "state": "ready",
+                "ready": True,
+                "container": spec["container"],
+                "warmup": result,
+                "log": str(readiness.log_path(spec)),
+            }
+        if q.action == "start" and q.warmup and q.warmup_timeout <= 0:
+            raise ValueError("--warmup-timeout must be positive")
         if q.action == "start" and q.wait_timeout <= 0:
             raise ValueError("--wait-timeout must be positive")
         policy = profile(q.profile)
@@ -421,6 +483,10 @@ def dispatch(q):
             + shlex.join([command, "server", "status", "--name", q.name])
         )
         checked = readiness.wait(value["spec"], server.inspect_container, timeout=q.wait_timeout)
+        if q.warmup:
+            checked["warmup"] = warmup.run(
+                value["spec"], server.inspect_container, timeout=q.warmup_timeout
+            )
         return {**result, **checked}
     if q.group == "image":
         policy = profile(q.profile)
