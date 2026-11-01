@@ -31,8 +31,8 @@ Syntax: ./local-ai GROUP COMMAND OPTIONS. profiles and chat have no child comman
 | profiles | Either host | Profile catalog and validation status as JSON |
 | server inventory | GPU001 | Local CPU architecture, GPU models, UUIDs and memory |
 | server plan | GPU001 | JSON plan with selected devices, engine args and Docker command; no container creation |
-| server start | GPU001 | Validate resources, start the instance and report container, health URL and log |
-| server status | GPU001 | Named container state and labels |
+| server start | GPU001 | Validate resources, start and wait for API readiness; report result and log |
+| server status | GPU001 | Explicit READY/NOT READY result with reason, listener and log |
 | server stop | GPU001 | Stop the named instance; retain weights and host logs |
 | image pull | Connected GPU preparation host | Pull the pinned image and record platform identity |
 | image export | Docker preparation host | Image archive and companion lock file |
@@ -84,6 +84,7 @@ Ongoing model output remains in instances/NAME/server.log; chat history and sess
 | --name | plan/start/status/stop | Default a; lowercase letter followed by lowercase letters, digits or hyphens; at most 32 characters |
 | --host | plan/start | IPv4 listen address, default 127.0.0.1; 0.0.0.0 for all IPv4 interfaces or a local IP; no hostnames or IPv6 |
 | --port | plan/start | Model API port, default 18000, range 1024–65535 |
+| --wait-timeout | start only | Positive seconds to wait for API readiness, default 600; timeout exits 1 and retains the container |
 | --inventory | plan only | JSON hardware fixture instead of discovery; start does not accept it |
 | --output | image export | Required destination archive path |
 | --archive; --lock | image import | Required image archive and matching .lock.json |
@@ -96,10 +97,9 @@ On GPU001:
 ./local-ai server plan --host 0.0.0.0 --profile b300-tp4 --gpus 0,1,2,3 --name a --port 18000 --data-dir /raid/local-ai
 ./local-ai server start --host 0.0.0.0 --profile b300-tp4 --gpus 0,1,2,3 --name a --port 18000 --data-dir /raid/local-ai
 ./local-ai server status --name a
-curl --fail http://127.0.0.1:18000/health
 ```
 
-plan neither reserves GPUs nor checks current process/port occupancy; start checks occupancy. Startup returning is not model readiness. Initial loading/compilation can take minutes. A successful health request (curl exit 0) may have an empty body. Here 127.0.0.1 means GPU001, where curl is run.
+Plan neither reserves GPUs nor checks occupancy. Start checks resources and waits up to 600 seconds for API readiness; use --wait-timeout to adjust. Exit 0 means readiness was confirmed. Status checks immediately, exits 0 for READY or 1 for NOT READY/check failure, and writes no files.
 
 The listen address affects engine arguments, instance identity and startup port checks.
 Plan does not check local interface ownership. Default loopback instances stay compatible;
@@ -109,10 +109,16 @@ Managed instances still reserve the API port across interfaces.
 Clients only connect to --endpoint. Administrators configure nginx/frp or other forwarding separately.
 API keys/HTTPS are not configured; restrict network access. See [README](../../README.en.md).
 
-Successful server start prints Runtime log, Follow startup and Check API guidance to stderr,
-including the actual instance log path, a shell-quoted tail -f command and health check.
-Already-running instances receive the same guidance; API readiness is not implied.
-Model loading/compilation output is in the instance server.log, not the installation journal.
+Start immediately prints the runtime log, tail -f and status commands. When the API succeeds,
+both terminal and instance server.log receive an explicit timestamped READY confirmation.
+An open port alone is insufficient; HTTP 503 or a stopped container is NOT READY.
+First compilation may take minutes. A past READY entry does not establish current health.
+
+Timeout exits 1, records NOT READY and the cause, and retains the container. Container exit
+records FAILED. Ctrl+C cancels waiting with exit 130 without stopping the container.
+Use status afterward, or start with identical arguments to resume waiting and record readiness;
+a matching running instance is not restarted. Status prints a human-readable result to stderr
+and JSON ready/listening/health/log fields to stdout. It probes the container and API, not old logs.
 
 ## Client parameters
 
@@ -154,7 +160,7 @@ For model/image upgrades, validate a separate data directory and instance while 
 
 | Symptom / operation | Action |
 |---|---|
-| Service not ready | On GPU001 check server status and DATA_DIR/instances/a/server.log, then retry /health |
+| Service not ready | On GPU001 check server status and DATA_DIR/instances/a/server.log, inspect the reported reason or increase start --wait-timeout |
 | Image extraction reports missing metadata.db | Follow the [deployment recovery procedure](deployment.md); check runtime storage and workloads before restarting Docker and containerd. File existence immediately after restart is not an acceptance check. |
 | BCM cannot connect | Run chat --endpoint http://GPU001:18000/v1 --check; inspect API readiness, DNS, routing, firewall and proxy settings |
 | Client cannot see GPUs | Expected on BCM; inspect inference processes with nvidia-smi on GPU001 |

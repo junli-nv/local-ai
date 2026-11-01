@@ -186,10 +186,10 @@ After prerequisites pass, prepare artifacts and start:
 ./local-ai server plan --host 0.0.0.0 --profile b300-tp4 --gpus 0,1,2,3 --name a --data-dir /raid/local-ai
 # Start the instance; initial loading takes time
 ./local-ai server start --host 0.0.0.0 --profile b300-tp4 --gpus 0,1,2,3 --name a --data-dir /raid/local-ai
-curl --fail http://127.0.0.1:18000/health
+./local-ai server status --name a
 ```
 
-Run on GPU001: 127.0.0.1 means GPU001 itself. A successful /health request (curl exit code 0) means the API is healthy; the body may be empty. While loading, wait and retry; inspect instances/a/server.log.
+On GPU001, server status --name a prints READY or NOT READY. Server start waits up to 600 seconds by default and records a timestamped READY confirmation in the terminal and instance server.log. Timeout or container exit is explicitly reported.
 
 `server plan` is read-only. `server start` validates weights, native CPU/image
 architecture, selected GPU UUIDs, CDI aliases, active processes, assignments, and
@@ -199,21 +199,40 @@ For a GB300 host with four local GPUs, select `--profile gb300-tp4`. With two
 local GPUs and sufficient host memory, select `--profile gb300-tp2 --gpus 0,1`.
 GB300 profiles require hardware acceptance testing before production.
 
-After server start returns, terminal guidance explains that model loading and
-compilation may take several minutes and prints:
+### Explicit readiness results
+
+Server start waits for API readiness by default, up to 600 seconds. During loading,
+compilation and warmup it explicitly reports NOT READY, the runtime log and a
+copyable tail -f command. An open TCP port is not sufficient: the container must
+still be running and /health must return HTTP 200. Success displays:
 
 ```text
-Runtime log: /raid/local-ai/instances/a/server.log
-Follow startup: tail -f /raid/local-ai/instances/a/server.log
-Check API: curl --fail http://127.0.0.1:18000/health
+服务已就绪（READY）： http://127.0.0.1:18000/health，HTTP 200
 ```
 
-Paths follow --data-dir and the instance name. install.log records installation
-and container launch commands; instances/a/server.log contains weight loading,
-kernel compilation, CUDA Graph capture and runtime errors. A running container
-does not prove readiness; the port may not listen during initialization.
-Follow the runtime log for progress. Ctrl+C stops log viewing, not the container.
-Guidance goes to stderr; stdout remains JSON.
+The same timestamped `[local-ai] ... (READY)` confirmation is appended to
+/raid/local-ai/instances/a/server.log. install.log records installation/management;
+the instance server.log records model loading, compilation and warmup.
+Paths follow --data-dir and the instance name.
+
+Query the current result **on the GPU server**:
+
+```bash
+./local-ai server status --name a
+```
+
+READY exits 0. NOT READY exits 1 and explains whether the port is closed, the API
+is unavailable or the container is stopped. Status is read-only; a past READY
+log entry is not a guarantee of current health. Human-readable messages go to
+stderr; stdout remains JSON with a ready field.
+
+Use --wait-timeout 1200 on start if needed. Timeout reports NOT READY, exits 1
+and leaves the container intact. Inspect logs and query status before restarting.
+A container exit reports FAILED. Ctrl+C cancels waiting with exit 130 and leaves
+the container running. Use status afterward; re-run start with identical arguments
+to wait and record readiness without restarting a matching running instance.
+Following the runtime log from another terminal shows detailed progress;
+Ctrl+C there only stops log viewing.
 
 ### Listen address and existing instances
 

@@ -146,14 +146,19 @@ Existing complete weights belong in /raid/local-ai/models/DeepSeek-V4.1-Flash/. 
 ./local-ai server plan --host 0.0.0.0 --profile b300-tp4 --gpus 0,1,2,3 --name a --port 18000 --data-dir /raid/local-ai
 # Start the instance; initial loading takes time
 ./local-ai server start --host 0.0.0.0 --profile b300-tp4 --gpus 0,1,2,3 --name a --port 18000 --data-dir /raid/local-ai
-curl --fail http://127.0.0.1:18000/health
+./local-ai server status --name a
 curl --fail http://127.0.0.1:18000/v1/models
 ./local-ai server status --name a
 ```
 
-Run on GPU001: 127.0.0.1 means GPU001 itself. A successful /health request (curl exit code 0) means the API is healthy; the body may be empty. While loading, wait and retry; inspect instances/a/server.log.
+On GPU001, server status --name a prints READY or NOT READY. Server start waits up to 600 seconds by default and records a timestamped READY confirmation in the terminal and instance server.log. Timeout or container exit is explicitly reported.
 
 Use gb300-tp4 for four local GB300 GPUs or gb300-tp2 with --gpus 0,1 for two. Full UUIDs are accepted. plan does not allocate devices; start checks occupancy. Initial compilation may take minutes. Container running state is not API readiness. Full logs and launch arguments are under instances/a/ in the data directory.
+
+Normal acceptance is start reporting READY and exit 0; no extra curl step is required.
+NOT READY includes the reason. Use --wait-timeout 1200 for a longer cold start.
+Timeout or Ctrl+C retains the container; query status or repeat start with identical arguments.
+See [README](../../README.en.md) for explicit results, exit codes and log markers.
 
 ### API listen address
 

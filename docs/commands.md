@@ -30,8 +30,8 @@
 | `profiles` | 任意一端 | 输出配置目录和验证状态，JSON 格式 |
 | `server inventory` | GPU001 | 读取本机 CPU 架构及 GPU 型号、UUID、显存 |
 | `server plan` | GPU001 | 输出 GPU 选择、引擎参数及 Docker 启动命令；不创建容器 |
-| `server start` | GPU001 | 检查资源并启动实例；返回容器名、健康地址和日志位置 |
-| `server status` | GPU001 | 查询指定实例的容器状态和标签 |
+| `server start` | GPU001 | 检查资源、启动并等待 API；成功表示已就绪，返回状态与日志位置 |
+| `server status` | GPU001 | 明确显示已就绪或尚未就绪；返回原因、监听状态和日志位置 |
 | `server stop` | GPU001 | 停止指定实例，保留权重和宿主机日志 |
 | `image pull` | 联网 GPU 准备机 | 拉取固定镜像并记录平台身份 |
 | `image export` | Docker 准备机 | 导出镜像归档及配套锁文件 |
@@ -83,6 +83,7 @@ BCM 客户端默认 `客户端目录/install.log`。每次操作有独立 ID，�
 | `--name` | plan/start/status/stop | 实例名，默认 a；须以小写字母开头，仅含小写字母、数字和连字符，最长 32 字符 |
 | `--host` | plan/start | IPv4 监听地址，默认 127.0.0.1；0.0.0.0 监听所有 IPv4 网卡，也可指定本机 IP；不接受主机名或 IPv6 |
 | `--port` | plan/start | 模型 API 端口，默认 18000，允许 1024–65535 |
+| `--wait-timeout` | 仅 start | 等待 API 就绪的秒数，默认 600，须大于 0；超时退出 1，保留容器 |
 | `--inventory` | 仅 plan | 从 JSON 测试清单生成计划，代替实时硬件发现；start 不接受 |
 | `--output` | image export | 必填，导出镜像的归档路径 |
 | `--archive`、`--lock` | image import | 均必填，镜像归档及其配套 .lock.json 路径 |
@@ -96,13 +97,12 @@ TP 表示张量并行：b300-tp4 在同一主机上使用 4 张 B300；GB300 配
 ./local-ai server plan --host 0.0.0.0 --profile b300-tp4 --gpus 0,1,2,3 --name a --port 18000 --data-dir /raid/local-ai
 ./local-ai server start --host 0.0.0.0 --profile b300-tp4 --gpus 0,1,2,3 --name a --port 18000 --data-dir /raid/local-ai
 ./local-ai server status --name a
-curl --fail http://127.0.0.1:18000/health
 ```
 
 plan 不预留 GPU，也不检查当前端口/GPU 进程占用；start 才检查实时占用。
-启动返回不等于模型已就绪；首次加载和编译可能持续数分钟。
-健康请求成功、curl 退出码为 0 即表示 API 健康，可能没有正文。
-这里 127.0.0.1 指执行 curl 的 GPU001，不是 BCM。
+start 默认等待 API 就绪，最多 600 秒，成功退出 0 表示检查时已就绪；可用 --wait-timeout 调整。
+等待期间直接提示“服务尚未就绪（NOT READY）”，日志持续显示加载、编译和预热。
+status 立即检查，已就绪退出 0，尚未就绪或检查失败退出 1；查询只读，不写日志。
 
 监听地址影响引擎参数、实例身份和启动前端口检查；plan 不探测地址是否属于本机。
 默认回环实例保持兼容；已有实例更改 --host 须显式停止、移除容器并重建。
@@ -111,9 +111,15 @@ plan 不预留 GPU，也不检查当前端口/GPU 进程占用；start 才检查
 客户端仅连接 --endpoint 指定的 API。需要转发时由管理员配置 nginx/frp 等外部工具。
 当前不配置 API key/HTTPS，应限制可信网络访问。完整操作见 [README](../README.md)。
 
-server start 成功返回时会在终端标准错误显示 Runtime log、Follow startup 和 Check API，
-分别给出实际实例日志路径、可复制的 tail -f 和健康检查命令；已运行实例也会提示。
-这不表示 API 已就绪。模型加载和编译日志在实例目录 server.log，安装管理过程在 install.log。
+启动开始时直接显示运行日志、tail -f 和 status 查询命令。API 健康成功后，终端和实例
+server.log 都会出现带时间戳的“服务已就绪（READY）”。端口开放本身不是就绪条件；
+容器停止或 HTTP 503 均为未就绪。首次编译可能耗时数分钟，旧 READY 日志只代表当时状态。
+
+等待超时返回 1，并明确写入 NOT READY 和原因；容器不会停止。容器退出会写入 FAILED；
+Ctrl+C 中断等待返回 130，也不会停止容器。中断后用 status 查询，或用相同参数重新执行
+start 继续等待并记录 READY；匹配的运行中实例不会重启。
+status 的人类可读提示写标准错误，标准输出保留 ready/listening/health/log 等 JSON 字段。
+当前状态不从日志推断，以实际容器和 API 检查为准。
 
 ## 客户端参数
 
@@ -162,7 +168,7 @@ client install/export 均接受 `--client-dir`，默认是用户状态根目录�
 | 现象 / 操作 | 检查方法 |
 |---|---|
 | 镜像解包提示 metadata.db 不存在 | 按[部署指南](deployment.zh-CN.md)检查 Docker/containerd 存储；确认任务影响后恢复服务，不能仅重启 Docker 或根据数据库文件是否立即出现判断恢复。 |
-| GPU 服务未就绪 | 在 GPU001 查询 server status，检查数据根目录下 instances/a/server.log，再重试 /health |
+| GPU 服务未就绪 | 在 GPU001 查询 server status，查看提示原因和 instances/a/server.log；必要时增加 start 的 --wait-timeout |
 | BCM 无法连接 | 用 chat --endpoint http://GPU001:18000/v1 --check 检查 API；核对服务就绪、DNS、路由、防火墙和代理设置 |
 | 客户端看不到 GPU | 工具在 BCM 执行属预期行为；在 GPU001 用 nvidia-smi 检查推理进程 |
 | GPU/端口冲突 | 核对分配与现有作业，选空闲设备/端口；不要停止无关任务 |

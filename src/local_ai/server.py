@@ -8,6 +8,7 @@ import re
 import socket
 from pathlib import Path
 
+from . import readiness
 from .common import arch, atomic_json, fingerprint, run
 from .images import resolve_image
 from .profiles import engine_args, select_gpus
@@ -276,17 +277,48 @@ def start(value, policy):
     }
 
 
-def status(name):
+def status(name, probe=True):
     if not re.fullmatch(r"[a-z][a-z0-9-]{0,31}", name):
         raise ValueError("Invalid instance name")
     old = inspect_container("local-ai-" + name)
     if old is None:
-        raise ValueError("Container not found")
-    return {"container": old["Name"], "state": old["State"], "labels": old["Config"].get("Labels")}
+        raise ValueError("服务尚未就绪（NOT READY）：实例不存在 / container not found")
+    value = {"container": old["Name"], "state": old["State"], "labels": old["Config"].get("Labels")}
+    if not probe:
+        return value
+    labels = value["labels"] or {}
+    value.update(
+        ready=False,
+        listening=False,
+        health=None,
+        log=None,
+        detail="容器未运行 / container not running",
+    )
+    if labels.get("local-ai.project") != "cluster-local-ai" or not labels.get("local-ai.data-dir"):
+        value["detail"] = "不是 local-ai 管理的实例 / unmanaged container"
+    else:
+        inst = Path(labels["local-ai.data-dir"]) / "instances" / name
+        value["log"] = str(inst / "server.log")
+        try:
+            spec = json.loads((inst / "spec.json").read_text())
+            if spec["container"] != "local-ai-" + name or str(spec["port"]) != labels.get(
+                "local-ai.port"
+            ):
+                raise ValueError("Instance metadata mismatch")
+            spec["host"] = listen_address(spec.get("host", "127.0.0.1"))
+            spec["port"] = int(spec["port"])
+            if not 1024 <= spec["port"] <= 65535:
+                raise ValueError("Invalid API port")
+            if old["State"].get("Running"):
+                value.update(readiness.probe(spec))
+        except (OSError, ValueError, KeyError, TypeError) as error:
+            value["detail"] = "无法读取实例配置 / invalid instance configuration: " + str(error)
+    value["message"] = readiness.message(value)
+    return value
 
 
 def stop(root, name):
-    value = status(name)
+    value = status(name, probe=False)
     labels = value["labels"] or {}
     if labels.get("local-ai.project") != "cluster-local-ai" or labels.get(
         "local-ai.data-dir"

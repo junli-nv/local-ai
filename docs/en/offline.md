@@ -111,7 +111,7 @@ cd /path/to/local-ai
   --archive /media/export/vllm-amd64.tar \
   --lock /media/export/vllm-amd64.tar.lock.json
 ./local-ai server start --host 0.0.0.0 --profile b300-tp4 --gpus 0,1,2,3 --name a --data-dir /raid/local-ai
-curl --fail http://127.0.0.1:18000/health
+./local-ai server status --name a
 ```
 
 Use the ARM64 archive/profile on GB300. Local image identity can be represented

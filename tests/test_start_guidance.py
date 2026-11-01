@@ -18,6 +18,7 @@ class StartGuidanceTests(unittest.TestCase):
         with (
             patch("local_ai.cli.server.inventory", return_value=hardware()),
             patch("local_ai.cli.server.start", return_value=result, side_effect=failure),
+            patch("local_ai.cli.readiness.wait", return_value={"state": "ready", "ready": True}),
             contextlib.redirect_stdout(output),
             contextlib.redirect_stderr(progress),
         ):
@@ -44,11 +45,12 @@ class StartGuidanceTests(unittest.TestCase):
             code, output, progress = self.invoke(root, "0.0.0.0", result)
             log = str(root / "instances/a/server.log")
             self.assertEqual(code, 0)
-            self.assertEqual(json.loads(output), result)
-            self.assertIn("API readiness has not been checked", progress)
+            self.assertEqual(json.loads(output)["state"], "ready")
+            self.assertTrue(json.loads(output)["ready"])
+            self.assertIn("正在等待 API 就绪", progress)
             self.assertIn("Runtime log: " + log, progress)
             self.assertIn("Follow startup: " + shlex.join(["tail", "-f", log]), progress)
-            self.assertIn("curl --fail http://127.0.0.1:18000/health", progress)
+            self.assertIn("server status --name a", progress)
             self.assertIn("Runtime log: " + log, (root / "install.log").read_text())
 
     def test_existing_container_also_gets_guidance_for_selected_host(self):
@@ -56,9 +58,10 @@ class StartGuidanceTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as root:
             code, output, progress = self.invoke(root, "192.0.2.10", result)
             self.assertEqual(code, 0)
-            self.assertEqual(json.loads(output), result)
+            self.assertEqual(json.loads(output)["state"], "ready")
+            self.assertTrue(json.loads(output)["ready"])
             self.assertIn("Follow startup:", progress)
-            self.assertIn("curl --fail http://192.0.2.10:18000/health", progress)
+            self.assertIn("server status --name a", progress)
 
     def test_failed_launch_does_not_print_success_guidance(self):
         with tempfile.TemporaryDirectory() as root:

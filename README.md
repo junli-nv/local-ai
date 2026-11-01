@@ -167,10 +167,10 @@ docker info
 ./local-ai server plan --host 0.0.0.0 --profile b300-tp4 --gpus 0,1,2,3 --name a --data-dir /raid/local-ai
 # 启动实例，首次加载需等待
 ./local-ai server start --host 0.0.0.0 --profile b300-tp4 --gpus 0,1,2,3 --name a --data-dir /raid/local-ai
-curl --fail http://127.0.0.1:18000/health
+./local-ai server status --name a
 ```
 
-在 `GPU001` 执行：`127.0.0.1` 指 GPU001 本机。`/health` 请求成功且 curl 退出码为 0 表示 API 健康；可能没有正文。若仍在加载，等待后重试，并查看 `instances/a/server.log`。
+在 GPU001 上用 `server status --name a` 查看明确的“已就绪 / 尚未就绪”结果。`server start` 默认等待最多 600 秒，API 就绪时同时在终端和实例 `server.log` 写入 READY 标记；超时或容器退出会明确报错。
 
 `server plan` 只生成计划。`server start` 检查权重、CPU/镜像平台、GPU UUID、CDI、
 GPU 进程占用、实例分配和端口，不会终止其他作业。
@@ -178,18 +178,38 @@ GPU 进程占用、实例分配和端口，不会终止其他作业。
 四卡 GB300 使用 `--profile gb300-tp4`；两卡 GB300 使用 `--profile gb300-tp2 --gpus 0,1`。
 GB300 配置用于生产前须完成实机验收。容器处于 running 状态不代表 API 已就绪。
 
-`server start` 返回后，终端会直接提示模型加载和编译可能仍需数分钟，并打印：
+### 如何判断服务是否准备好
+
+`server start` 默认等待 API 就绪，最长 600 秒；冷启动加载权重、编译内核和预热时，
+终端明确显示“服务尚未就绪（NOT READY）”，并给出实际运行日志和 `tail -f` 命令。
+仅端口监听还不够，只有容器仍在运行且 `/health` 返回 HTTP 200，才显示：
 
 ```text
-Runtime log: /raid/local-ai/instances/a/server.log
-Follow startup: tail -f /raid/local-ai/instances/a/server.log
-Check API: curl --fail http://127.0.0.1:18000/health
+服务已就绪（READY）： http://127.0.0.1:18000/health，HTTP 200
 ```
 
-路径随 `--data-dir` 和实例名变化。`install.log` 记录安装与容器启动命令；
-`instances/a/server.log` 记录权重加载、内核编译、CUDA Graph 捕获和服务错误。
-容器 Up 不代表 API 已就绪，初始化期间端口可能尚未监听。用上面的 `tail -f` 查看进展；
-Ctrl+C 只退出日志查看，不停止容器。终端提示写标准错误，标准输出仍是 JSON。
+同一条 `[local-ai] 服务已就绪（READY）` 会带时间戳追加到
+`/raid/local-ai/instances/a/server.log`，不用从底层引擎日志中猜测。
+安装管理过程仍写入 `install.log`，权重加载、编译和预热过程写入实例 `server.log`。
+路径随 `--data-dir` 和实例名变化。
+
+随时在 **GPU 服务器**查询当前状态：
+
+```bash
+./local-ai server status --name a
+```
+
+已就绪直接提示“服务已就绪（READY）”，退出码 0；未就绪直接提示
+“服务尚未就绪（NOT READY）”及原因，例如端口未监听、API 未响应或容器未运行，
+退出码 1。查询只读，不写日志；日志中的 READY 是当时检查的结果，当前状态以查询为准。
+人类可读提示写标准错误，标准输出保留包含 `ready` 字段的 JSON。
+
+若 600 秒仍不够，可在 start 中增加 `--wait-timeout 1200`。
+等待超时会明确提示“尚未就绪”，退出码 1，不停止或删除容器；检查日志后再查询，
+不要仅因等待超时就反复重启。容器退出会提示“服务启动失败（FAILED）”。
+Ctrl+C 只中断等待并返回 130，容器继续运行；之后用 `server status` 检查，
+需要再次等待并写入就绪确认时，可用完全相同的参数重新执行 start，已有实例不会重启。
+另一个终端运行 `tail -f` 可看实时加载进展，Ctrl+C 仅退出日志查看。
 
 ### 监听地址与已有实例
 

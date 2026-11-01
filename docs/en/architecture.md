@@ -23,6 +23,7 @@ These identities are independent:
 | images.py | Image platform/provenance, model download, offline image transport |
 | artifacts.py | Native client integrity/architecture and public asset exports |
 | endpoint.py | HTTP(S) API address validation and model readiness checks |
+| readiness.py | Port/HTTP health probes, startup waiting and explicit runtime-log readiness; status is read-only |
 | client.py | Private user state, local tools, config and full transcripts |
 | cli.py | Explicit role/operation dispatch |
 

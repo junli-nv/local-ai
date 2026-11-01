@@ -21,6 +21,7 @@ BCM 负责 OpenCode、项目文件、Shell/Git/SSH 工具、用户凭据、历�
 | `images.py` | 镜像平台与身份校验、模型下载、离线镜像传输 |
 | `artifacts.py` | 客户端完整性与架构检查、公共资源导出 |
 | `endpoint.py` | HTTP(S) API 地址校验和模型就绪检查 |
+| `readiness.py` | 端口与 HTTP 健康探测、启动等待、明确就绪日志；状态查询只读 |
 | `client.py` | 用户私有状态、本地工具、连接配置和完整日志 |
 | `installlog.py` | 安装步骤、实际命令、实时输出及失败诊断集中记录；只读操作无文件副作用 |
 | `cli.py` | 解析参数并显式分派操作 |

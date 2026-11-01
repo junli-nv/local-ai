@@ -107,7 +107,7 @@ cd /path/to/local-ai
   --archive /media/export/vllm-amd64.tar \
   --lock /media/export/vllm-amd64.tar.lock.json
 ./local-ai server start --host 0.0.0.0 --profile b300-tp4 --gpus 0,1,2,3 --name a --data-dir /raid/local-ai
-curl --fail http://127.0.0.1:18000/health
+./local-ai server status --name a
 ```
 
 GB300 使用对应 ARM64 归档和配置。Docker 导入后的镜像身份表示可能不同，但配置、层内容和平台必须一致。CUDA 内核缓存不保证跨机器可用，首次启动可能使用固定镜像在本机编译。

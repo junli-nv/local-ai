@@ -8,7 +8,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from . import artifacts, client, images, installlog, server
+from . import artifacts, client, images, installlog, readiness, server
 from .common import arch, client_home
 from .profiles import catalog, profile
 
@@ -54,8 +54,8 @@ def parser():
     for action in ["plan", "start", "status", "stop"]:
         details = {
             "plan": "GPU001: print a plan without starting a container",
-            "start": "GPU001: validate resources and start an inference instance",
-            "status": "GPU001: show the named container status",
+            "start": "GPU001: validate resources, start an instance and wait for API readiness",
+            "status": "GPU001: report whether the named service API is ready",
             "stop": "GPU001: stop the named instance and preserve host data",
         }[action]
         b = gpu.add_parser(action, help=details, description=details)
@@ -91,6 +91,13 @@ def parser():
                 default=18000,
                 help="Model HTTP API port on this GPU server, 1024..65535",
             )
+            if action == "start":
+                b.add_argument(
+                    "--wait-timeout",
+                    type=int,
+                    default=600,
+                    help="Maximum seconds to wait for API readiness; timeout leaves the container running",
+                )
             if action == "plan":
                 b.add_argument(
                     "--inventory", type=Path, help="JSON fixture; never accepted by start"
@@ -261,9 +268,15 @@ def dispatch(q):
         if q.action == "inventory":
             return server.inventory()
         if q.action == "status":
-            return server.status(q.name)
+            value = server.status(q.name)
+            print(value["message"], file=sys.stderr, flush=True)
+            if value.get("log"):
+                print("运行日志（Runtime log）： " + value["log"], file=sys.stderr, flush=True)
+            return value
         if q.action == "stop":
             return server.stop(q.data_dir, q.name)
+        if q.action == "start" and q.wait_timeout <= 0:
+            raise ValueError("--wait-timeout must be positive")
         policy = profile(q.profile)
         hardware = (
             json.loads(q.inventory.read_text())
@@ -275,16 +288,17 @@ def dispatch(q):
             return value
         result = server.start(value, policy)
         runtime_log = Path(value["spec"]["data_dir"]) / "instances" / q.name / "server.log"
-        host = value["spec"].get("host", "127.0.0.1")
-        health = "http://%s:%d/health" % ("127.0.0.1" if host == "0.0.0.0" else host, q.port)
-        installlog.event(
-            "Container is running; API readiness has not been checked. "
-            "Initial model loading and compilation may take several minutes."
-        )
+        installlog.event("容器已运行，正在等待 API 就绪；首次模型加载和编译可能需要数分钟。")
         installlog.event("Runtime log: " + str(runtime_log))
         installlog.event("Follow startup: " + shlex.join(["tail", "-f", str(runtime_log)]))
-        installlog.event("Check API: " + shlex.join(["curl", "--fail", health]))
-        return result
+        launcher = Path(__file__).resolve().parents[2] / "local-ai"
+        command = str(launcher) if launcher.is_file() else "local-ai"
+        installlog.event(
+            "查询状态（Check status）: "
+            + shlex.join([command, "server", "status", "--name", q.name])
+        )
+        checked = readiness.wait(value["spec"], server.inspect_container, timeout=q.wait_timeout)
+        return {**result, **checked}
     if q.group == "image":
         policy = profile(q.profile)
         if q.action == "pull":
@@ -314,6 +328,8 @@ def main(argv=None):
         if isinstance(value, int):
             return value
         print(json.dumps(value, indent=2))
+        if q.group == "server" and q.action == "status" and not value["ready"]:
+            return 1
         return 0
     except KeyboardInterrupt:
         return 130

@@ -152,12 +152,12 @@ docker info
 ./local-ai server plan --host 0.0.0.0 --profile b300-tp4 --gpus 0,1,2,3 --name a --port 18000 --data-dir /raid/local-ai
 # 启动实例，首次加载需等待
 ./local-ai server start --host 0.0.0.0 --profile b300-tp4 --gpus 0,1,2,3 --name a --port 18000 --data-dir /raid/local-ai
-curl --fail http://127.0.0.1:18000/health
+./local-ai server status --name a
 curl --fail http://127.0.0.1:18000/v1/models
 ./local-ai server status --name a
 ```
 
-在 `GPU001` 执行：`127.0.0.1` 指 GPU001 本机。`/health` 请求成功且 curl 退出码为 0 表示 API 健康；可能没有正文。若仍在加载，等待后重试，并查看 `instances/a/server.log`。
+在 GPU001 上用 `server status --name a` 查看明确的“已就绪 / 尚未就绪”结果。`server start` 默认等待最多 600 秒，API 就绪时同时在终端和实例 `server.log` 写入 READY 标记；超时或容器退出会明确报错。
 
 GB300 四卡替换为 --profile gb300-tp4。
 GB300 两卡替换为 --profile gb300-tp2 --gpus 0,1。
@@ -168,6 +168,11 @@ GB300 两卡替换为 --profile gb300-tp2 --gpus 0,1。
 `status --name a` 查询实例 a；`stop --name a` 停止该实例。
 首次加载/编译可能持续数分钟，容器 running 不能替代 API 验收。
 完整日志在数据目录 instances/a/server.log，启动命令和参数也保存在该目录。
+
+正常安装以 start 的“服务已就绪（READY）”及退出码 0 为准，不必额外运行 curl。
+未就绪时会显示原因；需要更长冷启动等待，可在 start 中加 --wait-timeout 1200。
+超时或 Ctrl+C 不会停止容器，之后用 status 查询，或以相同参数重新 start 继续等待。
+详细结果、退出码和日志含义见 [README](../README.md) 的“如何判断服务是否准备好”。
 
 ### API 监听地址
 
