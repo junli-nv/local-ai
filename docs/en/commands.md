@@ -11,7 +11,7 @@ Use the [deployment guide](deployment.md) for first installation and this page f
 | GPU001 | GPU server running the model container |
 | bcm-headnode | BCM host running OpenCode and local tools |
 | alice; /home/alice/project | BCM user and an existing project directory; replace as needed |
-| a; 18000 | Instance name and model API port on GPU001, not hostname or SSH port |
+| a; 18000 | Instance name and model API port on GPU001, instance identifier and HTTP API port |
 
 Discover commands without starting a model:
 
@@ -39,11 +39,10 @@ Syntax: ./local-ai GROUP COMMAND OPTIONS. profiles and chat have no child comman
 | image import | Offline GPU host | Verify archive and lock, then load the image |
 | model download | Connected preparation host | Pinned config, tokenizer, index and all weight shards |
 | client install | bcm-headnode | Install a pinned native client online or import local assets |
-| client doctor | bcm-headnode | Check client and Python/git/SSH/rg/script availability |
 | client export | BCM preparation host | Client/public-cache archive without private history or credentials |
 | chat | bcm-headnode | Connect to inference; execute tools locally as the current user |
 
-server runs vLLM through Docker; the plan's command field shows the Docker arguments. chat starts native OpenCode and owns its SSH tunnel. Tools do not execute inside the GPU container.
+server runs vLLM through Docker; the plan's command field shows the Docker arguments. chat connects to the specified API and starts native OpenCode. Tools do not execute inside the GPU container.
 
 Engine options are not passed through arbitrarily; maintain model/vLLM presets in profiles.json/profiles.py. Each started instance records spec.json, args.json, docker-command.json and launch.log for inspection.
 
@@ -94,8 +93,8 @@ TP is tensor parallelism: b300-tp4 uses four local B300 GPUs. See [deployment](d
 On GPU001:
 
 ```bash
-./local-ai server plan --profile b300-tp4 --gpus 0,1,2,3 --name a --port 18000 --data-dir /raid/local-ai
-./local-ai server start --profile b300-tp4 --gpus 0,1,2,3 --name a --port 18000 --data-dir /raid/local-ai
+./local-ai server plan --host 0.0.0.0 --profile b300-tp4 --gpus 0,1,2,3 --name a --port 18000 --data-dir /raid/local-ai
+./local-ai server start --host 0.0.0.0 --profile b300-tp4 --gpus 0,1,2,3 --name a --port 18000 --data-dir /raid/local-ai
 ./local-ai server status --name a
 curl --fail http://127.0.0.1:18000/health
 ```
@@ -107,14 +106,12 @@ Plan does not check local interface ownership. Default loopback instances stay c
 changing --host requires explicitly stopping, removing and recreating an existing container.
 Wildcard listeners report a loopback health URL; specific IP listeners report that IP.
 Managed instances still reserve the API port across interfaces.
-Use --endpoint http://GPU001:18000/v1 for direct access, never 0.0.0.0.
-API keys/HTTPS are not configured; restrict network access. A specific interface listener
-requires --endpoint because --server still forwards to remote loopback.
-See [README](../../README.en.md) for the complete procedure.
+Clients only connect to --endpoint. Administrators configure nginx/frp or other forwarding separately.
+API keys/HTTPS are not configured; restrict network access. See [README](../../README.en.md).
 
 ## Client parameters
 
-client install/doctor/export accept --client-dir, defaulting to clients/ARCH under the private user-state root. The root is ~/.local/state/local-ai, or $XDG_STATE_HOME/local-ai when set. Select native binaries for BCM's architecture independently of the GPU server.
+client install/export accept --client-dir, defaulting to clients/ARCH under the private user-state root. The root is ~/.local/state/local-ai, or $XDG_STATE_HOME/local-ai when set. Select native binaries for BCM's architecture independently of the GPU server.
 
 | Option | Command | Meaning and default |
 |---|---|---|
@@ -130,11 +127,7 @@ See [offline deployment](offline.md) for artifact paths and imports.
 
 | Option | Meaning and default |
 |---|---|
-| --server GPU001 | SSH hostname or alice@GPU001; exactly one of --server and --endpoint is required |
-| --endpoint URL | Reachable HTTP(S) model API base including /v1; no SSH tunnel |
-| --ssh-user; --ssh-port | SSH user from user@host/OpenSSH settings unless overridden; SSH port defaults to 22 |
-| --port | Remote model API port, default 18000 |
-| --local-port | Local BCM tunnel port; default 0 automatically selects a free port |
+| --endpoint URL | Required reachable HTTP(S) model API base including port and /v1 |
 | --project | Existing BCM project directory, default current directory |
 | --client-dir | Native client asset directory; match installation location |
 | --state-dir | Private history/cache/log root, default described above |
@@ -145,10 +138,9 @@ See [offline deployment](offline.md) for artifact paths and imports.
 On bcm-headnode as alice:
 
 ```bash
-./local-ai client doctor
-./local-ai chat --server GPU001 --check
-./local-ai chat --server GPU001 --project /home/alice/project
-./local-ai chat --server GPU001 --project /home/alice/project --run 'Run hostname and report its output.'
+./local-ai chat --endpoint http://GPU001:18000/v1 --check
+./local-ai chat --endpoint http://GPU001:18000/v1 --project /home/alice/project
+./local-ai chat --endpoint http://GPU001:18000/v1 --project /home/alice/project --run 'Run hostname and report its output.'
 ```
 
 For model/image upgrades, validate a separate data directory and instance while retaining the old source, weights and image locks. Avoid forcing a replacement over production weights as a rollback strategy.
@@ -159,11 +151,11 @@ For model/image upgrades, validate a separate data directory and instance while 
 |---|---|
 | Service not ready | On GPU001 check server status and DATA_DIR/instances/a/server.log, then retry /health |
 | Image extraction reports missing metadata.db | Follow the [deployment recovery procedure](deployment.md); check runtime storage and workloads before restarting Docker and containerd. File existence immediately after restart is not an acceptance check. |
-| BCM cannot connect | Run ssh GPU001 hostname, client doctor and chat --server GPU001 --check; verify API port |
+| BCM cannot connect | Run chat --endpoint http://GPU001:18000/v1 --check; inspect API readiness, DNS, routing, firewall and proxy settings |
 | Client cannot see GPUs | Expected on BCM; inspect inference processes with nvidia-smi on GPU001 |
 | GPU or port conflict | Check allocations and workloads; choose free resources without stopping unrelated jobs |
 | Change GPUs, port or profile | Inspect and stop the instance, explicitly remove its container, then recreate |
-| Exit chat | The session's SSH tunnel closes; inference service remains running |
+| Exit chat | The local client exits; inference remains running |
 | Update or roll back | Record Git commit, image digest and model revision; validate a separate instance before switching clients. Switch back to a validated instance/version on failure. |
 
 On GPU001, after confirming a is the instance to replace:
@@ -172,7 +164,7 @@ On GPU001, after confirming a is the instance to replace:
 ./local-ai server stop --name a --data-dir /raid/local-ai
 # Remove only this stopped container; retain weights and host logs
 docker rm local-ai-a
-./local-ai server start --profile b300-tp4 --gpus 0,1,2,3 --name a --port 18000 --data-dir /raid/local-ai
+./local-ai server start --host 0.0.0.0 --profile b300-tp4 --gpus 0,1,2,3 --name a --port 18000 --data-dir /raid/local-ai
 ```
 
 Exit relevant clients before backing up their private state. Never commit history, credentials or raw logs. Server logs are DATA_DIR/instances/NAME/server.log; installation/preparation logs are DATA_DIR/install.log. Client logs live under private services/ID/logs/session-.../. Plan image, weight and user-state backups separately.

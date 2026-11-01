@@ -10,7 +10,7 @@
 | `GPU001` | GPU 服务节点，示例为 8 卡 B300 | 下载镜像和权重、启动或停止推理服务、检查健康状态 |
 | `bcm-headnode` | BCM 头节点 | 以 `alice` 登录，安装客户端，在 `/home/alice/project` 中运行 OpenCode |
 
-将这两个主机名替换为实际环境。示例假设 `alice` 能从 `bcm-headnode` SSH 登录 `GPU001`。
+将这两个主机名替换为实际环境。示例假设 BCM 可访问 GPU001 的模型 API。
 实例 `a`、`b` 是同一 GPU 节点上的服务名字，不是主机名。
 
 完整子命令、参数默认值和排障步骤见[使用手册](commands.md)。
@@ -45,7 +45,7 @@ GB300 配置必须完成实机验收，不能直接套用 B300 的速度结论�
 | `--data-dir /raid/local-ai` | 存放权重、镜像锁文件、缓存和日志；不是 Git 源码目录。可改为容量足够的本地目录。 |
 | `--gpus 0,1,2,3` | 使用服务端 `nvidia-smi` 显示的这 4 张卡；也可写完整 GPU UUID。数量须匹配配置。 |
 | `--name a` | 自定义实例名，用于区分容器与日志；查询、停止时沿用同一个名字。 |
-| `--port 18000` | 模型 HTTP API 端口，默认 18000；第二个实例换成 18001。与 SSH 端口不同。 |
+| `--port 18000` | 模型 HTTP API 端口，默认 18000；第二个实例换成 18001。 |
 
 `server plan/start` 默认配置为 `b300-tp4`，实例名默认 `a`，但必须显式指定 `--gpus`。
 数据目录默认取环境变量 `LOCAL_AI_DATA_DIR`，未设置时为 `/raid/local-ai`。
@@ -149,9 +149,9 @@ docker info
 在 GPU 服务器执行：
 ```bash
 # 预览计划，不启动服务
-./local-ai server plan --profile b300-tp4 --gpus 0,1,2,3 --name a --port 18000 --data-dir /raid/local-ai
+./local-ai server plan --host 0.0.0.0 --profile b300-tp4 --gpus 0,1,2,3 --name a --port 18000 --data-dir /raid/local-ai
 # 启动实例，首次加载需等待
-./local-ai server start --profile b300-tp4 --gpus 0,1,2,3 --name a --port 18000 --data-dir /raid/local-ai
+./local-ai server start --host 0.0.0.0 --profile b300-tp4 --gpus 0,1,2,3 --name a --port 18000 --data-dir /raid/local-ai
 curl --fail http://127.0.0.1:18000/health
 curl --fail http://127.0.0.1:18000/v1/models
 ./local-ai server status --name a
@@ -169,71 +169,52 @@ GB300 两卡替换为 --profile gb300-tp2 --gpus 0,1。
 首次加载/编译可能持续数分钟，容器 running 不能替代 API 验收。
 完整日志在数据目录 instances/a/server.log，启动命令和参数也保存在该目录。
 
-### 可选的内网直连
+### API 监听地址
 
 server plan/start 接受 --host，默认 127.0.0.1。使用 --host 0.0.0.0 或本机 IPv4 地址后，
 BCM 可通过 --endpoint http://GPU001:18000/v1 直连。现有容器改地址须显式重建。
-完整命令和访问范围说明见 [README](../README.md) 的“通过宿主机地址直连”。
+完整命令和访问范围说明见 [README](../README.md) 的“监听地址与已有实例”。
 
 ## 4. BCM 安装客户端
 
-在 BCM 头节点，以实际操作用户执行：
+在 BCM 以实际执行工具的用户安装：
+
 ```bash
 git clone https://github.com/junli-nv/local-ai.git
 cd local-ai
 ./local-ai client install
-./local-ai client doctor
-ssh GPU001 hostname
 ```
 
-把 GPU001 换为 GPU 服务器名。先完成正常 SSH 登录、主机密钥确认和密钥/agent
-认证。程序不关闭主机密钥检查，不修改 SSH 配置，也不分发 root 密钥。
-
-客户端只装在当前用户的私有目录，不需要 BCM 安装 Docker、CUDA、Node.js
-或 npm。在线安装会下载固定版本原生程序并核对 NPM 完整性。
-BCM 需要 Python3、Bash、git、ssh、rg 和 script；离线时提前准备这些工具。
+需要 Python3、Bash、git、rg 和 script，不需要 BCM 安装 Docker、CUDA、Node.js 或 npm。
+在线安装核对固定版本与完整性；离线时导入预先准备的原生程序。
+SSH 仅是访问其他节点的可选工具，不是模型连接的前提。
 
 ## 5. 从 BCM 开始使用
 
-`--server` 填实际 GPU 服务端的 SSH 地址；`--project` 填 BCM 本机的项目目录，
-默认当前目录。`--port` 是远端模型 API 端口，默认 18000，不是 SSH 端口。
-示例中的 `GPU001`、`alice` 和项目路径均需替换。
+确认 GPU API 已就绪且 BCM 可以访问。将 GPU001 换为可达 IP 或主机名，端口写在
+--endpoint URL 中；--project 指 BCM 已有项目目录，默认当前目录：
 
 ```bash
-./local-ai chat --server GPU001 --project /home/alice/project
+./local-ai chat --endpoint http://GPU001:18000/v1 --project /home/alice/project
+./local-ai chat --endpoint http://GPU001:18000/v1 --check
+./local-ai chat --endpoint http://GPU001:18001/v1 --project /home/alice/project
+./local-ai chat --endpoint http://GPU001:18000/v1 --run '请用 bash 执行 hostname 并报告实际输出。'
 ```
 
-程序自动建立本机 loopback SSH 隧道，确认 API 后启动本地 OpenCode，
-退出时关闭隧道。无需另外手工运行 ssh -L。
-
-`--check` 仅检查连接后退出，不调用模型：
-```bash
-./local-ai chat --server GPU001 --check
-```
-指定登录身份、服务端口：
-```bash
-./local-ai chat --server alice@GPU001 --port 18001 --project /home/alice/project
-```
-`--run` 将后面的引号内容作为单次任务，流式输出 JSON 事件并保存日志后退出；不加则进入交互会话：
-```bash
-./local-ai chat --server GPU001 --project /home/alice/project \
-  --run '请用bash执行hostname，并报告实际输出。'
-```
-
-此时 hostname、文件编辑、git 和 SSH 都发生在 BCM，推理发生在 GPU 容器。
-如需访问其他节点，使用 BCM 当前用户已有的 SSH 权限。
-客户端看不到本地 GPU 属于正常现象，不代表模型在 CPU 上运行。
+客户端只连接 HTTP(S) API，不管理网络转发。跨网转发或 nginx/frp 等代理由管理员单独配置，
+客户端填写最终可达地址。工具在 BCM 以当前用户权限执行，推理在 GPU 服务器进行。
+接口和实例重建步骤见 [README](../README.md)。
 
 ## 6. 多人和双实例
 
 在八卡 B300 的 GPU 服务器上：
 ```bash
-./local-ai server start --profile b300-tp4 --name a --gpus 0,1,2,3 --port 18000 --data-dir /raid/local-ai
-./local-ai server start --profile b300-tp4 --name b --gpus 4,5,6,7 --port 18001 --data-dir /raid/local-ai
+./local-ai server start --host 0.0.0.0 --profile b300-tp4 --name a --gpus 0,1,2,3 --port 18000 --data-dir /raid/local-ai
+./local-ai server start --host 0.0.0.0 --profile b300-tp4 --name b --gpus 4,5,6,7 --port 18001 --data-dir /raid/local-ai
 ```
 
 每套拥有独立 GPU、显存、KV、缓存、端口和日志，共享只读模型文件。
-用户在 BCM 选择 chat --port 18000 或 18001；当前没有自动负载均衡。
+用户在 BCM 通过 --endpoint URL 的 18000 或 18001 端口选择实例；当前没有自动负载均衡。
 
 每人使用自己的 Linux 账户。默认私有目录：
 ```
@@ -245,7 +226,7 @@ BCM 需要 Python3、Bash、git、ssh、rg 和 script；离线时提前准备这
     state/
     logs/session-.../
 ```
-历史按逻辑服务保存，不随临时隧道端口变化。每次连接配置独立。
+历史按 API endpoint 保存。每次连接配置独立。
 同一 Linux 账户的不同目录不构成用户权限隔离，root 仍能访问用户文件。
 
 每引擎默认四个活动序列，更多请求排队，不是只能有四名用户。
@@ -256,7 +237,7 @@ BCM 需要 Python3、Bash、git、ssh、rg 和 script；离线时提前准备这
 在 GPU 服务器：
 ```bash
 ./local-ai server stop --name b --data-dir /raid/local-ai
-./local-ai server start --profile b300-tp4 --name b --gpus 4,5,6,7 --port 18001 --data-dir /raid/local-ai
+./local-ai server start --host 0.0.0.0 --profile b300-tp4 --name b --gpus 4,5,6,7 --port 18001 --data-dir /raid/local-ai
 ```
 
 不同配置不会静默覆盖同名实例。需要改 GPU、端口或模板时，先检查、停止并
@@ -268,7 +249,7 @@ BCM 需要 Python3、Bash、git、ssh、rg 和 script；离线时提前准备这
 离线时携带三个独立部分：源码、服务端平台匹配的镜像/权重、BCM 平台匹配的
 客户端资源。步骤见 [离线文档](offline.md)。
 不需要互联网推理，但网页搜索、外部 MCP、在线下载依赖会不可用。
-内部 SSH 网络可以保留。
+离线推理仍须保持 BCM 到 GPU API 的内网连接。
 
 代码如何划分、为何这么设计：见 [架构](architecture.md)。
 如何新增平台、改模型、运行测试和提交代码：见 [开发指南](development.md)。

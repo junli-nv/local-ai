@@ -5,6 +5,8 @@
 Date: 2026-10-31. Infrastructure hostnames, IPs, GPU UUIDs, credentials and raw
 user logs are intentionally omitted from this public record.
 
+The 2026-10-31 integration records below describe the previous client. Tunnel entries are historical; the current client uses API endpoints without built-in forwarding or a separate environment-doctor command. New local HTTP regressions cover direct connections, model checks, retry and no SSH subprocess. They do not constitute new GPU acceptance.
+
 ## Hardware and pinned versions
 
 - Server: eight B300 GPUs on AMD64, Ubuntu 24.04, NVIDIA driver 580.126.20.

@@ -13,7 +13,7 @@
 7. Validate local artifacts; distinguish verified and unverified provenance without fabricating locks. Preserve both archive checksums and imported-image content identity.
 8. Run the unittest, Ruff and diff checks below. Fix failures without deleting or weakening existing acceptance tests.
 9. Record hardware/version/method/results/limits for real GPU tests. CPU tests alone never promote a hardware validation level.
-10. Review staged files, record release evidence, clean temporary containers/tunnels/resources, push and inspect CI.
+10. Review staged files, record release evidence, clean temporary containers/client-processes/resources, push and inspect CI.
 
 Use the profile workflow below when B200 or later hardware becomes available. Do not relabel a validated profile as support for an untested GPU.
 
@@ -23,7 +23,7 @@ Base sanitized inventories on the [existing fixture](../../tests/fixtures/b300-t
 This command probes no real GPUs, starts no container and creates no data directory:
 
 ```bash
-./local-ai server plan --profile b300-tp4 --gpus 0,1,2,3 --inventory tests/fixtures/b300-tp4.json --data-dir /tmp/local-ai-plan
+./local-ai server plan --host 0.0.0.0 --profile b300-tp4 --gpus 0,1,2,3 --inventory tests/fixtures/b300-tp4.json --data-dir /tmp/local-ai-plan
 ```
 
 See [profiles.json](../../src/local_ai/profiles.json), [engine arguments](../../src/local_ai/profiles.py),
@@ -114,7 +114,7 @@ executables are architecture-specific. Never reuse AMD64 caches on ARM64.
 - Keep plan generation deterministic and free of subprocesses/writes.
 - Test rejected states and cleanup, not just a happy-path command.
 - Require image config/layer identity after import; a tag alone is insufficient.
-- Test two sessions keep stable history but separate temporary tunnel configs.
+- Test two sessions keep stable history but separate endpoint connection configs.
 - Verify execution location with hostname, not merely a successful model reply.
 - Keep raw logs and customer infrastructure identifiers under ignored runtime
   paths. Commit sanitized aggregate validation records only.

@@ -3,7 +3,6 @@
 import argparse
 import json
 import os
-import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -174,14 +173,13 @@ def parser():
     )
     clients = groups.add_parser(
         "client",
-        help="bcm-headnode: install, inspect or export the native OpenCode client",
-        description="bcm-headnode: install, inspect or export the native OpenCode client",
+        help="bcm-headnode: install or export the native OpenCode client",
+        description="bcm-headnode: install or export the native OpenCode client",
     ).add_subparsers(dest="action", required=True)
-    for action in ["install", "export", "doctor"]:
+    for action in ["install", "export"]:
         details = {
             "install": "Install a pinned native client online or from local assets",
             "export": "Export client assets without personal history or credentials",
-            "doctor": "Check the client binary and required local tools",
         }[action]
         b = clients.add_parser(action, help=details, description=details)
         b.add_argument(
@@ -217,26 +215,13 @@ def parser():
     b = groups.add_parser(
         "chat",
         help="bcm-headnode: chat using tools on this host",
-        description="Run on bcm-headnode. Connect to GPU001 through SSH, or use a direct API endpoint. Tools execute locally as the current user.",
-        epilog="Example: ./local-ai chat --server GPU001 --project /home/alice/project",
-    )
-    connection = b.add_mutually_exclusive_group(required=True)
-    connection.add_argument("--server", help="GPU server SSH hostname or user@hostname")
-    connection.add_argument(
-        "--endpoint", help="Use an already reachable OpenAI base URL instead of SSH"
+        description="Run on bcm-headnode. Connect to a reachable HTTP(S) model API endpoint. Tools execute locally as the current user.",
+        epilog="Example: ./local-ai chat --endpoint http://GPU001:18000/v1 --project /home/alice/project",
     )
     b.add_argument(
-        "--ssh-user", help="SSH login user; omit to use user@host or existing OpenSSH settings"
-    )
-    b.add_argument(
-        "--ssh-port",
-        type=int,
-        default=22,
-        help="SSH transport port; independent of the model API port",
-    )
-    b.add_argument("--port", type=int, default=18000, help="GPU server API port")
-    b.add_argument(
-        "--local-port", type=int, default=0, help="Local tunnel port; 0 chooses a free port"
+        "--endpoint",
+        required=True,
+        help="Reachable OpenAI-compatible HTTP(S) base URL including /v1; include the API port in the URL",
     )
     b.add_argument(
         "--client-dir",
@@ -262,7 +247,7 @@ def parser():
         help="Served model ID; must match the remote API model list",
     )
     b.add_argument(
-        "--check", action="store_true", help="Check connection, then close tunnel without chatting"
+        "--check", action="store_true", help="Check model API connectivity without chatting"
     )
     b.add_argument("--run", help="One prompt; stream JSON events, save full logs, then exit")
     return a
@@ -300,13 +285,6 @@ def dispatch(q):
             return artifacts.install(q.client_dir, q.binary, q.seed_cache, q.version, q.sha256)
         if q.action == "export":
             return artifacts.export_client(q.client_dir, q.output)
-        tools = {name: shutil.which(name) for name in ["python3", "git", "ssh", "rg", "script"]}
-        return {
-            "ready": all(tools.values()),
-            "arch": arch(),
-            "tools": tools,
-            "client": artifacts.validate(q.client_dir),
-        }
     if q.group == "chat":
         return client.chat(q)
     raise ValueError("Unsupported command")
@@ -322,8 +300,6 @@ def main(argv=None):
         if isinstance(value, int):
             return value
         print(json.dumps(value, indent=2))
-        if q.group == "client" and q.action == "doctor" and not value["ready"]:
-            return 1
         return 0
     except KeyboardInterrupt:
         return 130

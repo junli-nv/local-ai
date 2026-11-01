@@ -2,7 +2,7 @@
 
 分别准备三类材料：项目源码、GPU 服务端镜像与权重、BCM 原生客户端。GB300 服务端通常使用 ARM64 镜像，但 BCM 客户端仍可能是 AMD64；必须分别判断。
 
-目标系统须预装兼容的 GPU 驱动，以及服务端的 Docker、CDI、NVIDIA Container Toolkit。BCM 需要 Python、Bash、git、SSH、rg 和 script。vLLM 镜像不包含宿主机驱动和系统依赖，应按目标发行版及内核准备离线安装包。ELF 架构匹配也不等于完整 ABI 兼容。
+目标系统须预装兼容的 GPU 驱动，以及服务端的 Docker、CDI、NVIDIA Container Toolkit。BCM 需要 Python、Bash、git、rg 和 script。vLLM 镜像不包含宿主机驱动和系统依赖，应按目标发行版及内核准备离线安装包。ELF 架构匹配也不等于完整 ABI 兼容。
 
 ## 示例路径与参数
 
@@ -106,7 +106,7 @@ cd /path/to/local-ai
 ./local-ai image import --profile b300-tp4 --data-dir /raid/local-ai \
   --archive /media/export/vllm-amd64.tar \
   --lock /media/export/vllm-amd64.tar.lock.json
-./local-ai server start --profile b300-tp4 --gpus 0,1,2,3 --name a --data-dir /raid/local-ai
+./local-ai server start --host 0.0.0.0 --profile b300-tp4 --gpus 0,1,2,3 --name a --data-dir /raid/local-ai
 curl --fail http://127.0.0.1:18000/health
 ```
 
@@ -118,7 +118,6 @@ GB300 使用对应 ARM64 归档和配置。Docker 导入后的镜像身份表示
 
 ```bash
 ./local-ai client install
-./local-ai client doctor
 ./local-ai client export --output /data/export/client-amd64.tar.gz
 ```
 
@@ -135,9 +134,8 @@ cd /path/to/local-ai
 ./local-ai client install \
   --binary /media/export/client-unpacked/client/bin/opencode \
   --seed-cache /media/export/client-unpacked/client/seed-cache
-./local-ai client doctor
-./local-ai chat --server GPU001 --check
-./local-ai chat --server GPU001 --run '请用 bash 执行 hostname 并报告实际输出。'
+./local-ai chat --endpoint http://GPU001:18000/v1 --check
+./local-ai chat --endpoint http://GPU001:18000/v1 --run '请用 bash 执行 hostname 并报告实际输出。'
 ```
 
 BCM 不需要 Node、npm 或 Docker。在已校验归档之外单独导入二进制时，使用清单中的校验值指定 `--sha256`。客户端升级或插件变更后，应重新验证无外网运行。
@@ -146,12 +144,12 @@ BCM 不需要 Node、npm 或 Docker。在已校验归档之外单独导入二进
 
 ## 4. 验收
 
-断开外网、保留内部 SSH 后，逐项检查：
+断开外网、保留 BCM 到模型 API 的内网后，逐项检查：
 
 1. 仅使用本地完整权重和镜像冷启动，确认 API 就绪。
 2. 使用新用户启动客户端，不能只验证管理员已预热的环境。
 3. 验证搜索、读取、编辑和测试工具，确认 hostname 返回 BCM 主机名。
-4. 检查完整私有日志、GPU UUID、显存和遗留隧道。
+4. 检查完整私有日志、GPU UUID、显存和客户端进程清理。
 5. 测试实际输入长度及并发，不能将解码速度直接视为整体性能。
 
 服务端启用 HF/Transformers 离线标志；客户端禁用更新、模型目录获取、默认外部插件和 LSP 下载。显式配置的项目插件、外部 MCP、搜索及 git/pip/npm/apt 下载仍可能需要外网，须预先准备项目依赖和工具。

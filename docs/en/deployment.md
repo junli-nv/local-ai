@@ -11,7 +11,7 @@ Run inference on the GPU server; run OpenCode and its tools on BCM. Keep source 
 | `GPU001` | GPU server; an eight-card B300 in this example | Prepare images/weights, manage inference instances, check health |
 | `bcm-headnode` | BCM headnode | Log in as `alice`, install the client, use OpenCode in `/home/alice/project` |
 
-Replace these hostnames with your own. The examples assume `alice` can SSH from `bcm-headnode` to `GPU001`.
+Replace these hostnames with your own. The examples assume BCM can reach the model API on GPU001.
 Instance names `a` and `b` identify services on that GPU server, not hostnames.
 
 See the [manual](commands.md) for every command, option default and troubleshooting step.
@@ -38,7 +38,7 @@ Choose these values before running the example:
 | `--data-dir /raid/local-ai` | Weights, image locks, cache and logs; separate from the Git checkout. Choose a large local directory. |
 | `--gpus 0,1,2,3` | Server GPU indices from nvidia-smi, or full UUIDs. Count must match the profile. |
 | `--name a` | Instance name, reused for status/stop and its log directory; not a hostname. |
-| `--port 18000` | Model HTTP API port, default 18000. Use 18001 for a second instance; this is not the SSH port. |
+| `--port 18000` | Model HTTP API port, default 18000. Use 18001 for a second instance. |
 
 Server plan/start default to profile b300-tp4 and name a; --gpus is required.
 The data directory uses LOCAL_AI_DATA_DIR if set, otherwise /raid/local-ai.
@@ -143,9 +143,9 @@ Existing complete weights belong in /raid/local-ai/models/DeepSeek-V4.1-Flash/. 
 
 ```bash
 # Preview the plan without starting a service
-./local-ai server plan --profile b300-tp4 --gpus 0,1,2,3 --name a --port 18000 --data-dir /raid/local-ai
+./local-ai server plan --host 0.0.0.0 --profile b300-tp4 --gpus 0,1,2,3 --name a --port 18000 --data-dir /raid/local-ai
 # Start the instance; initial loading takes time
-./local-ai server start --profile b300-tp4 --gpus 0,1,2,3 --name a --port 18000 --data-dir /raid/local-ai
+./local-ai server start --host 0.0.0.0 --profile b300-tp4 --gpus 0,1,2,3 --name a --port 18000 --data-dir /raid/local-ai
 curl --fail http://127.0.0.1:18000/health
 curl --fail http://127.0.0.1:18000/v1/models
 ./local-ai server status --name a
@@ -155,7 +155,7 @@ Run on GPU001: 127.0.0.1 means GPU001 itself. A successful /health request (curl
 
 Use gb300-tp4 for four local GB300 GPUs or gb300-tp2 with --gpus 0,1 for two. Full UUIDs are accepted. plan does not allocate devices; start checks occupancy. Initial compilation may take minutes. Container running state is not API readiness. Full logs and launch arguments are under instances/a/ in the data directory.
 
-### Optional direct internal-network access
+### API listen address
 
 Server plan/start accept --host, default 127.0.0.1. Set --host 0.0.0.0 or a local
 IPv4 address for BCM access through --endpoint http://GPU001:18000/v1.
@@ -164,71 +164,58 @@ See [README](../../README.en.md) for commands and network access requirements.
 
 ## 4. Install on BCM
 
-Run as the user who will execute tools:
+Install as the user who will execute tools:
 
 ```bash
 git clone https://github.com/junli-nv/local-ai.git
 cd local-ai
 ./local-ai client install
-./local-ai client doctor
-ssh GPU001 hostname
 ```
 
-Replace GPU001 with the server. Complete SSH authentication and host-key verification first. Normal SSH checks remain enabled; root keys are not distributed. BCM needs Python, Bash, git, ssh, rg and script, but no Docker, CUDA, Node or npm. Installation checks the pinned native binary's NPM integrity.
+BCM needs Python, Bash, git, rg and script, not Docker, CUDA, Node or npm.
+Installation checks the pinned binary's integrity. Offline installation imports
+prepared native assets. SSH is optional for onward tool tasks, not model access.
 
 ## 5. Use from BCM
 
---server selects the server SSH address; --project selects a directory on bcm-headnode (default: current directory). --port is the remote API port (default: 18000), not the SSH port. Replace alice and the project path as needed.
-
---check only checks the connection. --run executes one quoted task, streams JSON events, saves logs and exits; omit it for an interactive session.
-
-```bash
-./local-ai chat --server GPU001 --project /home/alice/project
-```
-
-The client owns a loopback SSH tunnel and closes it on exit.
+Wait for the GPU API and verify BCM can reach it. Replace GPU001 with a reachable
+IP or hostname. The API port is part of --endpoint; --project selects an existing
+BCM directory, defaulting to the current directory.
 
 ```bash
-./local-ai chat --server GPU001 --check
+./local-ai chat --endpoint http://GPU001:18000/v1 --project /home/alice/project
+./local-ai chat --endpoint http://GPU001:18000/v1 --check
+./local-ai chat --endpoint http://GPU001:18001/v1 --project /home/alice/project
+./local-ai chat --endpoint http://GPU001:18000/v1 --run 'Use bash to run hostname and report its output.'
 ```
 
-Choose identity and API port:
-
-```bash
-./local-ai chat --server alice@GPU001 --port 18001 --project /home/alice/project
-```
-
-Run a single task:
-
-```bash
-./local-ai chat --server GPU001 --project /home/alice/project \
-  --run 'Use bash to run hostname and report its actual output.'
-```
-
-Files, git, shell and onward SSH execute on BCM with the current user's permissions. Inference runs in the GPU container. The client does not need a GPU.
+The client connects to HTTP(S) APIs and does not manage network forwarding.
+Administrators configure frp/nginx or other forwarding separately and supply its
+reachable URL. Tools execute on BCM; inference runs on the GPU server.
+See [README](../../README.en.md) for listen addresses and instance recreation.
 
 ## 6. Two instances and multiple users
 
 On an eight-GPU B300 server:
 
 ```bash
-./local-ai server start --profile b300-tp4 --name a --gpus 0,1,2,3 --port 18000 --data-dir /raid/local-ai
-./local-ai server start --profile b300-tp4 --name b --gpus 4,5,6,7 --port 18001 --data-dir /raid/local-ai
+./local-ai server start --host 0.0.0.0 --profile b300-tp4 --name a --gpus 0,1,2,3 --port 18000 --data-dir /raid/local-ai
+./local-ai server start --host 0.0.0.0 --profile b300-tp4 --name b --gpus 4,5,6,7 --port 18001 --data-dir /raid/local-ai
 ```
 
-Instances have separate GPUs, HBM, KV, caches, ports and logs; only read-only weights are shared. Select with chat --port. There is no load balancing.
+Instances have separate GPUs, HBM, KV, caches, ports and logs; only read-only weights are shared. Select the port in the --endpoint URL. There is no load balancing.
 
-Use separate Linux accounts and private state under ~/.local/state/local-ai/. History follows the logical service, not temporary ports. Connection configurations are independent. Root can access user files. Four active sequences per engine is a scheduling limit; additional requests queue. Measure concurrent throughput separately.
+Use separate Linux accounts and private state under ~/.local/state/local-ai/. History is keyed by API endpoint. Connection configurations are independent. Root can access user files. Four active sequences per engine is a scheduling limit; additional requests queue. Measure concurrent throughput separately.
 
 ## 7. Stop and reconfigure
 
 ```bash
 ./local-ai server stop --name b --data-dir /raid/local-ai
-./local-ai server start --profile b300-tp4 --name b --gpus 4,5,6,7 --port 18001 --data-dir /raid/local-ai
+./local-ai server start --host 0.0.0.0 --profile b300-tp4 --name b --gpus 4,5,6,7 --port 18001 --data-dir /raid/local-ai
 ```
 
 To change GPUs, port or profile, inspect and stop the instance, explicitly remove its container, then recreate it. Model files and host logs remain. Automatic boot startup and resource handoff are not implemented.
 
 ## 8. Offline use and development
 
-Carry source, matching server image/weights, and BCM-native assets separately. See [offline deployment](offline.md), [architecture](architecture.md), [development](development.md) and [validation](validation.md). Internal SSH may remain available. External MCP, web search and dependency downloads need separate preparation.
+Carry source, matching server image/weights, and BCM-native assets separately. See [offline deployment](offline.md), [architecture](architecture.md), [development](development.md) and [validation](validation.md). Keep the internal BCM-to-API network available. External MCP, web search and dependency downloads need separate preparation.

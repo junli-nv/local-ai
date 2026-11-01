@@ -1,6 +1,5 @@
 """Headnode client. Every tool executes with the headnode user's permissions."""
 
-import contextlib
 import fcntl
 import json
 import os
@@ -9,21 +8,15 @@ import shutil
 import subprocess
 import sys
 import time
-import urllib.parse
 from pathlib import Path
 
 from .artifacts import validate
 from .common import atomic_json, fingerprint, private_dir
-from .tunnel import Tunnel, destination, wait_endpoint
+from .endpoint import endpoint_url, wait_endpoint
 
 
-def service_key(server, user, ssh_port, port, endpoint):
-    identity = (
-        {"endpoint": endpoint}
-        if endpoint
-        else {"ssh": destination(server, user), "ssh_port": ssh_port, "api_port": port}
-    )
-    return fingerprint(identity)[:20]
+def service_key(endpoint):
+    return fingerprint({"endpoint": endpoint_url(endpoint)})[:20]
 
 
 def config(base, model):
@@ -120,15 +113,14 @@ def execute(command, project, env, logfile, prompt):
 
 
 def chat(options):
+    base = endpoint_url(options.endpoint)
     os.umask(0o077)
     assets = Path(options.client_dir).expanduser().resolve()
     if not (assets / "manifest.json").is_file():
         raise RuntimeError("Client not installed; run local-ai client install on this headnode")
     manifest = validate(assets)
     state_root = private_dir(options.state_dir)
-    key = service_key(
-        options.server, options.ssh_user, options.ssh_port, options.port, options.endpoint
-    )
+    key = service_key(base)
     state = private_dir(state_root / "services" / key)
     session = private_dir(state / "logs" / ("session-%d-%d" % (time.time_ns(), os.getpid())))
     project = Path(options.project).expanduser().resolve()
@@ -136,50 +128,34 @@ def chat(options):
         raise ValueError("Project directory does not exist: " + str(project))
     if not options.check and options.run is None and not sys.stdin.isatty():
         raise ValueError("Interactive chat requires a terminal; use --run for batch execution")
-    if options.endpoint:
-        parsed = urllib.parse.urlsplit(options.endpoint)
-        if parsed.scheme not in {"http", "https"} or not parsed.hostname or parsed.username:
-            raise ValueError("Endpoint must be an HTTP(S) base URL without embedded credentials")
-        context = contextlib.nullcontext(None)
-    else:
-        context = Tunnel(
-            options.server,
-            options.ssh_user,
-            options.ssh_port,
-            options.port,
-            options.local_port,
-            session / "tunnel.log",
-        )
-    with context as tunnel:
-        base = options.endpoint.rstrip("/") if options.endpoint else tunnel.endpoint
-        wait_endpoint(base, options.model, tunnel.process if tunnel else None)
-        env = prepare(state, assets, session, base, options.model, project)
-        if options.check:
-            print(
-                json.dumps(
-                    {
-                        "ready": True,
-                        "client_arch": manifest["arch"],
-                        "log_directory": str(session),
-                        "tunnel_closes_on_exit": bool(tunnel),
-                    }
-                )
+    wait_endpoint(base, options.model)
+    env = prepare(state, assets, session, base, options.model, project)
+    if options.check:
+        print(
+            json.dumps(
+                {
+                    "ready": True,
+                    "client_arch": manifest["arch"],
+                    "log_directory": str(session),
+                    "endpoint": base,
+                }
             )
-            return 0
-        command = [str(assets / "bin/opencode")]
-        command += (
-            ["run", "--dir", str(project), "--format", "json", options.run]
-            if options.run is not None
-            else [str(project)]
         )
-        atomic_json(
-            session / "invocation.json",
-            {
-                "project": str(project),
-                "command": command,
-                "ssh_command": tunnel.command if tunnel else None,
-                "client_arch": manifest["arch"],
-            },
-        )
-        print("Log: " + str(session / "terminal.log"), file=sys.stderr)
-        return execute(command, project, env, session / "terminal.log", options.run)
+        return 0
+    command = [str(assets / "bin/opencode")]
+    command += (
+        ["run", "--dir", str(project), "--format", "json", options.run]
+        if options.run is not None
+        else [str(project)]
+    )
+    atomic_json(
+        session / "invocation.json",
+        {
+            "project": str(project),
+            "command": command,
+            "endpoint": base,
+            "client_arch": manifest["arch"],
+        },
+    )
+    print("Log: " + str(session / "terminal.log"), file=sys.stderr)
+    return execute(command, project, env, session / "terminal.log", options.run)

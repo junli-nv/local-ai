@@ -7,7 +7,7 @@ BCM-native client assets. A GB300 server usually needs ARM64 images while its BC
 client may still need AMD64. Never choose client architecture from the GPU name.
 
 The target OS must already have the required tools: compatible GPU driver,
-Docker/CDI/Toolkit on the server; Python/Bash/git/SSH/rg/script on BCM. Host driver
+Docker/CDI/Toolkit on the server; Python/Bash/git/rg/script on BCM. Host driver
 and OS packages are not included inside vLLM. Plan offline installation packages
 for the actual distro/kernel. Linux ELF architecture is not an entire ABI check.
 
@@ -110,7 +110,7 @@ cd /path/to/local-ai
 ./local-ai image import --profile b300-tp4 --data-dir /raid/local-ai \
   --archive /media/export/vllm-amd64.tar \
   --lock /media/export/vllm-amd64.tar.lock.json
-./local-ai server start --profile b300-tp4 --gpus 0,1,2,3 --name a --data-dir /raid/local-ai
+./local-ai server start --host 0.0.0.0 --profile b300-tp4 --gpus 0,1,2,3 --name a --data-dir /raid/local-ai
 curl --fail http://127.0.0.1:18000/health
 ```
 
@@ -124,7 +124,6 @@ may compile locally using the pinned image.
 On a connected headnode with the same target CPU/compatible Linux environment:
 ```bash
 ./local-ai client install
-./local-ai client doctor
 ./local-ai client export --output /data/export/client-amd64.tar.gz
 ```
 
@@ -142,9 +141,8 @@ cd /path/to/local-ai
 ./local-ai client install \
   --binary /media/export/client-unpacked/client/bin/opencode \
   --seed-cache /media/export/client-unpacked/client/seed-cache
-./local-ai client doctor
-./local-ai chat --server GPU001 --check
-./local-ai chat --server GPU001 --run 'Use bash to run hostname and report the result.'
+./local-ai chat --endpoint http://GPU001:18000/v1 --check
+./local-ai chat --endpoint http://GPU001:18000/v1 --run 'Use bash to run hostname and report the result.'
 ```
 
 No Node/npm/Docker is required on BCM. Use `--sha256` with the exported manifest's
@@ -155,11 +153,11 @@ Offline import/start append to /raid/local-ai/install.log. Repeating preparation
 
 ## 4. Acceptance
 
-With internet unavailable but internal SSH intact:
+With internet unavailable but the internal model API reachable:
 1. Cold-start the image and complete model locally; check API readiness.
 2. Start a fresh user's client, not just an administrator's already-warm account.
 3. Verify search/read/edit/test tools and that hostname is the BCM host.
-4. Check complete private logs, selected GPU UUIDs, HBM and absence of stray tunnels.
+4. Check complete private logs, selected GPU UUIDs, HBM and client process cleanup.
 5. Test representative input lengths and concurrency; do not extrapolate decode speed.
 
 HF/Transformers offline flags are enabled in the server. Client updates, model

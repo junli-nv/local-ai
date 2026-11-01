@@ -10,6 +10,8 @@
 - vLLM：0.32.0-ubuntu2404；固定清单及 AMD64/ARM64 子镜像摘要见 profiles.json。
 - BCM 客户端：Linux AMD64，OpenCode 1.19.5；头节点无需 Docker、Node 或 npm。
 
+以下实机记录来自 2026-10-31 的旧版，隧道相关条目仅保留历史事实；当前客户端已改为 API endpoint，移除内置转发及独立环境诊断命令。本次新增本地 HTTP API 回归测试，覆盖直连、模型校验、失败重试和不启动 SSH；不代表新增 GPU 实机验收。
+
 ## 项目集成验证
 
 | 检查项 | 结果 |

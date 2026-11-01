@@ -15,8 +15,7 @@ a local GPU, CUDA, Docker, Node.js, or npm.
 ```mermaid
 flowchart LR
     User[User on BCM] --> Client[Per-user OpenCode client]
-    Client <-->|OpenAI-compatible API| Tunnel[Owned loopback SSH tunnel]
-    Tunnel <--> GPU[vLLM container on GPU server]
+    Client <-->|HTTP API endpoint| GPU[vLLM container on GPU server]
     Client --> Tools[Headnode files / bash / git / SSH]
     Tools --> Nodes[Other cluster nodes]
 ```
@@ -31,7 +30,7 @@ Use `./local-ai --help` for groups, `./local-ai server --help` for server comman
 | profiles | List hardware presets | Either host |
 | image / model | Prepare images and weights | GPU host or preparation machine |
 | server | Plan, start, query, stop | GPU001 |
-| client | Install, inspect, export native client | bcm-headnode |
+| client | Install or export native client | bcm-headnode |
 | chat | Connect to inference; execute local tools | bcm-headnode |
 
 ## Example environment
@@ -41,7 +40,7 @@ Use `./local-ai --help` for groups, `./local-ai server --help` for server comman
 | `GPU001` | GPU server; an eight-card B300 in this example | Prepare images/weights, manage inference instances, check health |
 | `bcm-headnode` | BCM headnode | Log in as `alice`, install the client, use OpenCode in `/home/alice/project` |
 
-Replace these hostnames with your own. The examples assume `alice` can SSH from `bcm-headnode` to `GPU001`.
+Replace these hostnames with your own. The examples assume BCM can reach the model API port on GPU001.
 Instance names `a` and `b` identify services on that GPU server, not hostnames.
 
 ## Supported deployment profiles
@@ -72,10 +71,9 @@ support (Docker API 1.49+), NVIDIA Container Toolkit, sufficient local GPUs/HBM/
 operator-approved GPU allocation. Known baseline: Ubuntu 24.04, driver
 580.126.20, Docker 29.2.1, Toolkit 1.19.1.
 
-**BCM headnode:** Linux AMD64 or ARM64, Python 3.10+, Bash, git, OpenSSH,
+**BCM headnode:** Linux AMD64 or ARM64, Python 3.10+, Bash, git,
 ripgrep (`rg`), and util-linux `script`. OpenCode 1.19.5 is installed into the
-user's private state directory. Existing SSH login and host-key verification to
-the GPU node must work. GitHub/source access is needed only during online setup.
+user's private state directory. The model API must be reachable from BCM. Install SSH only if onward tool tasks need it. GitHub/source access is needed only during online setup.
 
 The four-card B300 reference uses about 125.7 GiB/card for weights and about
 218 GiB/card including reserved KV/runtime memory. Model files occupy about
@@ -101,7 +99,7 @@ Choose these values before running the example:
 | `--data-dir /raid/local-ai` | Weights, image locks, cache and logs; separate from the Git checkout. Choose a large local directory. |
 | `--gpus 0,1,2,3` | Server GPU indices from nvidia-smi, or full UUIDs. Count must match the profile. |
 | `--name a` | Instance name, reused for status/stop and its log directory; not a hostname. |
-| `--port 18000` | Model HTTP API port, default 18000. Use 18001 for a second instance; this is not the SSH port. |
+| `--port 18000` | Model HTTP API port, default 18000. Use 18001 for a second instance. |
 
 Server plan/start default to profile b300-tp4 and name a; --gpus is required.
 The data directory uses LOCAL_AI_DATA_DIR if set, otherwise /raid/local-ai.
@@ -185,9 +183,9 @@ After prerequisites pass, prepare artifacts and start:
 # Download complete model weights
 ./local-ai model download --profile b300-tp4 --data-dir /raid/local-ai
 # Preview the plan without starting a service
-./local-ai server plan --profile b300-tp4 --gpus 0,1,2,3 --name a --data-dir /raid/local-ai
+./local-ai server plan --host 0.0.0.0 --profile b300-tp4 --gpus 0,1,2,3 --name a --data-dir /raid/local-ai
 # Start the instance; initial loading takes time
-./local-ai server start --profile b300-tp4 --gpus 0,1,2,3 --name a --data-dir /raid/local-ai
+./local-ai server start --host 0.0.0.0 --profile b300-tp4 --gpus 0,1,2,3 --name a --data-dir /raid/local-ai
 curl --fail http://127.0.0.1:18000/health
 ```
 
@@ -201,99 +199,78 @@ For a GB300 host with four local GPUs, select `--profile gb300-tp4`. With two
 local GPUs and sufficient host memory, select `--profile gb300-tp2 --gpus 0,1`.
 GB300 profiles require hardware acceptance testing before production.
 
-### Optional: connect directly to the host address
+### Listen address and existing instances
 
-The default `--host 127.0.0.1` works with the SSH tunnel created by `chat --server`.
-If BCM can reach the GPU server directly, use `--host 0.0.0.0` on server plan/start
-to listen on all IPv4 interfaces, or supply a specific local IPv4 address.
-Hostnames and IPv6 listen addresses are not accepted.
+The server commands above use --host 0.0.0.0 for all IPv4 interfaces. BCM connects
+to the host IP or hostname. A specific local IPv4 address is also supported.
+Omitting --host keeps the 127.0.0.1 default, suitable for local access or an
+administrator-managed proxy. local-ai does not manage network forwarding.
 
-Limit API access to trusted clients; API keys and HTTPS are not configured here.
-Preview and start **on the GPU server**:
-
-```bash
-./local-ai server plan --profile b300-tp4 --gpus 0,1,2,3 --name a --host 0.0.0.0 --port 18000 --data-dir /raid/local-ai
-./local-ai server start --profile b300-tp4 --gpus 0,1,2,3 --name a --host 0.0.0.0 --port 18000 --data-dir /raid/local-ai
-```
-
-Changing the address of an existing instance is rejected. After confirming that
-instance a is the one to replace, run these commands before the start above.
-Restarting the original container does not change its configuration:
+Allow BCM to reach the API port and restrict access to trusted clients; API keys
+and HTTPS are not configured here. To change an existing instance, first confirm
+the instance to replace, then stop/remove its container and run the start above:
 
 ```bash
 ./local-ai server stop --name a --data-dir /raid/local-ai
 docker rm local-ai-a
 ```
 
-After the API is ready, check and chat **on BCM**, with the client already installed.
-Replace GPU001 with a hostname BCM can resolve or a reachable server IP, and choose
-your project directory:
-
-```bash
-./local-ai chat --endpoint http://GPU001:18000/v1 --check
-./local-ai chat --endpoint http://GPU001:18000/v1 --project /home/alice/project
-```
-
-Use 0.0.0.0 only for listening, not as the client endpoint. Include the port and /v1
-in the URL. Direct connections create no SSH tunnel; tools still execute on BCM.
-If proxy settings affect internal requests, add the server to NO_PROXY/no_proxy.
-For a specific interface IP, health checks use that IP and clients use --endpoint;
---server still forwards to remote loopback. A 0.0.0.0 listener supports both methods.
-Existing port conflict protections remain in place.
+Restarting the original container does not change its arguments. Use 0.0.0.0 only
+as a listen address, never as the client endpoint. Specific IP listeners return
+a health URL using that IP.
 
 ## BCM headnode: install and chat
 
-Run these commands **on BCM**, as the user who should execute tools:
+Run **on BCM** as the user who will execute tools:
+
 ```bash
 git clone https://github.com/junli-nv/local-ai.git
 cd local-ai
 ./local-ai client install
-./local-ai client doctor
-ssh GPU001 hostname
-./local-ai chat --server GPU001 --project /home/alice/project
+./local-ai chat --endpoint http://GPU001:18000/v1 --project /home/alice/project
 ```
 
-Replace `GPU001` with the actual GPU hostname. `chat` opens an authenticated SSH
-tunnel, waits for the model API, launches OpenCode locally, and closes the tunnel
-on exit. No headnode Docker daemon or global Python package installation is required.
+Replace GPU001 with a hostname BCM can resolve or the reachable GPU host IP.
+Choose an existing BCM project directory. The client checks the API and runs
+OpenCode locally. Files, shell, git and other tools execute on BCM with the
+current user's permissions; inference runs on the GPU server.
 
 | Option | Meaning |
 |---|---|
-| `--server GPU001` | Server SSH hostname, optionally alice@GPU001; replace with a reachable host. |
-| `--project /home/alice/project` | Project directory on bcm-headnode; defaults to the current directory, not a server directory. |
-| `--port 18001` | Remote model API port; must match the instance. Default: 18000. |
+| --endpoint http://GPU001:18000/v1 | Required reachable HTTP(S) API base, including port and /v1 |
+| --project /home/alice/project | Existing BCM project directory; default current directory |
+| --check | Check API/model readiness without generating a response |
+| --run 'task' | Run one task and exit; omit for interactive use |
 
-Options:
 ```bash
-./local-ai chat --server alice@GPU001 --port 18001 --project /home/alice/project
-./local-ai chat --server GPU001 --check
-./local-ai chat --server GPU001 --run 'Use bash to run hostname and report its output.'
+./local-ai chat --endpoint http://GPU001:18000/v1 --check
+./local-ai chat --endpoint http://GPU001:18001/v1 --project /home/alice/project
+./local-ai chat --endpoint http://GPU001:18000/v1 --run 'Use bash to run hostname and report its output.'
 ```
 
---check only checks connectivity, without inference. --run executes one quoted prompt and exits; omit it for interactive use.
+Private history is keyed by endpoint; change the port in the URL to choose an
+instance. Old history directories keyed by SSH targets remain untouched and
+are not automatically mapped to API endpoints.
 
-For an existing tunnel or compatible local proxy, --endpoint selects an API base URL including /v1, instead of --server:
-```bash
-./local-ai chat --endpoint http://127.0.0.1:28000/v1
-```
-
-Tools execute on the **client host** with that user's permissions. Inference
-remains in the GPU container. The client receives neither the GPU server's root
-credentials nor MyTerm tools automatically.
+If forwarding or a reverse proxy is needed, configure it separately with tools
+such as frp or nginx, then supply its reachable URL as --endpoint. GPU-node SSH
+login is not required for model access. Add the server to NO_PROXY/no_proxy if
+proxy environment settings affect internal requests. BCM needs no Docker, CUDA,
+Node.js or npm.
 
 ## Two instances and multiple users
 
 On an eight-card B300 server:
 ```bash
-./local-ai server start --profile b300-tp4 --name a --gpus 0,1,2,3 --port 18000 --data-dir /raid/local-ai
-./local-ai server start --profile b300-tp4 --name b --gpus 4,5,6,7 --port 18001 --data-dir /raid/local-ai
+./local-ai server start --host 0.0.0.0 --profile b300-tp4 --name a --gpus 0,1,2,3 --port 18000 --data-dir /raid/local-ai
+./local-ai server start --host 0.0.0.0 --profile b300-tp4 --name b --gpus 4,5,6,7 --port 18001 --data-dir /raid/local-ai
 ```
 
 Instances share only read-only model files; caches, logs, KV, ports, and GPU
-assignments are separate. Clients choose an instance with `chat --port`.
+assignments are separate. Clients choose an instance using the API port in the --endpoint URL.
 There is no automatic load balancer or per-user quota service.
 
-Users share inference, not their OpenCode database or SSH keys. Private client
+Users share inference while retaining private OpenCode databases and tool credentials. Private client
 state defaults to `~/.local/state/local-ai/` (or `$XDG_STATE_HOME/local-ai/`).
 Different logical servers/ports have different histories. Concurrent sessions
 use separate connection-config files. Four active sequences per engine is a

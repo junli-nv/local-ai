@@ -22,7 +22,7 @@ These identities are independent:
 | server.py | Inventory, plans, selected-GPU checks and instance lifecycle |
 | images.py | Image platform/provenance, model download, offline image transport |
 | artifacts.py | Native client integrity/architecture and public asset exports |
-| tunnel.py | Owned loopback SSH forward, startup checks and cleanup |
+| endpoint.py | HTTP(S) API address validation and model readiness checks |
 | client.py | Private user state, local tools, config and full transcripts |
 | cli.py | Explicit role/operation dispatch |
 
@@ -63,21 +63,18 @@ the local image-reference representation.
 
 ## Connection and user state
 
-Each chat invocation using --server owns one SSH forward bound to 127.0.0.1. Authentication
-and host-key verification use existing OpenSSH configuration. The process is
-closed on normal exit, startup failure and Python exception unwinding.
+Clients connect only through --endpoint to an HTTP(S) model API and create no forwarding
+processes. The environment supplies the network path; administrators may configure nginx/frp
+or other forwarding externally. Examples use --host 0.0.0.0; the parameter default remains
+127.0.0.1 for local access or an administrator-managed proxy.
 
-History is keyed by logical SSH target and SSH/API ports, or the direct endpoint.
-It is not keyed by the temporary forwarding port, so reconnecting preserves
-history. Each invocation has a separate config file so two sessions cannot
-overwrite one another's temporary port. State/config use 0700/0600; OS
-administrators can still access them.
+History is keyed by normalized endpoint, ignoring trailing slashes. Different hosts/ports
+have separate histories and every invocation has independent configuration. State directories
+and files use 0700/0600. Old SSH-keyed histories remain untouched and are not auto-migrated.
+Administrators can still access user data.
 
-The API defaults to 127.0.0.1; SSH provides remote transport/access control.
-Server plan/start --host can select 0.0.0.0 or a local IPv4 address.
-Direct --endpoint connections create no tunnel. External listening does not add
-API keys or HTTPS; restrict network access to trusted clients.
-This is not a tenant gateway, per-user quota engine or load balancer.
+API keys/HTTPS, tenant gateways, quotas and load balancing are not configured. Restrict
+network access. Tools may use SSH for onward tasks, independently of inference transport.
 
 ## Performance policy
 

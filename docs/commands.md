@@ -9,7 +9,7 @@
 | `GPU001` | GPU 服务节点，负责容器和模型 |
 | `bcm-headnode` | BCM 头节点，负责 OpenCode 和本地工具 |
 | `alice`、`/home/alice/project` | BCM 登录用户及已存在的项目目录，按实际环境替换 |
-| `a`、`18000` | GPU001 上的实例名和模型 API 端口，不是主机名或 SSH 端口 |
+| `a`、`18000` | GPU001 上的实例名和模型 API 端口，与主机名区分，端口用于 API |
 
 先查询帮助，无需启动模型：
 
@@ -38,12 +38,11 @@
 | `image import` | 离线 GPU 节点 | 校验归档与锁文件后导入镜像 |
 | `model download` | 联网准备机 | 下载固定模型配置、分词器、索引和全部权重分片 |
 | `client install` | bcm-headnode | 安装固定版本原生客户端，或导入本地程序 |
-| `client doctor` | bcm-headnode | 检查客户端及 Python/git/SSH/rg/script 是否就绪 |
 | `client export` | BCM 准备机 | 打包客户端与公共缓存，不包含个人历史和凭据 |
 | `chat` | bcm-headnode | 连接推理服务，在本机以当前用户权限执行工具 |
 
 server 通过 Docker 运行 vLLM；plan 的 JSON 中 `command` 字段就是将使用的 Docker 参数。
-chat 启动本机 OpenCode，并管理 SSH 隧道；不是登录容器后再执行你的工具命令。
+chat 连接指定 API 并启动本机 OpenCode；不是登录容器后再执行你的工具命令。
 
 引擎参数不做任意透传；模型和 vLLM 参数在 profiles.json/profiles.py 中维护。启动后实例目录保存 spec.json、args.json、docker-command.json 和 launch.log，便于核对实际配置。
 
@@ -94,8 +93,8 @@ TP 表示张量并行：b300-tp4 在同一主机上使用 4 张 B300；GB300 配
 例如在 GPU001 上预览、启动和查询：
 
 ```bash
-./local-ai server plan --profile b300-tp4 --gpus 0,1,2,3 --name a --port 18000 --data-dir /raid/local-ai
-./local-ai server start --profile b300-tp4 --gpus 0,1,2,3 --name a --port 18000 --data-dir /raid/local-ai
+./local-ai server plan --host 0.0.0.0 --profile b300-tp4 --gpus 0,1,2,3 --name a --port 18000 --data-dir /raid/local-ai
+./local-ai server start --host 0.0.0.0 --profile b300-tp4 --gpus 0,1,2,3 --name a --port 18000 --data-dir /raid/local-ai
 ./local-ai server status --name a
 curl --fail http://127.0.0.1:18000/health
 ```
@@ -109,13 +108,12 @@ plan 不预留 GPU，也不检查当前端口/GPU 进程占用；start 才检查
 默认回环实例保持兼容；已有实例更改 --host 须显式停止、移除容器并重建。
 绑定 0.0.0.0 时健康地址使用 127.0.0.1；绑定具体 IP 时使用该 IP。
 管理中的实例仍保守地独占同一 API 端口，不支持按不同网卡复用端口。
-直连使用 --endpoint http://GPU001:18000/v1，不能填 0.0.0.0。
-当前不配置 API key/HTTPS，应限制可信网络访问；具体网卡 IP 监听须用 --endpoint，
-因为 --server 隧道的远端目标仍为回环地址。完整操作见 [README](../README.md)。
+客户端仅连接 --endpoint 指定的 API。需要转发时由管理员配置 nginx/frp 等外部工具。
+当前不配置 API key/HTTPS，应限制可信网络访问。完整操作见 [README](../README.md)。
 
 ## 客户端参数
 
-client install/doctor/export 均接受 `--client-dir`，默认是用户状态根目录下的 `clients/本机架构/`。
+client install/export 均接受 `--client-dir`，默认是用户状态根目录下的 `clients/本机架构/`。
 状态根目录默认 `~/.local/state/local-ai`；设置 XDG_STATE_HOME 时则为 `$XDG_STATE_HOME/local-ai`。
 
 | 参数 | 适用命令 | 含义与默认值 |
@@ -132,11 +130,7 @@ client install/doctor/export 均接受 `--client-dir`，默认是用户状态根
 
 | 参数 | 含义与默认值 |
 |---|---|
-| `--server GPU001` | SSH 主机名或 alice@GPU001；与 --endpoint 二选一且必选其一 |
-| `--endpoint URL` | 已可访问的 HTTP(S) 模型 API 基础地址，包含 /v1；不创建 SSH 隧道 |
-| `--ssh-user`、`--ssh-port` | SSH 登录身份与端口；身份默认沿用 user@host 或 OpenSSH 配置，端口默认 22 |
-| `--port` | GPU 服务端 API 端口，默认 18000 |
-| `--local-port` | BCM 隧道端口，默认 0 表示自动选择空闲端口 |
+| `--endpoint URL` | 必填，可访问的 HTTP(S) 模型 API 基础地址，包含端口与 /v1 |
 | `--project` | BCM 上已存在的工作目录，默认当前目录 |
 | `--client-dir` | 原生客户端目录，须与安装位置一致 |
 | `--state-dir` | 私有历史、缓存和会话日志根目录，默认见上节 |
@@ -147,15 +141,14 @@ client install/doctor/export 均接受 `--client-dir`，默认是用户状态根
 在 bcm-headnode 上以 alice 执行：
 
 ```bash
-# 先检查客户端与连接
-./local-ai client doctor
-./local-ai chat --server GPU001 --check
+# 可选：只检查 API 连接和模型就绪
+./local-ai chat --endpoint http://GPU001:18000/v1 --check
 
 # 进入 BCM 本地项目，开始交互会话
-./local-ai chat --server GPU001 --project /home/alice/project
+./local-ai chat --endpoint http://GPU001:18000/v1 --project /home/alice/project
 
 # 只执行一个任务；工具仍在 bcm-headnode 执行
-./local-ai chat --server GPU001 --project /home/alice/project --run '请执行 hostname 并报告结果。'
+./local-ai chat --endpoint http://GPU001:18000/v1 --project /home/alice/project --run '请执行 hostname 并报告结果。'
 ```
 
 升级模型或镜像时，使用独立的数据目录和实例进行验收，保留旧源码、权重和镜像锁。不要在原生产数据目录中强制覆盖权重后再尝试回退。
@@ -166,11 +159,11 @@ client install/doctor/export 均接受 `--client-dir`，默认是用户状态根
 |---|---|
 | 镜像解包提示 metadata.db 不存在 | 按[部署指南](deployment.zh-CN.md)检查 Docker/containerd 存储；确认任务影响后恢复服务，不能仅重启 Docker 或根据数据库文件是否立即出现判断恢复。 |
 | GPU 服务未就绪 | 在 GPU001 查询 server status，检查数据根目录下 instances/a/server.log，再重试 /health |
-| BCM 无法连接 | 先执行 ssh GPU001 hostname，再运行 client doctor 和 chat --server GPU001 --check；核对 API 端口 |
+| BCM 无法连接 | 用 chat --endpoint http://GPU001:18000/v1 --check 检查 API；核对服务就绪、DNS、路由、防火墙和代理设置 |
 | 客户端看不到 GPU | 工具在 BCM 执行属预期行为；在 GPU001 用 nvidia-smi 检查推理进程 |
 | GPU/端口冲突 | 核对分配与现有作业，选空闲设备/端口；不要停止无关任务 |
 | 更换 GPU、端口或配置 | 先检查并停止实例，显式移除对应容器，再按新配置重建 |
-| 退出聊天 | 当前用户的 SSH 隧道随会话清理；GPU 服务继续运行 |
+| 退出聊天 | 本机客户端退出；GPU 推理服务继续运行 |
 | 更新或回退 | 固定并记录 Git 提交、镜像摘要和模型 revision；在独立实例验收后再切换客户端。失败时切回已验证实例/版本。 |
 
 停止与重建示例，在 GPU001 执行；先确认实例 a 正是要替换的服务：
@@ -179,7 +172,7 @@ client install/doctor/export 均接受 `--client-dir`，默认是用户状态根
 ./local-ai server stop --name a --data-dir /raid/local-ai
 # 仅移除已停止的实例容器；权重和宿主机日志保留
 docker rm local-ai-a
-./local-ai server start --profile b300-tp4 --gpus 0,1,2,3 --name a --port 18000 --data-dir /raid/local-ai
+./local-ai server start --host 0.0.0.0 --profile b300-tp4 --gpus 0,1,2,3 --name a --port 18000 --data-dir /raid/local-ai
 ```
 
 备份用户状态前退出相关客户端；不要将历史、凭据或原始日志提交 Git。

@@ -6,7 +6,7 @@
 - Planning with supplied inventory must not probe hardware or write files.
 - Never infer client CPU architecture from a GPU profile.
 - Reject occupied GPUs, conflicting ports, wrong images and spec drift.
-- Preserve per-user state and owned SSH-tunnel cleanup.
+- Preserve per-user state. Model connections use API endpoints only; do not manage network forwarding. Clean up client child processes on exit.
 - Do not commit weights, binaries, caches, credentials or raw infrastructure logs.
 - Run unittest, Ruff check/format checks and git diff --check.
 - GPU validation requires an allocated device set; never launch it from CI.

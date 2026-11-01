@@ -4,43 +4,18 @@ import tarfile
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import Mock, patch
 
 from local_ai.artifacts import extract_binary, seed_cache, verify_integrity
 from local_ai.client import prepare, service_key
 from local_ai.common import verify_elf
-from local_ai.tunnel import Tunnel, destination, ssh_command
 
 
 class ClientTests(unittest.TestCase):
-    def test_ssh_argument_injection_is_rejected(self):
-        for name in ["-oProxyCommand=bad", "host;bad", "host with spaces"]:
-            with self.assertRaises(ValueError):
-                destination(name)
-        self.assertEqual(destination("user@gpu-a"), "user@gpu-a")
-
-    def test_ssh_forward_is_loopback_and_not_persistent(self):
-        cmd = ssh_command("gpu-a", "alice", 22, 28000, 18001)
-        self.assertIn("127.0.0.1:28000:127.0.0.1:18001", cmd)
-        self.assertIn("ExitOnForwardFailure=yes", cmd)
-        self.assertNotIn("-f", cmd)
-        self.assertEqual(cmd[-1], "alice@gpu-a")
-
-    def test_history_key_tracks_server_not_ephemeral_port(self):
-        a = service_key("gpu-a", "alice", 22, 18000, None)
-        self.assertEqual(a, service_key("gpu-a", "alice", 22, 18000, None))
-        self.assertNotEqual(a, service_key("gpu-a", "alice", 22, 18001, None))
-
-    def test_tunnel_cleanup_runs_on_client_exception(self):
-        with tempfile.TemporaryDirectory() as root:
-            proc = Mock()
-            proc.poll.return_value = None
-            with patch("local_ai.tunnel.subprocess.Popen", return_value=proc):
-                with self.assertRaises(RuntimeError):
-                    with Tunnel("gpu-a", None, 22, 18000, 28000, Path(root) / "tunnel.log"):
-                        raise RuntimeError("client failed")
-            proc.terminate.assert_called_once()
-            proc.wait.assert_called_once_with(timeout=3)
+    def test_history_key_tracks_endpoint_service_and_port(self):
+        a = service_key("http://gpu-a:18000/v1")
+        self.assertEqual(a, service_key("http://gpu-a:18000/v1/"))
+        self.assertNotEqual(a, service_key("http://gpu-a:18001/v1"))
+        self.assertNotEqual(a, service_key("http://gpu-b:18000/v1"))
 
     def test_integrity_check_precedes_archive_execution(self):
         with tempfile.TemporaryDirectory() as root:
