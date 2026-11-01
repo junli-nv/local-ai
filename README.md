@@ -58,11 +58,40 @@ nvidia-smi
 nvidia-ctk cdi list
 ```
 
-Docker 必须能访问服务端，CDI 应列出所选 GPU 的 nvidia.com/gpu=GPU-... UUID 别名。缺失时先完成[CDI 配置](docs/deployment.zh-CN.md#cdi-配置)。
+Docker 客户端必须能连接本机 Docker 守护进程。下面先完成 CDI 检查和配置，再安装模型、启动服务。
+
+### 配置 GPU 的 CDI 设备定义（首次部署必查）
+
+**在 GPU001 执行。** 新机器即使 nvidia-smi 正常，也需要核实 CDI 定义。nvidia-ctk cdi list 必须包含准备使用的每张卡的 nvidia.com/gpu=GPU-... UUID 别名；已有完整别名时无需重复生成。
+
+若列表为空或缺少所选 UUID，系统有自动刷新服务时执行：
+
+```bash
+sudo systemctl restart nvidia-cdi-refresh.service
+nvidia-ctk cdi list
+```
+
+如果提示 Unit nvidia-cdi-refresh.service not found，改用下面的手动生成方式。先确认 /etc/cdi 和 /var/run/cdi 中没有其他有效或冲突的 NVIDIA 定义；不要同时保留重复定义。
+
+```bash
+sudo install -d /etc/cdi
+sudo nvidia-ctk cdi generate --device-name-strategy uuid --output=/etc/cdi/nvidia.yaml
+nvidia-ctk cdi list
+```
+
+将列表与本机 GPU UUID 核对：
+
+```bash
+nvidia-smi --query-gpu=index,uuid --format=csv,noheader
+```
+
+**成功标志：** 准备使用的 0–3 号 GPU 均有对应的 nvidia.com/gpu=GPU-... 别名，且没有冲突错误。只有确认后才继续下方安装。仍缺别名或有重复定义时先停止排查，不能仅因 nvidia-smi 能看到 GPU 就继续启动。手动定义需在驱动、GPU 或 MIG 配置改变后重新生成。
 
 首次 inspect 提示 No such image 可正常继续；随后 pull 若报 metadata.db 不存在，应停止安装，按[Docker 存储故障](docs/deployment.zh-CN.md#docker-存储故障)处理。Docker active 不代表存储正常；--data-dir 不迁移 Docker/containerd 数据库，多节点不能共享其活动数据库。
 
-检查通过后：
+### 安装资源并启动实例
+
+Docker 和 CDI 检查通过后：
 
 ```bash
 ./local-ai install --role server --profile b300-tp4

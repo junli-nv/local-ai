@@ -60,11 +60,40 @@ nvidia-smi
 nvidia-ctk cdi list
 ```
 
-Docker must reach its server. CDI must list selected GPUs' nvidia.com/gpu=GPU-... UUID aliases; see [CDI setup](docs/en/deployment.md#cdi-setup) when absent.
+The Docker client must connect to the local daemon. Complete CDI setup below before installing model assets or starting the service.
+
+### Configure GPU CDI definitions before first deployment
+
+**Run on GPU001.** Working nvidia-smi output is not sufficient: verify CDI definitions too. nvidia-ctk cdi list must include a nvidia.com/gpu=GPU-... UUID alias for every selected GPU. Skip regeneration when those aliases already exist.
+
+If the list is empty or selected UUIDs are absent, use the automatic refresh service when available:
+
+```bash
+sudo systemctl restart nvidia-cdi-refresh.service
+nvidia-ctk cdi list
+```
+
+If it reports Unit nvidia-cdi-refresh.service not found, generate definitions manually below. First check /etc/cdi and /var/run/cdi for other valid or conflicting NVIDIA definitions; do not retain duplicates.
+
+```bash
+sudo install -d /etc/cdi
+sudo nvidia-ctk cdi generate --device-name-strategy uuid --output=/etc/cdi/nvidia.yaml
+nvidia-ctk cdi list
+```
+
+Compare aliases against local GPU UUIDs:
+
+```bash
+nvidia-smi --query-gpu=index,uuid --format=csv,noheader
+```
+
+**Success:** selected GPUs 0–3 each have a matching nvidia.com/gpu=GPU-... alias, without conflicts. Only then continue installation below. Missing aliases or conflicting definitions must be resolved first; visible GPUs in nvidia-smi alone do not permit startup. Regenerate manual definitions after driver, GPU or MIG changes.
 
 Initial inspect No such image is expected. A pull error involving metadata.db requires [storage recovery](docs/en/deployment.md#docker-storage-failures). Docker active does not prove storage health. --data-dir does not move Docker/containerd databases; never share active databases across nodes.
 
-After preflight:
+### Install resources and start the instance
+
+After Docker and CDI preflight succeeds:
 
 ```bash
 ./local-ai install --role server --profile b300-tp4

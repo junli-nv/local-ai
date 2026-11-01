@@ -8,24 +8,9 @@ Conventions: GPU001, bcm-headnode, alice, /raid/local-ai, instance a, port 18000
 
 ## CDI setup
 
-nvidia-ctk cdi list must show nvidia.com/gpu=GPU-... UUID aliases for selected GPUs. Generate definitions on the target host; never copy another host's definitions.
+The complete first-deployment check, refresh/manual-generation commands and UUID acceptance criteria are in [README: configure GPU CDI definitions](../../README.en.md#configure-gpu-cdi-definitions-before-first-deployment), before model installation/startup. Follow that procedure on the target GPU host; do not copy another host's definitions.
 
-With the automatic refresh service:
-
-```bash
-sudo systemctl restart nvidia-cdi-refresh.service
-nvidia-ctk cdi list
-```
-
-Without that service, an administrator first checks /etc/cdi and /var/run/cdi for existing valid NVIDIA definitions/conflicts, then generates local UUID definitions:
-
-```bash
-sudo install -d /etc/cdi
-sudo nvidia-ctk cdi generate --device-name-strategy uuid --output=/etc/cdi/nvidia.yaml
-nvidia-ctk cdi list
-```
-
-Regenerate manual definitions after driver, GPU or MIG changes. Avoid duplicate definitions. If selected UUIDs remain absent, stop and investigate. Server image and BCM architectures are independent; see README for GB300 validation limits.
+For missing/duplicate aliases, inspect /etc/cdi and /var/run/cdi and resolve conflicting definitions before continuing. Regenerate manual definitions after driver, GPU or MIG changes; existing complete aliases do not require regeneration.
 
 ## Docker storage failures
 

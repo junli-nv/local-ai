@@ -6,24 +6,9 @@
 
 ## CDI 配置
 
-nvidia-ctk cdi list 必须列出所选 GPU 的 nvidia.com/gpu=GPU-... UUID 别名。定义应在目标机器生成，不复制其他机器的定义。
+首次部署的检查、刷新/手动生成命令及 UUID 验收标准，统一放在 [README：配置 GPU 的 CDI 设备定义](../README.md#配置-gpu-的-cdi-设备定义首次部署必查)，排在模型安装和服务启动之前。请在目标 GPU 主机按该步骤执行，不能复制其他机器的定义。
 
-系统有自动刷新服务时：
-
-```bash
-sudo systemctl restart nvidia-cdi-refresh.service
-nvidia-ctk cdi list
-```
-
-若没有自动刷新服务，管理员先检查 /etc/cdi 和 /var/run/cdi，确认没有其他有效 NVIDIA 定义或冲突后，生成本机 UUID 定义：
-
-```bash
-sudo install -d /etc/cdi
-sudo nvidia-ctk cdi generate --device-name-strategy uuid --output=/etc/cdi/nvidia.yaml
-nvidia-ctk cdi list
-```
-
-手动定义在驱动、GPU 或 MIG 配置改变后需重新生成。不要同时保留重复定义；若所选 UUID 仍缺失，停止启动并排查。镜像平台和 BCM 架构分别选择，GB300 验证限制见 README。
+若别名缺失或重复，检查 /etc/cdi 和 /var/run/cdi，解决定义冲突后再继续。驱动、GPU 或 MIG 配置变化后重新生成手动定义；已有完整别名无需重复生成。
 
 ## Docker 存储故障
 
