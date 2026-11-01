@@ -44,6 +44,7 @@ Chinese is primary; maintain English separately and synchronize both entry paths
 | Application copying fails | Default terminal selection/copy/paste; disable application mouse/clipboard shortcuts. Explain disabled click/wheel behavior and verify terminal modes |
 | Fixed release blocks upgrades/offline use | Reference releases are validation records, not runtime allowlists. Reuse installs, detect imports, allow explicit releases/offline exports and test capabilities |
 | Models/revisions change | Configure recipe identities, directories, names, engine/client capabilities and separate locks; do not inherit hardware acceptance or DeepSeek-specific settings |
+| Source-script delivery | Use immutable tags on validated commits; GitHub Releases and Python distributions are optional, not prerequisites |
 | Around 400 ms TTFT seems high | Record method, input size, cache/load and timing first. Separate compilation, generation delay and reasoning content; avoid one-number conclusions |
 
 Use the [manual](commands.md) and [deployment guide](deployment.md) for operations;
@@ -255,9 +256,12 @@ original backup when downgrading across incompatible database migrations.
 
 ## Stable release procedure
 
-1. Align pyproject.toml, local_ai.__version__, release notes and both entry docs. Project, client, model and image versions are independent.
-2. Run the documented checks, build wheel/sdist, install the wheel offline in an isolated environment, verify version/resources/pure planning, then run native client acceptance.
-3. Push the reviewed release commit and require its CI to pass. Point the tag at that exact commit; never move a published tag.
-4. Use git archive for the complete source package and generate SHA256SUMS. Exclude working-directory state, weights, caches, credentials and user histories.
-5. Create a matching GitHub Release with source, Python packages and checksums. Verify the tag, asset sizes and digests before publishing.
-6. Record features, upgrade steps, compatibility limits and actual validation. Version 1.0 does not imply acceptance of every platform, model or scheduler cluster.
+Deliver script source through validated Git tags. GitHub Releases and wheel/sdist
+packages are optional, not installation prerequisites.
+
+1. Align pyproject.toml, local_ai.__version__ and both version docs. Project/client/model/image versions are independent.
+2. Run unittest, Ruff and diff checks; run native acceptance for client adapter changes. Optional Python packages also need build and isolated-install checks.
+3. Commit/push and require CI to pass for that exact commit.
+4. Create and push an annotated version tag at the validated commit. Match the version and never move published tags.
+5. Users clone the tag; prepare offline artifacts from that version. Optional source archives may use git archive with SHA256 checksums; no GitHub Release is required.
+6. Deliver tag, commit, results and limits. A new tag does not imply universal model/hardware/cluster acceptance.

@@ -134,7 +134,7 @@ client install/export accept --client-dir, defaulting to clients/ARCH under the 
 | --sha256 | client install | Optional expected checksum from a trusted binary manifest |
 | --output | client export | Required archive destination; also creates .sha256 |
 
-See [offline deployment](offline.md) for artifact paths and imports.
+Choose [installed-environment migration](offline.md#scenario-1-export-an-installed-environment-and-migrate) or [online preparation](offline.md#scenario-2-download-on-an-online-preparation-host); both contain complete destination import examples.
 
 ## Chat parameters
 

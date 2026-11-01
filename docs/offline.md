@@ -1,32 +1,43 @@
-# 离线部署
+# 离线部署：两种完整流程
 
-分别准备三类材料：项目源码、GPU 服务端镜像与权重、BCM 原生客户端。GB300 服务端通常使用 ARM64 镜像，但 BCM 客户端仍可能是 AMD64；必须分别判断。
+按现有条件选择一条流程，从该流程第一步执行到最后一步，不需要拼接另一条流程。
 
-目标系统须预装兼容的 GPU 驱动，以及服务端的 Docker、CDI、NVIDIA Container Toolkit。BCM 需要 Python、Bash、git、rg 和 script。vLLM 镜像不包含宿主机驱动和系统依赖，应按目标发行版及内核准备离线安装包。ELF 架构匹配也不等于完整 ABI 兼容。
+| 选择 | 使用场景 | 材料准备端 |
+|---|---|---|
+| [场景一](#场景一从已安装环境导出并迁移) | 已有能运行的 local-ai，迁移到新环境 | 旧 GPU 节点 gpu-old、旧 BCM 节点 bcm-old |
+| [场景二](#场景二从联网环境下载并准备) | 没有现成安装，使用联网机器准备离线材料 | Linux 准备机 prep-host |
 
-## 示例路径与参数
+## 示例中固定的主机和路径
 
-| 路径 / 参数 | 含义 |
+全文示例使用 `b300-tp4`：新 GPU 节点为 AMD64、4 张已分配 B300，BCM 为 Linux AMD64。
+换平台时，镜像和客户端分别匹配各自目标 CPU；不能只改文件名。
+
+| 项目 | 全文统一的值 |
 |---|---|
-| `/data/local-ai` | 联网准备机上的材料目录 |
-| `/data/export` → `/media/export` | 联网端导出目录，复制或挂载到离线端后的路径 |
-| `/raid/local-ai` | 离线 GPU001 的运行数据目录 |
-| `--output` | 导出归档写到哪里 |
-| `--archive` / `--lock` | 导入镜像及配套锁文件，必须来自同一次导出 |
-| `--binary` / `--seed-cache` | BCM 上解压后的 OpenCode 程序和公共缓存目录 |
+| 各机器的安装根目录（含源码） | `/raid/local-ai` |
+| 旧/新 GPU 节点的数据目录 | `/raid/local-ai` |
+| 联网准备机的临时材料目录 | `/data/local-ai-prep` |
+| 准备端汇总材料的目录 | `/data/local-ai-offline` |
+| 离线介质在准备端和新环境的挂载目录 | `/media/local-ai-offline` |
+| BCM 用户及客户端安装目录 | alice；`/home/alice/.local/state/local-ai/clients/amd64` |
+| 新服务地址 | `http://GPU001:18000/v1`；实例 a，GPU 0,1,2,3 |
 
-这些是可替换的示例路径，操作前核对所在机器和实际挂载点。
-`--profile` 选择服务端平台；`--data-dir` 选择当前准备或运行目录。
-客户端参数及默认值见[使用手册](commands.md)。`rsync -a 源目录/ 目标目录/` 复制目录内容并保留属性；
-`sha256sum -c` 校验清单，出现不匹配时不要继续导入。
+执行前准备好以下条件：
 
-## 离线前材料清单
+- 示例以 alice 执行，具备 sudo 和 Docker 权限；root 可省略 sudo。替换用户名时，也替换用户私有目录。
+- 新 GPU 节点已安装 Python 3.10+、兼容驱动、Docker API 1.49+、NVIDIA Container Toolkit/CDI。
+  新 BCM 已安装 Python 3.10+、Bash、Git、rg 和 util-linux 的 script。
+- 复制和校验用到 rsync、tar、sha256sum、find、sort、xargs；目标能访问内网模型 API。
+- `/media/local-ai-offline` 已挂载容量足够的介质。权重约 510 GB，另预留镜像、归档和复制空间。
+- 新环境 /raid/local-ai 安装根目录初始为空；每批材料汇总使用空目录。旧环境保持原位置，原路径不同时导出命令填写真实路径。驱动/OS 软件包另行准备，不能从模型镜像中恢复。
+- 使用外部模型配方时，把同一份 JSON 随材料携带并校验，在各端设置 LOCAL_AI_CATALOG；不要混用源码、配方和版本锁。
 
-把以下材料一并带到离线环境，示例统一放在 `/media/export`。
-AMD64 镜像/客户端文件名用于示意；ARM64 使用对应文件，不能只改文件名代替平台转换。
+源码直接放在 /raid/local-ai，GPU 的 models/、images/、instances/、install.log 也在该目录下。BCM 私有客户端目录单独列于上表。
+
+材料汇总完成后，目录应包含：
 
 ```text
-/media/export/
+/data/local-ai-offline/
   local-ai-source.tar.gz
   local-ai-source.tar.gz.sha256
   vllm-amd64.tar
@@ -37,124 +48,290 @@ AMD64 镜像/客户端文件名用于示意；ARM64 使用对应文件，不能�
   client-amd64.tar.gz.sha256
 ```
 
-本节后续命令会分别生成这些文件。源码包在联网端仓库的 `dist/` 下，需一并复制到导出目录；
-模型校验清单须与完整 models/ 目录一起复制，不能只带权重分片而遗漏配置或分词器。
-服务端与 BCM 各自预装所需系统工具；本项目材料不替代离线 OS、驱动和容器运行时安装包。
+## 场景一：从已安装环境导出并迁移
 
-离线端先校验、解压源码。以下步骤在 **GPU001 和 bcm-headnode 各执行一次**；
-示例使用可写且空的 `/home/alice/local-ai`，也可换成各自的源码目录：
+### 1.1 在旧 GPU 节点 gpu-old 导出源码、镜像和模型
 
-```bash
-cd /media/export
-sha256sum -c local-ai-source.tar.gz.sha256
-mkdir -p /home/alice/local-ai
-tar -xzf local-ai-source.tar.gz -C /home/alice/local-ai
-cd /home/alice/local-ai
-./local-ai --help
-```
-
-后文 `/path/to/local-ai` 指这个源码目录；`/raid/local-ai` 则是 GPU001 的运行数据目录。
-导入和启动的 `--data-dir` 必须一致；如果设置过 LOCAL_AI_DATA_DIR，显式传参可避免用错目录。
-
-## 1. 打包源码
-
-在已审查的提交上执行：
+从当前使用的安装目录执行。Git 安装导出已提交源码；无 .git 的解压安装按明确清单打包源码。先审查源码修改，两个分支都不打包 models/、images/、instances/ 或整个安装目录。
+下面不执行下载，也不要求停止正在使用只读模型的实例；复制时模型文件不能正在被更新。
 
 ```bash
-mkdir -p dist
-git archive --format=tar.gz --output=dist/local-ai-source.tar.gz HEAD
-cd dist
+cd /raid/local-ai
+./local-ai --version
+sudo install -d -o "$(id -u)" -g "$(id -g)" /data/local-ai-offline
+if [ -e .git ]; then
+  git archive --format=tar.gz --output=/data/local-ai-offline/local-ai-source.tar.gz HEAD
+else
+  tar --exclude='__pycache__' --exclude='*.pyc' --exclude='*.log' --exclude='.env*' \
+    -czf /data/local-ai-offline/local-ai-source.tar.gz \
+    local-ai pyproject.toml src README.md README.en.md AGENTS.md docs scripts tests
+fi
+
+./local-ai image export --profile b300-tp4 --data-dir /raid/local-ai \
+  --output /data/local-ai-offline/vllm-amd64.tar
+
+mkdir -p /data/local-ai-offline/models
+rsync -aL /raid/local-ai/models/ /data/local-ai-offline/models/
+cd /data/local-ai-offline
 sha256sum local-ai-source.tar.gz > local-ai-source.tar.gz.sha256
-cd ..
+find models -type f -print0 | sort -z | xargs -0 -r sha256sum > MODELS.sha256
 ```
 
-不要直接打包整个工作目录，其中可能含被忽略的原始日志和个人状态。源码包不包含约 510 GB 的模型权重或原生二进制文件。
+成功标志：源码归档及校验文件、镜像及配套锁、完整 models/ 和 MODELS.sha256 均已生成。
+`-L` 复制链接指向的实际文件，使模型材料不再依赖旧机器上的链接目标。
+模型锁有就一起复制；缺锁不能自行编造 revision。不要复制 `/var/lib/docker`、
+`/var/lib/containerd`、旧实例目录、日志或用户历史。
 
-## 2. 准备 GPU 镜像和权重
+### 1.2 在旧 BCM 节点 bcm-old 导出客户端并汇总到 gpu-old
 
-在联网的 Docker 准备机上执行：
+`--client-dir` 必须是当前账户已经安装的真实目录；不要导出 `~/.local/bin/opencode` 恢复入口。
+本例两台旧机器不依赖共享目录，用 scp 汇总客户端包。
 
 ```bash
-./local-ai image pull --profile b300-tp4 --data-dir /data/local-ai
-./local-ai image export --profile b300-tp4 --data-dir /data/local-ai \
-  --output /data/export/vllm-amd64.tar
+cd /raid/local-ai
+sudo install -d -o "$(id -u)" -g "$(id -g)" /data/local-ai-offline
+./local-ai client export \
+  --client-dir /home/alice/.local/state/local-ai/clients/amd64 \
+  --output /data/local-ai-offline/client-amd64.tar.gz
+scp /data/local-ai-offline/client-amd64.tar.gz \
+  /data/local-ai-offline/client-amd64.tar.gz.sha256 \
+  alice@gpu-old:/data/local-ai-offline/
 ```
 
-GB300 改用 gb300-tp4 或 gb300-tp2，并使用独立的 vllm-arm64.tar。拉取、检查和导出均显式指定平台；AMD64 准备机打包 ARM64 镜像无需执行 ARM64 代码。跨平台镜像操作要求 Docker API 1.49+，已验证基线为 Docker 29。
+成功标志：gpu-old 的 `/data/local-ai-offline` 已有上面清单中的全部材料。
+客户端包包含程序、公共缓存和 manifest，不包含聊天历史或凭据。
 
-导出时生成配套 `.lock.json`，记录归档 SHA256 和选定镜像的配置、层指纹。归档与锁文件须一起携带，不允许只凭可变标签回退。
+### 1.3 把完整材料放到离线介质
 
-使用与准备机 CPU 相符的配置下载权重：
+在 gpu-old 执行。确认介质已挂载后复制：
 
 ```bash
-./local-ai model download --profile b300-tp4 --data-dir /data/local-ai
-rsync -a /data/local-ai/models/ /data/export/models/
-cd /data/export
-find models -type f -print0 | sort -z | xargs -0 sha256sum > MODELS.sha256
+rsync -a /data/local-ai-offline/ /media/local-ai-offline/
 ```
 
-权重不依赖 CPU 架构，必须完整复制配置、分词器、索引及全部分片；同一份权重可供两个实例使用。
+将介质带到新环境，并挂载到同一个 `/media/local-ai-offline` 路径。
+先在 GPU001 执行下一步，再在 bcm-headnode 执行客户端导入；同一介质可依次挂载使用。
 
-离线 GPU 节点解压源码、校验并复制权重，必要时重新生成本机 CDI，然后导入和启动：
+### 1.4 在新 GPU 节点 GPU001 导入并启动
+
+先校验和展开本文生成的源码包，再复制模型、核对目标文件的 SHA256，最后导入镜像和启动。
+`local-ai-source.tar.gz` 由本文打包命令生成，解压后源码直接位于目标目录，不加 --strip-components。
 
 ```bash
-cd /media/export
-sha256sum -c MODELS.sha256
-sudo mkdir -p /raid/local-ai/models
-sudo rsync -a models/ /raid/local-ai/models/
-cd /path/to/local-ai
+cd /media/local-ai-offline
+sha256sum -c local-ai-source.tar.gz.sha256
+sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
+tar -xzf local-ai-source.tar.gz -C /raid/local-ai
+
+mkdir -p /raid/local-ai/models
+rsync -a /media/local-ai-offline/models/ /raid/local-ai/models/
+cd /raid/local-ai
+sha256sum -c /media/local-ai-offline/MODELS.sha256
+
+cd /raid/local-ai
+./local-ai --version
 ./local-ai image import --profile b300-tp4 --data-dir /raid/local-ai \
-  --archive /media/export/vllm-amd64.tar \
-  --lock /media/export/vllm-amd64.tar.lock.json
-./local-ai server start --host 0.0.0.0 --profile b300-tp4 --gpus 0,1,2,3 --name a --data-dir /raid/local-ai
+  --archive /media/local-ai-offline/vllm-amd64.tar \
+  --lock /media/local-ai-offline/vllm-amd64.tar.lock.json
+./local-ai server inventory
+nvidia-ctk cdi list
+./local-ai server start --host 0.0.0.0 --profile b300-tp4 \
+  --gpus 0,1,2,3 --name a --port 18000 --data-dir /raid/local-ai
 ./local-ai server status --name a
 ```
 
-GB300 使用对应 ARM64 归档和配置。Docker 导入后的镜像身份表示可能不同，但配置、层内容和平台必须一致。CUDA 内核缓存不保证跨机器可用，首次启动可能使用固定镜像在本机编译。
+成功标志：所有 SHA256 校验均为 OK；image import 返回 imported=true；
+启动显示 READY，status 返回 ready=true。镜像导入本身会校验归档、平台和镜像内容身份。
+启动前确认 GPU 0,1,2,3 是新机器分配给本次实例的设备，CDI 列表含其 UUID；不复用旧机器 UUID。
+加载或编译可能需要数分钟。尚未就绪时先查看 `/raid/local-ai/instances/a/server.log`，
+安装/导入/启动过程看 `/raid/local-ai/install.log`，解决报错后再继续，不以容器存在为成功。
 
-## 3. 准备 BCM 客户端
+### 1.5 在新 BCM 节点 bcm-headnode 导入客户端并连接
 
-在与目标 CPU 相同、Linux 环境兼容的联网头节点执行：
-
-```bash
-./local-ai client install
-./local-ai client export --output /data/export/client-amd64.tar.gz
-```
-
-导出包包含 `client/bin/opencode`、公共 `seed-cache` 和材料清单，不包含历史记录、认证数据库或 SSH 密钥。缓存中的可执行文件也须匹配目标架构。
-
-离线 BCM 上执行：
+在这台机器也展开同一个源码包。客户端包解压到用户可写目录，离线介质可以只读挂载。
 
 ```bash
-cd /media/export
+cd /media/local-ai-offline
+sha256sum -c local-ai-source.tar.gz.sha256
 sha256sum -c client-amd64.tar.gz.sha256
-mkdir -p client-unpacked
-tar -xzf client-amd64.tar.gz -C client-unpacked
-cd /path/to/local-ai
+sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
+tar -xzf local-ai-source.tar.gz -C /raid/local-ai
+mkdir -p /home/alice/local-ai-client-import
+tar -xzf client-amd64.tar.gz -C /home/alice/local-ai-client-import
+
+cd /raid/local-ai
 ./local-ai client install \
-  --binary /media/export/client-unpacked/client/bin/opencode \
-  --seed-cache /media/export/client-unpacked/client/seed-cache
-./local-ai chat --endpoint http://GPU001:18000/v1 --check
-./local-ai chat --endpoint http://GPU001:18000/v1 --run '请用 bash 执行 hostname 并报告实际输出。'
+  --client-dir /home/alice/.local/state/local-ai/clients/amd64 \
+  --binary /home/alice/local-ai-client-import/client/bin/opencode \
+  --seed-cache /home/alice/local-ai-client-import/client/seed-cache
+./local-ai chat --endpoint http://GPU001:18000/v1 \
+  --client-dir /home/alice/.local/state/local-ai/clients/amd64 --check
+./local-ai chat --endpoint http://GPU001:18000/v1 \
+  --client-dir /home/alice/.local/state/local-ai/clients/amd64 \
+  --run '请用 bash 执行 hostname 并报告实际输出。'
 ```
 
-BCM 不需要 Node、npm 或 Docker。在已校验归档之外单独导入二进制时，使用清单中的校验值指定 `--sha256`。客户端升级或插件变更后，应重新验证无外网运行。
+成功标志：client install 从本地程序完成，chat --check 返回 ready=true；
+单次任务实际调用工具，hostname 返回新 BCM 的主机名。本例应是 bcm-headnode。
+随后开始交互使用：
 
-离线导入和启动统一追加到 `/raid/local-ai/install.log`。本地材料完整时可重复执行准备命令验证复用；离线流程不使用 `--force`。缺失文件、版本冲突及截断文件会明确记录，不能将目录存在视为验收通过。
+```bash
+cd /raid/local-ai
+./local-ai chat --endpoint http://GPU001:18000/v1 \
+  --client-dir /home/alice/.local/state/local-ai/clients/amd64
+```
 
-## 4. 验收
+### 1.6 本流程完成条件
 
-断开外网、保留 BCM 到模型 API 的内网后，逐项检查：
+在无外网、仅保留 BCM 到 GPU001 内网连接的条件下，完成前面的服务 READY、客户端 check
+和真实 hostname 任务。客户端启动时输出的 Log 路径保存该会话完整日志。
+新用户应有自己的客户端状态；SSH、Slurm、Kubernetes 凭据及项目依赖在新环境单独配置，
+不从公共材料包迁移个人历史或密钥。显式启用的外部插件/MCP 或下载任务仍须具备相应资源。
 
-1. 仅使用本地完整权重和镜像冷启动，确认 API 就绪。
-2. 使用新用户启动客户端，不能只验证管理员已预热的环境。
-3. 验证搜索、读取、编辑和测试工具，确认 hostname 返回 BCM 主机名。
-4. 检查完整私有日志、GPU UUID、显存和客户端进程清理。
-5. 测试实际输入长度及并发，不能将解码速度直接视为整体性能。
+## 场景二：从联网环境下载并准备
 
-服务端启用 HF/Transformers 离线标志；客户端禁用更新、模型目录获取、默认外部插件和 LSP 下载。显式配置的项目插件、外部 MCP、搜索及 git/pip/npm/apt 下载仍可能需要外网，须预先准备项目依赖和工具。
+本例 prep-host 是能访问 GitHub、Docker 仓库、Hugging Face 和 NPM 的 Linux AMD64 机器，
+已安装 Python 3.10+、Git、Docker API 1.49+ 和复制/校验工具；不需要 GPU。
+客户端程序会在准备机执行版本检查，因此准备机也须与目标 BCM 的 Linux/CPU 兼容。
+示例选择 v1.0.0；可替换为另一个选定版本，但全程使用同一份源码和配方。
 
-实际验证范围见[验证记录](validation.md)。客户端网络隔离测试不能证明另一平台的全新 GPU 服务端可以离线冷启动。
+### 2.1 在 prep-host 下载源码、镜像和模型并导出
+
+```bash
+sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai /data/local-ai-prep
+git clone --branch v1.0.0 --depth 1 https://github.com/junli-nv/local-ai.git /raid/local-ai
+cd /raid/local-ai
+./local-ai --version
+sudo install -d -o "$(id -u)" -g "$(id -g)" /data/local-ai-offline
+git archive --format=tar.gz --output=/data/local-ai-offline/local-ai-source.tar.gz HEAD
+
+./local-ai image pull --profile b300-tp4 --data-dir /data/local-ai-prep
+./local-ai model download --profile b300-tp4 --data-dir /data/local-ai-prep
+./local-ai image export --profile b300-tp4 --data-dir /data/local-ai-prep \
+  --output /data/local-ai-offline/vllm-amd64.tar
+
+mkdir -p /data/local-ai-offline/models
+rsync -aL /data/local-ai-prep/models/ /data/local-ai-offline/models/
+cd /data/local-ai-offline
+sha256sum local-ai-source.tar.gz > local-ai-source.tar.gz.sha256
+find models -type f -print0 | sort -z | xargs -0 -r sha256sum > MODELS.sha256
+```
+
+成功标志：源码、镜像归档和锁、完整模型及校验清单齐全。模型下载会运行本机架构的容器，
+不是仅下载镜像；本例 b300-tp4 与 AMD64 准备机匹配。
+
+### 2.2 在同一台 prep-host 下载并导出 BCM 客户端
+
+```bash
+cd /raid/local-ai
+./local-ai client install --client-dir /data/local-ai-prep/client-amd64
+./local-ai client export --client-dir /data/local-ai-prep/client-amd64 \
+  --output /data/local-ai-offline/client-amd64.tar.gz
+```
+
+成功标志：`/data/local-ai-offline` 已包含完整材料清单。
+需要特定客户端版本时，在 install 命令中增加 `--version X.Y.Z`；导入时会识别包内程序的实际版本。
+
+### 2.3 把完整材料放到离线介质
+
+在 prep-host 执行。确认介质已挂载后复制：
+
+```bash
+rsync -a /data/local-ai-offline/ /media/local-ai-offline/
+```
+
+将介质带到新环境，并挂载到同一个 `/media/local-ai-offline` 路径。
+先在 GPU001 执行下一步，再在 bcm-headnode 执行客户端导入；同一介质可依次挂载使用。
+
+### 2.4 在新 GPU 节点 GPU001 导入并启动
+
+先校验和展开本文生成的源码包，再复制模型、核对目标文件的 SHA256，最后导入镜像和启动。
+`local-ai-source.tar.gz` 由本文打包命令生成，解压后源码直接位于目标目录，不加 --strip-components。
+
+```bash
+cd /media/local-ai-offline
+sha256sum -c local-ai-source.tar.gz.sha256
+sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
+tar -xzf local-ai-source.tar.gz -C /raid/local-ai
+
+mkdir -p /raid/local-ai/models
+rsync -a /media/local-ai-offline/models/ /raid/local-ai/models/
+cd /raid/local-ai
+sha256sum -c /media/local-ai-offline/MODELS.sha256
+
+cd /raid/local-ai
+./local-ai --version
+./local-ai image import --profile b300-tp4 --data-dir /raid/local-ai \
+  --archive /media/local-ai-offline/vllm-amd64.tar \
+  --lock /media/local-ai-offline/vllm-amd64.tar.lock.json
+./local-ai server inventory
+nvidia-ctk cdi list
+./local-ai server start --host 0.0.0.0 --profile b300-tp4 \
+  --gpus 0,1,2,3 --name a --port 18000 --data-dir /raid/local-ai
+./local-ai server status --name a
+```
+
+成功标志：所有 SHA256 校验均为 OK；image import 返回 imported=true；
+启动显示 READY，status 返回 ready=true。镜像导入本身会校验归档、平台和镜像内容身份。
+启动前确认 GPU 0,1,2,3 是新机器分配给本次实例的设备，CDI 列表含其 UUID；不复用旧机器 UUID。
+加载或编译可能需要数分钟。尚未就绪时先查看 `/raid/local-ai/instances/a/server.log`，
+安装/导入/启动过程看 `/raid/local-ai/install.log`，解决报错后再继续，不以容器存在为成功。
+
+### 2.5 在新 BCM 节点 bcm-headnode 导入客户端并连接
+
+在这台机器也展开同一个源码包。客户端包解压到用户可写目录，离线介质可以只读挂载。
+
+```bash
+cd /media/local-ai-offline
+sha256sum -c local-ai-source.tar.gz.sha256
+sha256sum -c client-amd64.tar.gz.sha256
+sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
+tar -xzf local-ai-source.tar.gz -C /raid/local-ai
+mkdir -p /home/alice/local-ai-client-import
+tar -xzf client-amd64.tar.gz -C /home/alice/local-ai-client-import
+
+cd /raid/local-ai
+./local-ai client install \
+  --client-dir /home/alice/.local/state/local-ai/clients/amd64 \
+  --binary /home/alice/local-ai-client-import/client/bin/opencode \
+  --seed-cache /home/alice/local-ai-client-import/client/seed-cache
+./local-ai chat --endpoint http://GPU001:18000/v1 \
+  --client-dir /home/alice/.local/state/local-ai/clients/amd64 --check
+./local-ai chat --endpoint http://GPU001:18000/v1 \
+  --client-dir /home/alice/.local/state/local-ai/clients/amd64 \
+  --run '请用 bash 执行 hostname 并报告实际输出。'
+```
+
+成功标志：client install 从本地程序完成，chat --check 返回 ready=true；
+单次任务实际调用工具，hostname 返回新 BCM 的主机名。本例应是 bcm-headnode。
+随后开始交互使用：
+
+```bash
+cd /raid/local-ai
+./local-ai chat --endpoint http://GPU001:18000/v1 \
+  --client-dir /home/alice/.local/state/local-ai/clients/amd64
+```
+
+### 2.6 本流程完成条件
+
+在无外网、仅保留 BCM 到 GPU001 内网连接的条件下，完成前面的服务 READY、客户端 check
+和真实 hostname 任务。客户端启动时输出的 Log 路径保存该会话完整日志。
+新用户应有自己的客户端状态；SSH、Slurm、Kubernetes 凭据及项目依赖在新环境单独配置，
+不从公共材料包迁移个人历史或密钥。显式启用的外部插件/MCP 或下载任务仍须具备相应资源。
+
+## 卡住时按失败步骤检查
+
+| 失败位置 | 先检查什么 |
+|---|---|
+| 旧环境 image export 找不到材料 | --data-dir 是否为真实旧数据目录，原 images/ 锁是否还在，Docker 内是否仍有对应平台镜像；不要直接搬运行时数据库 |
+| SHA256 校验失败 | 停在当前步骤，检查材料是否来自同一批导出并重新复制损坏文件 |
+| 模型缺文件或 revision 冲突 | 完整 models/、目录内 model.lock.json 或匹配的旧根级锁；不只复制权重分片，不自行编造锁 |
+| GPU001 缺 CDI 或启动失败 | 按[部署前置检查](deployment.zh-CN.md)完成宿主机/CDI准备，查看上文实例日志 |
+| BCM 无法访问 API | GPU001 是否 READY，18000 端口、DNS、路由和防火墙是否允许新 BCM 访问；endpoint 不填 0.0.0.0 |
+| 客户端不能执行 | 包内 manifest 的架构和目标 BCM 的 Linux/CPU 是否匹配；不因服务端是 ARM64 就使用 ARM64 客户端 |
+
+本页命令不使用 --force。不要为了“验证离线”重复下载已完整的材料。
+更多参数查[命令手册](commands.md)，已实测范围查[验证记录](validation.md)。
 
 ---
 

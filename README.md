@@ -1,6 +1,6 @@
 # local-ai
 
-当前正式版本：[1.0.0](https://github.com/junli-nv/local-ai/releases/tag/v1.0.0)。使用 `./local-ai --version` 查询项目版本；该版本号与可选的 OpenCode、模型及 vLLM 版本分别管理。
+当前版本标签：[1.0.0](https://github.com/junli-nv/local-ai/tree/v1.0.0)。使用 `./local-ai --version` 查询项目版本；该版本号与可选的 OpenCode、模型及 vLLM 版本分别管理。
 
 在 GPU 服务器上运行容器化推理服务，在 BCM 头节点上运行每位用户自己的 OpenCode 客户端。
 
@@ -99,7 +99,7 @@ GB300 TP2 的 Engram offload 本身约占 189 GiB 主存，另需加载和系统
 | 参数 | 示例含义 / 如何修改 |
 |---|---|
 | `--profile b300-tp4` | 使用 B300 四卡推理配置；TP4 表示同一实例跨 4 张本机 GPU。其他平台按上表选择。 |
-| `--data-dir /raid/local-ai` | 存放权重、镜像锁文件、缓存和日志；不是 Git 源码目录。可改为容量足够的本地目录。 |
+| `--data-dir /raid/local-ai` | 运行数据根目录；本例源码与数据统一在 /raid/local-ai，权重、镜像锁、缓存、实例和日志位于其下，也可独立配置数据目录。 |
 | `--gpus 0,1,2,3` | 使用服务端 `nvidia-smi` 显示的这 4 张卡；也可写完整 GPU UUID。数量须匹配配置。 |
 | `--name a` | 自定义实例名，用于区分容器与日志；查询、停止时沿用同一个名字。 |
 | `--port 18000` | 模型 HTTP API 端口，默认 18000；第二个实例换成 18001。 |
@@ -108,9 +108,12 @@ GB300 TP2 的 Engram offload 本身约占 189 GiB 主存，另需加载和系统
 数据目录默认取环境变量 `LOCAL_AI_DATA_DIR`，未设置时为 `/raid/local-ai`。
 若修改目录，下载、计划和启动时须使用同一个 `--data-dir`，参数不会由前一条命令自动继承。
 
+以下克隆命令用于新安装，/raid/local-ai 应为空；已有安装直接进入原安装目录继续。示例账户需 sudo 和 Docker 权限，root 可省略 sudo。
+
 ```bash
-git clone https://github.com/junli-nv/local-ai.git
-cd local-ai
+sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
+git clone --branch v1.0.0 --depth 1 https://github.com/junli-nv/local-ai.git /raid/local-ai
+cd /raid/local-ai
 # 查看配置及验证状态
 ./local-ai profiles
 docker version
@@ -248,8 +251,9 @@ docker rm local-ai-a
 以下命令在 **BCM** 执行，使用实际需要执行工具的用户账户：
 
 ```bash
-git clone https://github.com/junli-nv/local-ai.git
-cd local-ai
+sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
+git clone --branch v1.0.0 --depth 1 https://github.com/junli-nv/local-ai.git /raid/local-ai
+cd /raid/local-ai
 ./local-ai client install
 ./local-ai chat --endpoint http://GPU001:18000/v1 --project /home/alice/project
 ```
@@ -317,7 +321,7 @@ OpenCode 的默认下载版本只是验收参考，可用 `client install --vers
 | BCM 私有 `services/ID/` | 用户历史、缓存及每次会话完整日志 |
 
 凭据、二进制、模型权重和聊天历史不进入 Git。
-离线时分别携带源码、服务端资源和 BCM 客户端资源，具体步骤见 [离线部署](docs/offline.md)。
+离线部署按起点选择：[从已安装环境导出并迁移](docs/offline.md#场景一从已安装环境导出并迁移)，或[从联网环境下载并准备](docs/offline.md#场景二从联网环境下载并准备)。每条路线都包含准备、转移、新环境导入和验收的完整示例。
 
 ## 开发与扩展
 

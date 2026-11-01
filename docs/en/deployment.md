@@ -2,7 +2,7 @@
 
 [中文（默认）](../deployment.zh-CN.md)
 
-Run inference on the GPU server; run OpenCode and its tools on BCM. Keep source separate from model data and user state.
+Run inference on the GPU server; run OpenCode and its tools on BCM. This example installs source and GPU data under /raid/local-ai; user-private client state remains separate.
 
 ## Example environment
 
@@ -35,7 +35,7 @@ Choose these values before running the example:
 | Option | Meaning / what to change |
 |---|---|
 | `--profile b300-tp4` | B300 four-GPU inference preset. TP4 splits one instance across four local GPUs. |
-| `--data-dir /raid/local-ai` | Weights, image locks, cache and logs; separate from the Git checkout. Choose a large local directory. |
+| `--data-dir /raid/local-ai` | Runtime data root; this example keeps source and models/image locks/cache/instances/logs under the same /raid/local-ai root. Data may also be configured separately. |
 | `--gpus 0,1,2,3` | Server GPU indices from nvidia-smi, or full UUIDs. Count must match the profile. |
 | `--name a` | Instance name, reused for status/stop and its log directory; not a hostname. |
 | `--port 18000` | Model HTTP API port, default 18000. Use 18001 for a second instance. |
@@ -44,11 +44,14 @@ Server plan/start default to profile b300-tp4 and name a; --gpus is required.
 The data directory uses LOCAL_AI_DATA_DIR if set, otherwise /raid/local-ai.
 Use the same --data-dir for preparation, planning and startup: options do not carry over between commands.
 
-Allocate GPUs first. Install compatible drivers, Docker API 1.49+, NVIDIA Container Toolkit and Python 3.10+. Keep source and /raid/local-ai data separate. The tool does not stop other jobs.
+Allocate GPUs first. Install compatible drivers, Docker API 1.49+, NVIDIA Container Toolkit and Python 3.10+. Source and runtime data share the /raid/local-ai installation root in these examples. The tool does not stop other jobs.
+
+These clone commands are for a new, empty /raid/local-ai installation. For an existing installation, enter its directory directly. The example account needs sudo/Docker access; root may omit sudo.
 
 ```bash
-git clone https://github.com/junli-nv/local-ai.git
-cd local-ai
+sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
+git clone --branch v1.0.0 --depth 1 https://github.com/junli-nv/local-ai.git /raid/local-ai
+cd /raid/local-ai
 nvidia-smi
 nvidia-ctk cdi list
 # List profiles and validation status
@@ -172,8 +175,9 @@ See [README](../../README.en.md) for commands and network access requirements.
 Install as the user who will execute tools:
 
 ```bash
-git clone https://github.com/junli-nv/local-ai.git
-cd local-ai
+sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
+git clone --branch v1.0.0 --depth 1 https://github.com/junli-nv/local-ai.git /raid/local-ai
+cd /raid/local-ai
 ./local-ai client install
 ```
 

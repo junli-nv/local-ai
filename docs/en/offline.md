@@ -1,37 +1,53 @@
-# Offline deployment
+# Offline deployment: two complete workflows
 
 [中文（默认）](../offline.md)
 
-Prepare three independent artifact sets: source, GPU-server image/weights, and
-BCM-native client assets. A GB300 server usually needs ARM64 images while its BCM
-client may still need AMD64. Never choose client architecture from the GPU name.
+Choose one workflow and follow it from preparation through acceptance.
+You do not need to assemble steps from the other workflow.
 
-The target OS must already have the required tools: compatible GPU driver,
-Docker/CDI/Toolkit on the server; Python/Bash/git/rg/script on BCM. Host driver
-and OS packages are not included inside vLLM. Plan offline installation packages
-for the actual distro/kernel. Linux ELF architecture is not an entire ABI check.
+| Workflow | Starting point | Preparation hosts |
+|---|---|---|
+| [Scenario 1](#scenario-1-export-an-installed-environment-and-migrate) | A working installation to migrate | gpu-old and bcm-old |
+| [Scenario 2](#scenario-2-download-on-an-online-preparation-host) | No existing installation; internet available | prep-host |
 
-## Example paths and options
+## Fixed example hosts and paths
 
-| Path / option | Meaning |
+The example uses b300-tp4: an AMD64 server with four allocated B300 GPUs and
+a Linux AMD64 BCM client. Select server and client architectures independently.
+
+| Item | Value throughout both workflows |
 |---|---|
-| /data/local-ai | Artifact root on the connected preparation host |
-| /data/export -> /media/export | Export location, then its copied/mounted path on the offline host |
-| /raid/local-ai | Runtime data on offline GPU001 |
-| --output | Destination export archive |
-| --archive / --lock | Image archive and matching lock from the same export |
-| --binary / --seed-cache | Unpacked native OpenCode binary and public cache on BCM |
+| Installation root including source | /raid/local-ai |
+| Old/new GPU data root | /raid/local-ai |
+| Online preparation scratch data | /data/local-ai-prep |
+| Preparation artifact bundle | /data/local-ai-offline |
+| Removable-media mount on preparation/new hosts | /media/local-ai-offline |
+| BCM account and client assets | alice; /home/alice/.local/state/local-ai/clients/amd64 |
+| New inference endpoint | http://GPU001:18000/v1; instance a, GPUs 0,1,2,3 |
 
-Replace example paths with actual mount points. --profile selects the server platform; --data-dir selects this preparation/runtime root.
-See the [manual](commands.md) for client options and defaults. rsync -a SOURCE/ DEST/ copies directory contents with attributes.
-sha256sum -c verifies a manifest; stop if checksums do not match.
+Before starting:
 
-## Offline artifact checklist
+- The example account alice has sudo and Docker access; root can omit sudo.
+  Replace account/path values consistently for another setup.
+- New GPU001 already has Python 3.10+, compatible drivers, Docker API 1.49+
+  and NVIDIA Container Toolkit/CDI. New bcm-headnode has Python 3.10+,
+  Bash, Git, rg and util-linux script.
+- rsync, tar, sha256sum, find, sort and xargs are available. BCM can reach the
+  internal model API. Media is mounted with enough space: roughly 510 GB of
+  weights plus images, archives and copies.
+- Use an empty /raid/local-ai install root on new hosts and an empty bundle for each
+  preparation batch. Preserve old installations; use their actual source/data paths if different.
+  Prepare OS/driver packages separately.
+- For custom recipes, carry and verify the same JSON catalog, select it through
+  LOCAL_AI_CATALOG at every stage, and retain matching source/recipe/locks.
 
-Carry these files together, shown under /media/export. AMD64 filenames are examples; use the matching ARM64 artifacts where required. Renaming a file does not convert its platform.
+Source resides directly in /raid/local-ai, alongside GPU models/, images/,
+instances/ and install.log. BCM client assets remain in the user-private path.
+
+The complete bundle must contain:
 
 ```text
-/media/export/
+/data/local-ai-offline/
   local-ai-source.tar.gz
   local-ai-source.tar.gz.sha256
   vllm-amd64.tar
@@ -42,128 +58,307 @@ Carry these files together, shown under /media/export. AMD64 filenames are examp
   client-amd64.tar.gz.sha256
 ```
 
-The preparation steps below generate these files. Copy the source archive and checksum from the connected checkout's dist/ directory into the export set. Include the complete models/ tree and its checksum manifest, not only weight shards. Prepare OS, driver and container-runtime installation packages separately.
+## Scenario 1: export an installed environment and migrate
 
-After preparing and transferring the artifacts, extract source on **both GPU001 and bcm-headnode**. Use a writable, empty checkout directory:
+### 1.1 Export source, image and model on old GPU host gpu-old
+
+Run from the actual installation root. Git checkouts export committed source;
+extracted installations without .git package an explicit source list. Review local
+changes first. Neither branch archives models/, images/, instances/ or the whole root.
+These commands do not download or require stopping a read-only serving instance.
+Do not update model files during the copy.
 
 ```bash
-cd /media/export
-sha256sum -c local-ai-source.tar.gz.sha256
-mkdir -p /home/alice/local-ai
-tar -xzf local-ai-source.tar.gz -C /home/alice/local-ai
-cd /home/alice/local-ai
-./local-ai --help
-```
+cd /raid/local-ai
+./local-ai --version
+sudo install -d -o "$(id -u)" -g "$(id -g)" /data/local-ai-offline
+if [ -e .git ]; then
+  git archive --format=tar.gz --output=/data/local-ai-offline/local-ai-source.tar.gz HEAD
+else
+  tar --exclude='__pycache__' --exclude='*.pyc' --exclude='*.log' --exclude='.env*' \
+    -czf /data/local-ai-offline/local-ai-source.tar.gz \
+    local-ai pyproject.toml src README.md README.en.md AGENTS.md docs scripts tests
+fi
 
-Later /path/to/local-ai means this source directory; /raid/local-ai is the GPU001 runtime data root. Use the same explicit --data-dir for import and startup, especially if LOCAL_AI_DATA_DIR is set.
+./local-ai image export --profile b300-tp4 --data-dir /raid/local-ai \
+  --output /data/local-ai-offline/vllm-amd64.tar
 
-## 1. Source snapshot
-
-From a reviewed commit:
-```bash
-mkdir -p dist
-git archive --format=tar.gz --output=dist/local-ai-source.tar.gz HEAD
-cd dist
+mkdir -p /data/local-ai-offline/models
+rsync -aL /raid/local-ai/models/ /data/local-ai-offline/models/
+cd /data/local-ai-offline
 sha256sum local-ai-source.tar.gz > local-ai-source.tar.gz.sha256
-cd ..
+find models -type f -print0 | sort -z | xargs -0 -r sha256sum > MODELS.sha256
 ```
 
-Do not package the whole working directory: ignored files may include raw logs
-and personal state. Source does not include 510 GB model weights or native binaries.
+Success: source/checksum, image/matching lock and complete models/MODELS.sha256
+exist. rsync -L copies link targets, making the bundle self-contained.
+Preserve existing model locks; never fabricate a revision for missing locks.
+Do not migrate active Docker/containerd databases, old instances, logs or histories.
 
-## 2. GPU image and weights
+### 1.2 Export the client on old BCM host bcm-old and collect it on gpu-old
 
-On a connected Docker preparation host:
+Use the current account's actual client asset directory, not the
+~/.local/bin/opencode resume launcher. The example uses scp instead of assuming
+that the two old hosts share storage.
+
 ```bash
-./local-ai image pull --profile b300-tp4 --data-dir /data/local-ai
-./local-ai image export --profile b300-tp4 --data-dir /data/local-ai \
-  --output /data/export/vllm-amd64.tar
+cd /raid/local-ai
+sudo install -d -o "$(id -u)" -g "$(id -g)" /data/local-ai-offline
+./local-ai client export \
+  --client-dir /home/alice/.local/state/local-ai/clients/amd64 \
+  --output /data/local-ai-offline/client-amd64.tar.gz
+scp /data/local-ai-offline/client-amd64.tar.gz \
+  /data/local-ai-offline/client-amd64.tar.gz.sha256 \
+  alice@gpu-old:/data/local-ai-offline/
 ```
 
-For GB300 replace the profile with gb300-tp4 (or gb300-tp2) and use a distinct
-vllm-arm64.tar. Pull/inspect/save explicitly select the image platform. Preparing
-an ARM64 image archive on AMD64 does not require executing ARM64 code.
-Cross-platform image handling requires Docker API 1.49+; Docker 29 is the tested baseline.
+Success: gpu-old now has the entire bundle checklist. Client archives contain
+binary, public cache and manifest, excluding private history and credentials.
 
-Export writes a companion `.lock.json` with the archive SHA256 and selected image
-config/layer fingerprint. Carry both files. No mutable-tag-only fallback is used.
+### 1.3 Transfer the complete bundle onto offline media
 
-Download model weights on a preparation host using a native-CPU profile:
+Run on gpu-old after mounting the media.
+
 ```bash
-./local-ai model download --profile b300-tp4 --data-dir /data/local-ai
-rsync -a /data/local-ai/models/ /data/export/models/
-cd /data/export
-find models -type f -print0 | sort -z | xargs -0 sha256sum > MODELS.sha256
+rsync -a /data/local-ai-offline/ /media/local-ai-offline/
 ```
 
-Model files are CPU-architecture independent; copies must include configuration,
-tokenizer, index and all shards. The same model copy can serve two instances.
+Carry the media to the new environment and mount it at the same
+/media/local-ai-offline path. Import on GPU001 next, then on bcm-headnode;
+the same media can be mounted on each host in turn.
 
-On the offline GPU host, extract source, verify/copy weights, regenerate local
-CDI if needed, then import:
+### 1.4 Import and start on new GPU host GPU001
+
+Verify/extract source, copy weights, verify destination hashes, import the image,
+then start. This source archive is produced by the packaging commands above
+without a directory prefix; do not add --strip-components.
+
 ```bash
-cd /media/export
-sha256sum -c MODELS.sha256
-sudo mkdir -p /raid/local-ai/models
-sudo rsync -a models/ /raid/local-ai/models/
-cd /path/to/local-ai
+cd /media/local-ai-offline
+sha256sum -c local-ai-source.tar.gz.sha256
+sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
+tar -xzf local-ai-source.tar.gz -C /raid/local-ai
+
+mkdir -p /raid/local-ai/models
+rsync -a /media/local-ai-offline/models/ /raid/local-ai/models/
+cd /raid/local-ai
+sha256sum -c /media/local-ai-offline/MODELS.sha256
+
+cd /raid/local-ai
+./local-ai --version
 ./local-ai image import --profile b300-tp4 --data-dir /raid/local-ai \
-  --archive /media/export/vllm-amd64.tar \
-  --lock /media/export/vllm-amd64.tar.lock.json
-./local-ai server start --host 0.0.0.0 --profile b300-tp4 --gpus 0,1,2,3 --name a --data-dir /raid/local-ai
+  --archive /media/local-ai-offline/vllm-amd64.tar \
+  --lock /media/local-ai-offline/vllm-amd64.tar.lock.json
+./local-ai server inventory
+nvidia-ctk cdi list
+./local-ai server start --host 0.0.0.0 --profile b300-tp4 \
+  --gpus 0,1,2,3 --name a --port 18000 --data-dir /raid/local-ai
 ./local-ai server status --name a
 ```
 
-Use the ARM64 archive/profile on GB300. Local image identity can be represented
-differently after Docker import; equivalent config/layer content and matching
-platform are required. Cached CUDA kernels are not assumed portable; first start
-may compile locally using the pinned image.
+Success: all checksums report OK, image import returns imported=true, startup
+reports READY and status returns ready=true. Import checks archive/platform/content
+identity. Confirm new GPUs 0,1,2,3 are allocated and their UUIDs exist in CDI;
+do not copy old host GPU UUIDs. Loading/compilation may take minutes.
+If not ready, inspect /raid/local-ai/instances/a/server.log and preparation
+/raid/local-ai/install.log. Resolve the failure before continuing.
 
-## 3. BCM client assets
+### 1.5 Import the client and connect on new BCM host bcm-headnode
 
-On a connected headnode with the same target CPU/compatible Linux environment:
+Extract the same source on this host. Unpack client assets under the writable
+user directory; the offline media itself may be read-only.
+
 ```bash
-./local-ai client install
-./local-ai client export --output /data/export/client-amd64.tar.gz
-```
-
-The export contains `client/bin/opencode`, a public `seed-cache`, and an asset
-manifest. It excludes histories, auth databases and SSH keys.
-Matching architecture matters for cached executables too.
-
-On offline BCM:
-```bash
-cd /media/export
+cd /media/local-ai-offline
+sha256sum -c local-ai-source.tar.gz.sha256
 sha256sum -c client-amd64.tar.gz.sha256
-mkdir -p client-unpacked
-tar -xzf client-amd64.tar.gz -C client-unpacked
-cd /path/to/local-ai
+sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
+tar -xzf local-ai-source.tar.gz -C /raid/local-ai
+mkdir -p /home/alice/local-ai-client-import
+tar -xzf client-amd64.tar.gz -C /home/alice/local-ai-client-import
+
+cd /raid/local-ai
 ./local-ai client install \
-  --binary /media/export/client-unpacked/client/bin/opencode \
-  --seed-cache /media/export/client-unpacked/client/seed-cache
-./local-ai chat --endpoint http://GPU001:18000/v1 --check
-./local-ai chat --endpoint http://GPU001:18000/v1 --run 'Use bash to run hostname and report the result.'
+  --client-dir /home/alice/.local/state/local-ai/clients/amd64 \
+  --binary /home/alice/local-ai-client-import/client/bin/opencode \
+  --seed-cache /home/alice/local-ai-client-import/client/seed-cache
+./local-ai chat --endpoint http://GPU001:18000/v1 \
+  --client-dir /home/alice/.local/state/local-ai/clients/amd64 --check
+./local-ai chat --endpoint http://GPU001:18000/v1 \
+  --client-dir /home/alice/.local/state/local-ai/clients/amd64 \
+  --run 'Run hostname with bash and report its actual output.'
 ```
 
-No Node/npm/Docker is required on BCM. Use `--sha256` with the exported manifest's
-binary checksum when importing a standalone binary outside the checked archive.
-Verify network-free operation after any new client release or plugin change.
+Success: installation uses the local binary, chat --check returns ready=true,
+and the one-shot task actually invokes the hostname tool on the new BCM host
+(bcm-headnode in this example). Start interactive use:
 
-Offline import/start append to /raid/local-ai/install.log. Repeating preparation checks reuses complete local artifacts; offline procedures do not use --force. Missing files, revision conflicts and truncated shards are explicit failures, not successful acceptance.
+```bash
+cd /raid/local-ai
+./local-ai chat --endpoint http://GPU001:18000/v1 \
+  --client-dir /home/alice/.local/state/local-ai/clients/amd64
+```
 
-## 4. Acceptance
+### 1.6 Completion criteria
 
-With internet unavailable but the internal model API reachable:
-1. Cold-start the image and complete model locally; check API readiness.
-2. Start a fresh user's client, not just an administrator's already-warm account.
-3. Verify search/read/edit/test tools and that hostname is the BCM host.
-4. Check complete private logs, selected GPU UUIDs, HBM and client process cleanup.
-5. Test representative input lengths and concurrency; do not extrapolate decode speed.
+With no internet but internal BCM-to-GPU001 connectivity, complete READY,
+client check and the actual hostname task above. The client's printed Log path
+contains its full session log. Configure new users' SSH/Slurm/Kubernetes access
+and project dependencies separately; do not migrate private histories or keys
+inside shared client archives. Explicit external plugins/MCP or download tasks
+still require their own prepared resources.
 
-HF/Transformers offline flags are enabled in the server. Client updates, model
-catalog fetch, default external plugins and LSP downloads are disabled.
-Explicit project plugins, external MCP/search, git clone or pip/npm/apt downloads
-can still require internet; prepare project dependencies and tools in advance.
+## Scenario 2: download on an online preparation host
 
-See validation.md for what was actually tested. Network-isolated client tests
-do not by themselves establish a fresh GPU-server cold start on another platform.
+prep-host is Linux AMD64 with Python 3.10+, Git, Docker API 1.49+ and copy/checksum
+tools, and access to GitHub, the registry, Hugging Face and NPM. No GPU is required.
+Client version validation executes the binary, so the host must also match the
+target BCM CPU and Linux compatibility. This example selects v1.0.0; another
+reviewed version can be selected consistently.
+
+### 2.1 Download source, image and model, then export on prep-host
+
+```bash
+sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai /data/local-ai-prep
+git clone --branch v1.0.0 --depth 1 https://github.com/junli-nv/local-ai.git /raid/local-ai
+cd /raid/local-ai
+./local-ai --version
+sudo install -d -o "$(id -u)" -g "$(id -g)" /data/local-ai-offline
+git archive --format=tar.gz --output=/data/local-ai-offline/local-ai-source.tar.gz HEAD
+
+./local-ai image pull --profile b300-tp4 --data-dir /data/local-ai-prep
+./local-ai model download --profile b300-tp4 --data-dir /data/local-ai-prep
+./local-ai image export --profile b300-tp4 --data-dir /data/local-ai-prep \
+  --output /data/local-ai-offline/vllm-amd64.tar
+
+mkdir -p /data/local-ai-offline/models
+rsync -aL /data/local-ai-prep/models/ /data/local-ai-offline/models/
+cd /data/local-ai-offline
+sha256sum local-ai-source.tar.gz > local-ai-source.tar.gz.sha256
+find models -type f -print0 | sort -z | xargs -0 -r sha256sum > MODELS.sha256
+```
+
+Success: source, image/archive lock and complete model/checksum exist.
+Model download runs a native-CPU container, not merely an image fetch;
+b300-tp4 matches this AMD64 preparation host.
+
+### 2.2 Download and export the BCM client on the same prep-host
+
+```bash
+cd /raid/local-ai
+./local-ai client install --client-dir /data/local-ai-prep/client-amd64
+./local-ai client export --client-dir /data/local-ai-prep/client-amd64 \
+  --output /data/local-ai-offline/client-amd64.tar.gz
+```
+
+Success: /data/local-ai-offline contains the complete checklist.
+Add --version X.Y.Z to client install when selecting a particular release;
+offline import detects the actual binary version.
+
+### 2.3 Transfer the complete bundle onto offline media
+
+Run on prep-host after mounting the media.
+
+```bash
+rsync -a /data/local-ai-offline/ /media/local-ai-offline/
+```
+
+Carry the media to the new environment and mount it at the same
+/media/local-ai-offline path. Import on GPU001 next, then on bcm-headnode;
+the same media can be mounted on each host in turn.
+
+### 2.4 Import and start on new GPU host GPU001
+
+Verify/extract source, copy weights, verify destination hashes, import the image,
+then start. This source archive is produced by the packaging commands above
+without a directory prefix; do not add --strip-components.
+
+```bash
+cd /media/local-ai-offline
+sha256sum -c local-ai-source.tar.gz.sha256
+sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
+tar -xzf local-ai-source.tar.gz -C /raid/local-ai
+
+mkdir -p /raid/local-ai/models
+rsync -a /media/local-ai-offline/models/ /raid/local-ai/models/
+cd /raid/local-ai
+sha256sum -c /media/local-ai-offline/MODELS.sha256
+
+cd /raid/local-ai
+./local-ai --version
+./local-ai image import --profile b300-tp4 --data-dir /raid/local-ai \
+  --archive /media/local-ai-offline/vllm-amd64.tar \
+  --lock /media/local-ai-offline/vllm-amd64.tar.lock.json
+./local-ai server inventory
+nvidia-ctk cdi list
+./local-ai server start --host 0.0.0.0 --profile b300-tp4 \
+  --gpus 0,1,2,3 --name a --port 18000 --data-dir /raid/local-ai
+./local-ai server status --name a
+```
+
+Success: all checksums report OK, image import returns imported=true, startup
+reports READY and status returns ready=true. Import checks archive/platform/content
+identity. Confirm new GPUs 0,1,2,3 are allocated and their UUIDs exist in CDI;
+do not copy old host GPU UUIDs. Loading/compilation may take minutes.
+If not ready, inspect /raid/local-ai/instances/a/server.log and preparation
+/raid/local-ai/install.log. Resolve the failure before continuing.
+
+### 2.5 Import the client and connect on new BCM host bcm-headnode
+
+Extract the same source on this host. Unpack client assets under the writable
+user directory; the offline media itself may be read-only.
+
+```bash
+cd /media/local-ai-offline
+sha256sum -c local-ai-source.tar.gz.sha256
+sha256sum -c client-amd64.tar.gz.sha256
+sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
+tar -xzf local-ai-source.tar.gz -C /raid/local-ai
+mkdir -p /home/alice/local-ai-client-import
+tar -xzf client-amd64.tar.gz -C /home/alice/local-ai-client-import
+
+cd /raid/local-ai
+./local-ai client install \
+  --client-dir /home/alice/.local/state/local-ai/clients/amd64 \
+  --binary /home/alice/local-ai-client-import/client/bin/opencode \
+  --seed-cache /home/alice/local-ai-client-import/client/seed-cache
+./local-ai chat --endpoint http://GPU001:18000/v1 \
+  --client-dir /home/alice/.local/state/local-ai/clients/amd64 --check
+./local-ai chat --endpoint http://GPU001:18000/v1 \
+  --client-dir /home/alice/.local/state/local-ai/clients/amd64 \
+  --run 'Run hostname with bash and report its actual output.'
+```
+
+Success: installation uses the local binary, chat --check returns ready=true,
+and the one-shot task actually invokes the hostname tool on the new BCM host
+(bcm-headnode in this example). Start interactive use:
+
+```bash
+cd /raid/local-ai
+./local-ai chat --endpoint http://GPU001:18000/v1 \
+  --client-dir /home/alice/.local/state/local-ai/clients/amd64
+```
+
+### 2.6 Completion criteria
+
+With no internet but internal BCM-to-GPU001 connectivity, complete READY,
+client check and the actual hostname task above. The client's printed Log path
+contains its full session log. Configure new users' SSH/Slurm/Kubernetes access
+and project dependencies separately; do not migrate private histories or keys
+inside shared client archives. Explicit external plugins/MCP or download tasks
+still require their own prepared resources.
+
+## Troubleshoot at the failing step
+
+| Failure | Check first |
+|---|---|
+| Old image export cannot find assets | Actual old --data-dir, images/ lock and local platform image; do not migrate active runtime databases |
+| SHA256 mismatch | Stop at that step; verify one matching export batch and recopy damaged files |
+| Missing model/revision conflict | Complete models/ including configuration/tokenizer/index/shards and existing locks; do not fabricate provenance |
+| Missing CDI/start failure | Complete host/CDI prerequisites in the [deployment guide](deployment.md), then inspect the runtime log above |
+| BCM cannot reach API | GPU001 READY, port 18000, DNS/routing/firewall; never use 0.0.0.0 as endpoint |
+| Client cannot execute | Exported manifest CPU and target BCM Linux compatibility, independently of the GPU host |
+
+These examples do not use --force. Do not redownload complete artifacts just to
+validate offline use. See the [manual](commands.md) and [validation](validation.md)
+for options and the actually tested scope.
