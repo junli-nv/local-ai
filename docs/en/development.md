@@ -46,7 +46,7 @@ Chinese is primary; maintain English separately and synchronize both entry paths
 | Models/revisions change | Configure recipe identities, directories, names, engine/client capabilities and separate locks; do not inherit hardware acceptance or DeepSeek-specific settings |
 | Directory installation and migration | The unpacked directory is the root, with ordinary src/. install prepares assets in place; export writes a complete dist/ bundle excluding dist/, instance state, histories and credentials. Reinstall/reconfigure after moving |
 | One BCM, multiple model services | Initial installation endpoint is optional; change defaults through config or direct file editing, not reinstallation. chat --endpoint/--model override one invocation without rewriting defaults. Separate endpoint history/cache and resume original connection; never silently fall back to the default node |
-| Source-script delivery | Deliver main/exact commits during development; passing checks does not trigger tags; formal versions require explicit request and quality review |
+| Source-script delivery | Develop on main/exact commits; v1.2.0 identifies this validated version, and future tags still require explicit request and quality review |
 | Single-user speed and first-use compilation spikes | Keep the baseline unchanged; opt into DSpark and explicit bounded warmup. Separate API READY from WARMUP COMPLETE, persist compiler caches per recipe, invalidate completion on restart, and report actual coverage and concurrency tradeoffs |
 | Around 400 ms TTFT seems high | Record method, input size, cache/load and timing first. Separate compilation, generation delay and reasoning content; avoid one-number conclusions |
 
@@ -124,7 +124,7 @@ pyproject.toml configures Python packaging and developer tools; ordinary source-
 | Section | Purpose here |
 |---|---|
 | build-system | setuptools>=68 build backend |
-| project | cluster-local-ai 1.1.0, Python>=3.10, no third-party runtime dependencies |
+| project | cluster-local-ai 1.2.0, Python>=3.10, no third-party runtime dependencies |
 | project.scripts | Installed local-ai entry point: local_ai.cli:main |
 | tool.setuptools | Find packages under src and include profiles.json |
 | project.optional-dependencies | dev extra installs Ruff 0.14.2 |
@@ -282,9 +282,9 @@ original backup when downgrading across incompatible database migrations.
 
 ## Delivery and version labels
 
-Deliver development source from main and exact commits. Existing v1.0.0/v1.1.0 tags have been withdrawn; the source version is not a stability promise. Tests and CI are basic requirements, not automatic release readiness. Do not create tags or GitHub Releases without an explicit user request.
+v1.2.0 identifies this validated version; withdrawn v1.0.0/v1.1.0 tags are not reused. Development continues on main/exact commits, with support limited by the validation record. Tests and CI are basic requirements; future tags require an explicit user request and do not automatically create GitHub Releases.
 
-For routine delivery, review implementation and all documentation, validate appropriately, commit/push, and verify the remote commit/CI. If a formal version is explicitly requested later, assess complete installation paths, documentation consistency, compatibility and known issues first. Only then align versions/evidence and tag the exact successful CI commit. Exact commits remain available for reproduction and rollback.
+For routine delivery, review implementation and all documentation, validate appropriately, commit/push, and verify the remote commit/CI. For an explicitly requested version, assess installation paths, documentation consistency, compatibility and known issues. Align versions/evidence and create an annotated tag on the exact successful CI commit. Exact commits remain available for reproduction and rollback.
 
 ## Directory installation implementation
 

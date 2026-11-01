@@ -7,7 +7,7 @@ user logs are intentionally omitted from this public record.
 
 The 2026-10-31 integration records below describe the previous client. Tunnel entries are historical; the current client uses API endpoints without built-in forwarding or a separate environment-doctor command. New local HTTP regressions cover direct connections, model checks, retry and no SSH subprocess. They do not constitute new GPU acceptance.
 
-Version labels 1.0.0/1.1.0 below identify historical candidate checks. Their Git tags have been withdrawn; these records do not establish a current stable release. Source is delivered from main/exact commits.
+Version labels 1.0.0/1.1.0 below identify historical candidate checks whose tags were withdrawn. The current version is v1.2.0; each acceptance record retains its original date, method and limits. Tagging does not expand support.
 
 ## Hardware and pinned versions
 
@@ -231,3 +231,7 @@ Cold-cache start commands took about 428.1 seconds for control and 523.1 includi
 131 CPU unit/documentation tests, Ruff lint/format, diff checks and package-content checks passed. CPU coverage includes real TCP TIME_WAIT reuse with active-listener rejection, bounded HTTP warmup, partial failure, cancellation, duplicate locks, wrong deployment metadata and stale restart markers. GB300 and complete DSpark tool round trips remain unvalidated.
 
 The first instance switch exposed a TIME_WAIT false port conflict. After confirming no listener, preflight was fixed with SO_REUSEADDR and a real TCP regression; active listeners remain rejected. All control requests were retained and only the unfinished warmup group resumed. This change affects preflight, not engine arguments or payloads. See the [performance record](performance.md) for the full optimization and SGLang investigation.
+
+## v1.2.0 version marking
+
+This version includes directory installation/offline bundles, configurable endpoints, the optional B300 DSpark recipe and explicit inference warmup. Performance investigation and SGLang findings remain documented. This marking changes version metadata and source-download references without changing the previously validated inference settings. CPU/documentation and package checks are repeated; tag the exact commit only after its CI succeeds. Hardware evidence remains limited to the scenarios above; no additional GPU or disconnected-system acceptance is claimed.

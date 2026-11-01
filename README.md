@@ -2,7 +2,7 @@
 
 在 GPU 服务器运行 vLLM，在 BCM 头节点运行 OpenCode。文件、Shell、Git、SSH 等工具由 BCM 上的当前用户执行。
 
-当前提供 main 分支的开发源码，尚无稳定版本标签。./local-ai --version 是源码版本号，实际验收范围见[验证记录](docs/validation.md)。
+当前版本为 v1.2.0，以下示例下载该标签的完整源码。./local-ai --version 应显示 1.2.0，实际验收范围与未覆盖平台见[验证记录](docs/validation.md)。
 
 ## 示例约定与文档入口
 
@@ -50,7 +50,7 @@ BCM 架构独立选择。配置只使用同一 OS 可见的本地 GPU；GB300 TP
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/heads/main.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.2.0.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ./local-ai --version
@@ -126,7 +126,7 @@ start 默认等待 600 秒，加载和编译期间显示 NOT READY 及日志位�
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/heads/main.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.2.0.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ```
