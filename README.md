@@ -204,7 +204,7 @@ chat --endpoint 不改写 installation.json，也不要求重新安装。--check
 
 ## 更新已有安装
 
-按[程序更新指南](docs/update.md)分别更新 GPU 和 BCM 的实际程序目录，保留资源、配置与运行实例。独立 scripts/update.py 支持指定标签、本地源码包和备份回退，不执行 install 或资源准备。v1.2.0 标签固定时尚未包含脚本，指南给出首次获取方法。
+按[程序更新指南](docs/update.md)分别更新 GPU 和 BCM 的实际程序目录，保留资源、配置与运行实例。独立 scripts/update.py 支持指定标签、本地源码包和备份回退，不执行 install 或资源准备。v1.2.0 已包含更新脚本；旧安装没有脚本时，指南给出首次获取方法。
 
 ## 导出与离线安装
 

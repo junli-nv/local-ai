@@ -206,7 +206,7 @@ Tasks include hardware troubleshooting, scripts, services and Slurm/Kubernetes j
 
 ## Update an existing installation
 
-Use the [program update guide](docs/en/update.md) to update GPU and BCM installations separately while retaining resources, configuration and running instances. The standalone scripts/update.py supports explicit tags, local source archives and backup rollback, without install or resource preparation. The fixed v1.2.0 tag predates the helper; the guide includes its one-time bootstrap.
+Use the [program update guide](docs/en/update.md) to update GPU and BCM installations separately while retaining resources, configuration and running instances. The standalone scripts/update.py supports explicit tags, local source archives and backup rollback, without install or resource preparation. v1.2.0 includes the updater; the guide also covers bootstrapping installations that lack it.
 
 ## Export and offline installation
 

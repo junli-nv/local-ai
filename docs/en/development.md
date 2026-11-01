@@ -288,7 +288,7 @@ For routine delivery, review implementation and all documentation, validate appr
 
 ## Program updater maintenance
 
-The standalone scripts/update.py must use only Python 3.10+ standard library and must not import target installation modules, execute install/Docker/client commands, or read/hash model shards. Keep its program-path allowlist separate from resources and custom catalogs. Preserve settings permissions/defaults, retire stale bundle receipts, keep backup format compatibility, and test source-only offline updates, malformed archives, rollback, partial failure and unchanged resource inodes. The helper remains in scripts/ when a target tag predates it, so existing source export includes it. Program upgrades do not justify moving an existing tag. Full operations live only in the [update guide](update.md).
+The standalone scripts/update.py must use only Python 3.10+ standard library and must not import target installation modules, execute install/Docker/client commands, or read/hash model shards. Keep its program-path allowlist separate from resources and custom catalogs. Preserve settings permissions/defaults, retire stale bundle receipts, keep backup format compatibility, and test source-only offline updates, malformed archives, rollback, partial failure and unchanged resource inodes. The helper remains in scripts/ when a target tag predates it, so existing source export includes it. Program upgrades do not automatically move tags. An explicitly requested retag must record the old target and newly validated commit; this v1.2.0 retag includes the updater at the user's request. Full operations live only in the [update guide](update.md).
 
 ## Directory installation implementation
 

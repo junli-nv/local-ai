@@ -6,12 +6,12 @@ Update the GPU001 and bcm-headnode program directories separately. Examples use 
 
 ## Bootstrap and upgrade
 
-The immutable v1.2.0 tag predates the updater, so obtain the script separately the first time. Exit local chat and avoid launching management commands during replacement. GPU inference can remain running.
+v1.2.0 includes scripts/update.py. For an older installation without the helper, obtain it separately using the commands below. Exit local chat and avoid launching management commands during replacement. GPU inference can remain running.
 
 On GPU001, and separately on BCM for its own installation:
 
 ```bash
-curl -fL --retry 3 https://raw.githubusercontent.com/junli-nv/local-ai/main/scripts/update.py -o /tmp/local-ai-update.py
+curl -fL --retry 3 https://raw.githubusercontent.com/junli-nv/local-ai/v1.2.0/scripts/update.py -o /tmp/local-ai-update.py
 python3 /tmp/local-ai-update.py --root /raid/local-ai --version v1.2.0
 /raid/local-ai/local-ai --version
 ```
@@ -63,7 +63,7 @@ On an online preparation host, put the helper, small source archive and checksum
 ```bash
 mkdir -p /media/local-ai/update
 cd /media/local-ai/update
-curl -fL --retry 3 https://raw.githubusercontent.com/junli-nv/local-ai/main/scripts/update.py -o update.py
+curl -fL --retry 3 https://raw.githubusercontent.com/junli-nv/local-ai/v1.2.0/scripts/update.py -o update.py
 curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.2.0.tar.gz -o local-ai-v1.2.0-source.tar.gz
 sha256sum update.py local-ai-v1.2.0-source.tar.gz > SHA256SUMS
 ```

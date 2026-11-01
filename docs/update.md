@@ -6,12 +6,12 @@ GPU001 与 bcm-headnode 分别更新各自的程序目录。以下沿用 /raid/l
 
 ## 首次取得脚本并升级
 
-v1.2.0 标签在更新脚本加入前已经固定，因此首次单独获取脚本。先结束本机聊天，避免更新期间启动新的管理命令；GPU 推理容器可保持运行。
+v1.2.0 已包含 scripts/update.py；旧安装没有脚本时，先按下面的方法单独获取。先结束本机聊天，避免更新期间启动新的管理命令；GPU 推理容器可保持运行。
 
 在 GPU001 执行；在 BCM 按相同过程更新它自己的目录：
 
 ```bash
-curl -fL --retry 3 https://raw.githubusercontent.com/junli-nv/local-ai/main/scripts/update.py -o /tmp/local-ai-update.py
+curl -fL --retry 3 https://raw.githubusercontent.com/junli-nv/local-ai/v1.2.0/scripts/update.py -o /tmp/local-ai-update.py
 python3 /tmp/local-ai-update.py --root /raid/local-ai --version v1.2.0
 /raid/local-ai/local-ai --version
 ```
@@ -63,7 +63,7 @@ cd /raid/local-ai
 ```bash
 mkdir -p /media/local-ai/update
 cd /media/local-ai/update
-curl -fL --retry 3 https://raw.githubusercontent.com/junli-nv/local-ai/main/scripts/update.py -o update.py
+curl -fL --retry 3 https://raw.githubusercontent.com/junli-nv/local-ai/v1.2.0/scripts/update.py -o update.py
 curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.2.0.tar.gz -o local-ai-v1.2.0-source.tar.gz
 sha256sum update.py local-ai-v1.2.0-source.tar.gz > SHA256SUMS
 ```
