@@ -2,7 +2,7 @@
 
 在 GPU 服务器运行 vLLM，在 BCM 头节点运行 OpenCode。文件、Shell、Git、SSH 等工具由 BCM 上的当前用户执行。
 
-当前版本为 v1.2.0，以下示例下载该标签的完整源码。./local-ai --version 应显示 1.2.0，实际验收范围与未覆盖平台见[验证记录](docs/validation.md)。
+当前版本为 v1.3.0，以下示例下载该标签的完整源码。./local-ai --version 应显示 1.3.0，实际验收范围与未覆盖平台见[验证记录](docs/validation.md)。
 
 ## 示例约定与文档入口
 
@@ -27,7 +27,7 @@
 
 [推理优化与引擎探索记录](docs/performance.md)保存 DSpark 参数依据、首次编译处理、SGLang 探索及后续复测方法，供继续开发参考。
 
-main 分支新增聊天中按目录读取 PDF、图片、Word、Excel 和 PPT；现有 v1.2.0 标签尚未包含。使用方法、取得此更新及客户端转换依赖见[富文档指南](docs/documents.md)。
+v1.3.0 已包含聊天中按目录读取 PDF、图片、Word、Excel 和 PPT。使用方法、取得此更新及客户端转换依赖见[富文档指南](docs/documents.md)。
 
 ## 安装前提
 
@@ -52,7 +52,7 @@ BCM 架构独立选择。配置只使用同一 OS 可见的本地 GPU；GB300 TP
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.2.0.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.3.0.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ./local-ai --version
@@ -128,7 +128,7 @@ start 默认等待 600 秒，加载和编译期间显示 NOT READY 及日志位�
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.2.0.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.3.0.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ```
@@ -206,7 +206,7 @@ chat --endpoint 不改写 installation.json，也不要求重新安装。--check
 
 ## 更新已有安装
 
-按[程序更新指南](docs/update.md)分别更新 GPU 和 BCM 的实际程序目录，保留资源、配置与运行实例。独立 scripts/update.py 支持指定标签、本地源码包和备份回退，不执行 install 或资源准备。v1.2.0 已包含更新脚本；旧安装没有脚本时，指南给出首次获取方法。
+按[程序更新指南](docs/update.md)分别更新 GPU 和 BCM 的实际程序目录，保留资源、配置与运行实例。独立 scripts/update.py 支持指定标签、本地源码包和备份回退，不执行 install 或资源准备。v1.3.0 已包含更新脚本；旧安装没有脚本时，指南给出首次获取方法。
 
 ## 导出与离线安装
 

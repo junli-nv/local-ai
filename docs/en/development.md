@@ -46,7 +46,7 @@ Chinese is primary; maintain English separately and synchronize both entry paths
 | Models/revisions change | Configure recipe identities, directories, names, engine/client capabilities and separate locks; do not inherit hardware acceptance or DeepSeek-specific settings |
 | Directory installation and migration | The unpacked directory is the root, with ordinary src/. install prepares assets in place; export writes a complete dist/ bundle excluding dist/, instance state, histories and credentials. Reinstall/reconfigure after moving |
 | One BCM, multiple model services | Initial installation endpoint is optional; change defaults through config or direct file editing, not reinstallation. chat --endpoint/--model override one invocation without rewriting defaults. Separate endpoint history/cache and resume original connection; never silently fall back to the default node |
-| Source-script delivery | Develop on main/exact commits; v1.2.0 identifies this validated version, and future tags still require explicit request and quality review |
+| Source-script delivery | Develop on main/exact commits; v1.3.0 identifies this validated version, and future tags still require explicit request and quality review |
 | Single-user speed and first-use compilation spikes | Keep the baseline unchanged; opt into DSpark and explicit bounded warmup. Separate API READY from WARMUP COMPLETE, persist compiler caches per recipe, invalidate completion on restart, and report actual coverage and concurrency tradeoffs |
 | Around 400 ms TTFT seems high | Record method, input size, cache/load and timing first. Separate compilation, generation delay and reasoning content; avoid one-number conclusions |
 
@@ -124,7 +124,7 @@ pyproject.toml configures Python packaging and developer tools; ordinary source-
 | Section | Purpose here |
 |---|---|
 | build-system | setuptools>=68 build backend |
-| project | cluster-local-ai 1.2.0, Python>=3.10, no third-party runtime dependencies |
+| project | cluster-local-ai 1.3.0, Python>=3.10, no third-party runtime dependencies |
 | project.scripts | Installed local-ai entry point: local_ai.cli:main |
 | tool.setuptools | Find packages under src and include profiles.json |
 | project.optional-dependencies | dev extra installs Ruff 0.14.2 |
@@ -282,13 +282,13 @@ original backup when downgrading across incompatible database migrations.
 
 ## Delivery and version labels
 
-v1.2.0 identifies this validated version; withdrawn v1.0.0/v1.1.0 tags are not reused. Development continues on main/exact commits, with support limited by the validation record. Tests and CI are basic requirements; future tags require an explicit user request and do not automatically create GitHub Releases.
+v1.3.0 identifies this validated version; withdrawn v1.0.0/v1.1.0 tags are not reused. Development continues on main/exact commits, with support limited by the validation record. Tests and CI are basic requirements; future tags require an explicit user request and do not automatically create GitHub Releases.
 
 For routine delivery, review implementation and all documentation, validate appropriately, commit/push, and verify the remote commit/CI. For an explicitly requested version, assess installation paths, documentation consistency, compatibility and known issues. Align versions/evidence and create an annotated tag on the exact successful CI commit. Exact commits remain available for reproduction and rollback.
 
 ## Program updater maintenance
 
-The standalone scripts/update.py must use only Python 3.10+ standard library and must not import target installation modules, execute install/Docker/client commands, or read/hash model shards. Keep its program-path allowlist separate from resources and custom catalogs. Preserve settings permissions/defaults, retire stale bundle receipts, keep backup format compatibility, and test source-only offline updates, malformed archives, rollback, partial failure and unchanged resource inodes. The helper remains in scripts/ when a target tag predates it, so existing source export includes it. Program upgrades do not automatically move tags. An explicitly requested retag must record the old target and newly validated commit; this v1.2.0 retag includes the updater at the user's request. Full operations live only in the [update guide](update.md).
+The standalone scripts/update.py must use only Python 3.10+ standard library and must not import target installation modules, execute install/Docker/client commands, or read/hash model shards. Keep its program-path allowlist separate from resources and custom catalogs. Preserve settings permissions/defaults, retire stale bundle receipts, keep backup format compatibility, and test source-only offline updates, malformed archives, rollback, partial failure and unchanged resource inodes. The helper remains in scripts/ when a target tag predates it, so existing source export includes it. Program upgrades do not automatically move tags. An explicitly requested retag must record the old target and newly validated commit; the earlier v1.2.0 retag included the updater at the user's request. Full operations live only in the [update guide](update.md).
 
 ## Directory installation implementation
 

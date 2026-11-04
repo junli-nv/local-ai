@@ -2,13 +2,7 @@
 
 在 **BCM 客户端**使用普通聊天，文件必须能被当前账户读取。GPU 节点只接收模型请求；仅把文件放在 GPU 节点上不会让客户端自动看到它。目录可以是当前项目，也可以是你明确指定的其他本地目录。
 
-本功能位于 main，现有 v1.2.0 标签尚未包含。已有安装可取得 main 源码归档，通过只更新程序的脚本升级，详见[更新指南](update.md)：
-
-```bash
-cd /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/heads/main.tar.gz -o /tmp/local-ai-main.tar.gz
-python3 scripts/update.py --root /raid/local-ai --archive /tmp/local-ai-main.tar.gz
-```
+v1.3.0 已包含本功能。已有安装按[程序更新指南](update.md)选择 --version v1.3.0，无需重新下载模型或镜像。
 
 ## 准备与使用
 

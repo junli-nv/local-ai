@@ -4,7 +4,7 @@
 
 Run vLLM on the GPU server and OpenCode on BCM. File, shell, Git and SSH tools execute on BCM as the current user.
 
-The current version is v1.2.0. Examples download complete source from this tag; ./local-ai --version should report 1.2.0. See [validation](docs/en/validation.md) for acceptance scope and unvalidated platforms.
+The current version is v1.3.0. Examples download complete source from this tag; ./local-ai --version should report 1.3.0. See [validation](docs/en/validation.md) for acceptance scope and unvalidated platforms.
 
 ## Example conventions and documentation
 
@@ -29,7 +29,7 @@ Use appropriate sudo/Docker permissions; root may omit sudo. Data defaults follo
 
 The [optimization and engine exploration record](docs/en/performance.md) preserves DSpark parameter choices, first-use compilation work, SGLang experiments and future comparison methods.
 
-Rich-document reading is available in main after v1.2.0; the existing v1.2.0 tag does not include it. Read PDF, images, Word, Excel and PowerPoint by naming their directory during chat. Upgrade steps and optional client-side converters: [document guide](docs/en/documents.md).
+v1.3.0 includes rich-document reading during ordinary chat. Read PDF, images, Word, Excel and PowerPoint by naming their directory during chat. Upgrade steps and optional client-side converters: [document guide](docs/en/documents.md).
 
 ## Prerequisites
 
@@ -54,7 +54,7 @@ Download into an empty directory and check Docker, GPUs and CDI:
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.2.0.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.3.0.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ./local-ai --version
@@ -130,7 +130,7 @@ Log in as alice on bcm-headnode and use BCM's own empty directory:
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.2.0.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.3.0.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ```
@@ -208,7 +208,7 @@ Tasks include hardware troubleshooting, scripts, services and Slurm/Kubernetes j
 
 ## Update an existing installation
 
-Use the [program update guide](docs/en/update.md) to update GPU and BCM installations separately while retaining resources, configuration and running instances. The standalone scripts/update.py supports explicit tags, local source archives and backup rollback, without install or resource preparation. v1.2.0 includes the updater; the guide also covers bootstrapping installations that lack it.
+Use the [program update guide](docs/en/update.md) to update GPU and BCM installations separately while retaining resources, configuration and running instances. The standalone scripts/update.py supports explicit tags, local source archives and backup rollback, without install or resource preparation. v1.3.0 includes the updater; the guide also covers bootstrapping installations that lack it.
 
 ## Export and offline installation
 

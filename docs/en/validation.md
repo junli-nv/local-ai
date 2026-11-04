@@ -7,7 +7,7 @@ user logs are intentionally omitted from this public record.
 
 The 2026-10-31 integration records below describe the previous client. Tunnel entries are historical; the current client uses API endpoints without built-in forwarding or a separate environment-doctor command. New local HTTP regressions cover direct connections, model checks, retry and no SSH subprocess. They do not constitute new GPU acceptance.
 
-Version labels 1.0.0/1.1.0 below identify historical candidate checks whose tags were withdrawn. The current version is v1.2.0; each acceptance record retains its original date, method and limits. Tagging does not expand support.
+Version labels 1.0.0/1.1.0 below identify historical candidate checks whose tags were withdrawn. The current version is v1.3.0; each acceptance record retains its original date, method and limits. Tagging does not expand support.
 
 ## Hardware and pinned versions
 
@@ -247,3 +247,7 @@ Actual installed AMD64 server and BCM program directories were then updated from
 BCM client on Ubuntu 24.04, Python 3.12.3, OpenCode 1.19.5, existing DeepSeek-V4.1-Flash endpoint. No model/image/GPU service changes. Poppler 24.02.0 and LibreOffice 24.2.7 were installed on the client. Ordinary chat named a directory; no attachment startup flag. The assistant discovered files and called the local document MCP tool. All 12 synthetic files returned their hidden CHECK CODE: PNG, text PDF, scanned PDF, DOCX, XLSX, PPTX, ODS, ODP, DOC, XLS, PPT and RTF. Excel B2 formula =5+7 and cached value 12 were reported; PPT rendering identified the blue rectangle. Direct rendering checks also passed for XLSX/PPTX/ODS/ODP. Expected codes were outside the model project, not supplied in the prompt. PPT relationship ordering was fixed after real LibreOffice output exposed an unqualified numeric id preceding r:id. 154 unit/documentation tests and native session/terminal compatibility passed.
 
 Limits: simple one-page English visual fixtures, not a comprehensive OCR/layout benchmark. Unrequested visual repetition counts in model prose were not accepted as verified facts. No claim for all Chinese scans, complex charts, encrypted documents, macros, animation, large workbooks, ARM64 or arbitrary future OpenCode versions. Supported JPEG/WebP/GIF and ODT paths did not receive the same live-model coverage. Source guides describe optional host dependencies, which portable export does not package.
+
+## v1.3.0 version marking
+
+Explicitly requested release including ordinary-chat rich-document reading, model image capability declarations, client-side PDF/Office tools and bilingual guides. Existing v1.2.0 remains unchanged. The feature commit 8fc8a37 passed 154 tests, native OpenCode compatibility and CI; the release commit updates version metadata and consistent tagged download/update examples. Earlier hardware and document-quality limits remain unchanged.

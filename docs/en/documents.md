@@ -2,13 +2,7 @@
 
 Run normal chat on the **BCM client**. Files must be readable by the current user on that client. The GPU host only receives model requests; files stored only on that host are not automatically visible. You may name the project directory or another local directory explicitly.
 
-This feature is on main and is not included in the existing v1.2.0 tag. For an existing installation, download the main source archive and use the program-only updater (see [update guide](update.md)):
-
-```bash
-cd /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/heads/main.tar.gz -o /tmp/local-ai-main.tar.gz
-python3 scripts/update.py --root /raid/local-ai --archive /tmp/local-ai-main.tar.gz
-```
+This feature is included in v1.3.0. Existing installations should follow the [program update guide](update.md) and select --version v1.3.0; no model/image download is needed.
 
 ## Setup and use
 
