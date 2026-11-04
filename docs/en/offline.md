@@ -178,6 +178,10 @@ The source endpoint is not carried in the bundle. The new BCM examples set an in
 
 Compilation caches and warmup records are excluded with instance state. After target installation and API startup, follow [explicit warmup](deployment.md#single-user-dspark-and-explicit-warmup) on the target GPU when needed; online preparation does not run inference.
 
+## Optional document converters
+
+Portable source includes the document MCP tool when exported from a version containing it. Host Poppler/LibreOffice are not bundled: provision matching offline system packages on the target BCM before using PDF/legacy Office/rendering. See [offline document requirements](documents.md#offline-environments).
+
 ## Logs and failures
 
 Installation/export: INSTALL_ROOT/install.log. Startup: instances/a/server.log. READY requires a health check, not merely a running container. Clients print their private session Log path. Offline missing-file/checksum errors stop without download fallback. Resolve CDI, network, architecture or resource errors before continuing.

@@ -272,6 +272,10 @@ v1.2.0 标记本次验收版本；此前撤下的 v1.0.0、v1.1.0 不复用。�
 
 paths.py 根据启动脚本位置决定根目录，不取终端 cwd，也不写死 /raid/local-ai；显式 --data-dir 和 LOCAL_AI_DATA_DIR 保留兼容。deployment.py 就地准备资源并记录相对的安装设置；bundle.py 流式导出程序、模型、镜像归档和客户端，生成整包及逐文件 SHA256。config/catalog.json 随包携带配方。程序为普通目录，不使用隐藏版本目录或源码链接。导出排除自身 dist/ 和个人状态。安装不启动 GPU；新主机用本机 GPU、端口和 endpoint 创建实例。
 
+## 富文档开发约定
+
+普通聊天是入口：用户说出文件或目录，由助手调用 documents_read_document，不增加必填附件启动参数。解析在 BCM 完成，保留来源、显式分页和真实错误，验证原生 MCP 图片传输。端到端采用随机答案隔离的 PDF/图片/Word/Excel/PPT 样本；文字提取与渲染分别记录，不能按扩展名列表宣称等同 Codex。
+
 ---
 
 [English version](en/development.md)

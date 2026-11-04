@@ -14,6 +14,7 @@ from . import (
     client,
     configuration,
     deployment,
+    documents,
     images,
     installlog,
     readiness,
@@ -59,6 +60,21 @@ def parser():
     )
     groups = a.add_subparsers(dest="group", required=True)
     groups.add_parser("profiles", help="Show hardware profiles and validation levels")
+    document = groups.add_parser(
+        "document", help="Client host: read rich documents or check conversion tools"
+    ).add_subparsers(dest="action", required=True)
+    document.add_parser("doctor", help="Show local document converters; no downloads")
+    doc = document.add_parser("read", help="Extract document text and/or page images as MCP JSON")
+    doc.add_argument("path", type=Path, help="Local file on this client host")
+    doc.add_argument(
+        "--mode",
+        choices=["auto", "text", "render"],
+        default="auto",
+        help="PDF auto includes page images; Office auto extracts text",
+    )
+    doc.add_argument("--start", type=int, default=1, help="First page, sheet or slide (one-based)")
+    doc.add_argument("--count", type=int, default=3, help="Number of pages/sections, 1..5")
+    doc.add_argument("--offset", type=int, default=0, help="Text character offset for continuation")
     config = groups.add_parser(
         "config",
         help="View or change saved client defaults without installing",
@@ -415,6 +431,10 @@ def parser():
 
 
 def dispatch(q):
+    if q.group == "document":
+        if q.action == "doctor":
+            return documents.dependencies()
+        return documents.read_document(q.path, q.mode, q.start, q.count, q.offset)
     if q.group == "config":
         if q.action == "show":
             return configuration.show()

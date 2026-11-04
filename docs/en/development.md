@@ -293,3 +293,7 @@ The standalone scripts/update.py must use only Python 3.10+ standard library and
 ## Directory installation implementation
 
 paths.py uses the launcher location, not cwd or a fixed /raid/local-ai. Explicit --data-dir and LOCAL_AI_DATA_DIR remain compatible. deployment.py prepares assets in place and records relative settings. bundle.py streams program/model/image/client exports with archive and per-file SHA256. config/catalog.json carries recipes. Use ordinary source directories without hidden versions/symlinks. Exclude dist/ and private state. Installation does not start GPUs; new hosts recreate instances with local GPUs, ports and endpoints.
+
+## Rich-document development
+
+Keep ordinary chat as the entry point: users name a file or directory, and the assistant calls documents_read_document; do not add mandatory attachment flags. Keep parsing on BCM, preserve source labels, paginate explicitly, expose real errors and test native MCP image transport. Use random hidden codes for end-to-end PDF/image/Word/Excel/PPT checks. Record text versus rendering support separately; do not claim Codex parity from extension names.

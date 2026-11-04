@@ -250,6 +250,10 @@ tmux 自身的选取设置仍由用户管理；长对话可用 `/export` 导出�
 下载源不可用时可复用完整本地安装、导入本地程序，或使用 `client export` 的离线包；
 包中包含客户端、公共缓存、版本清单及校验值，不含聊天历史或凭据。导入步骤见[离线部署](offline.md)。
 
+## 文档读取自检
+
+正常聊天直接指定文件或目录，不需要附件启动参数。document doctor 只检查转换器路径及 pdf_ready/office_render_ready，不安装软件。document read PATH 返回工具结果 JSON；--mode 可选 auto（默认）、text、render；--start 默认 1，--count 默认 3（允许 1–5），--offset 默认 0。失败退出非零，图片可能包含 base64。依赖安装、格式范围、出处与读取边界见[富文档指南](documents.md)。
+
 ## 程序更新
 
 独立 Python 脚本 scripts/update.py 不属于 ./local-ai 子命令。--root、--version、--archive、--sha256、--rollback 的含义、完整示例、备份和退出码统一见[更新指南](update.md)。它不准备镜像、模型或客户端，也不重启推理服务；更换模型/镜像与升级原生 OpenCode 是独立操作。

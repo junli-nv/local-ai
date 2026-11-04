@@ -93,6 +93,10 @@ cli.py 只为安装和部署操作建立 installlog.py 会话；common.run 在�
 模型版本锁缺失时明确返回未验证状态，不伪造来源。完整内容哈希属于离线材料验收。
 细节见[命令手册](commands.md)。
 
+## 文档输入
+
+client.prepare 将 document_mcp.py 注册为本机 stdio MCP 服务。documents.py 提取 Office/文字，并调用可选的宿主机 Poppler/LibreOffice。PDF 页面以图片内容送入模型，避免发送当前服务不支持的原始 PDF 附件。模型配方声明图片输入，工具进程使用客户端账户权限。无需改变 GPU 服务或增加 Python 依赖。格式与读取边界见[富文档指南](documents.md)。
+
 ## 程序更新边界
 
 scripts/update.py 是独立标准库脚本，不导入待替换的旧程序模块。它只替换明确列出的源码路径，保留资源与配置，备份旧程序和安装元数据，并使旧离线包校验记录失效；不调用 install、Docker、模型/客户端下载或服务重启。备份在安装根之外；普通导出包含 scripts/，因此保留的引导更新脚本也可携带。

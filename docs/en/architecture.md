@@ -104,6 +104,10 @@ downloads; absent caches and conflicting content are distinct outcomes. Missing 
 as unverified rather than fabricated. Complete content hashes belong to offline artifact acceptance.
 See the [command manual](commands.md).
 
+## Document input
+
+client.prepare registers document_mcp.py as a local stdio MCP service. documents.py extracts Office/text and invokes optional host Poppler/LibreOffice. PDF page images are sent through image content, not unsupported raw PDF attachments. The model recipe declares image input; tool processes inherit the client's user permissions. No GPU service changes or new Python dependencies are required. Details: [documents](documents.md).
+
 ## Program update boundary
 
 scripts/update.py is a standalone standard-library helper so it can update an old installation without importing its modules. It replaces an explicit list of source paths, retains assets/configuration, backs up old code/installation metadata and invalidates the old bundle checksum receipt. It never calls install, Docker, model/client download or server restart. Backups remain outside the installation; scripts/ is included by ordinary exports, including the retained bootstrap helper.

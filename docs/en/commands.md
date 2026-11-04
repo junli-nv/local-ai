@@ -248,6 +248,10 @@ binary or restore a client export archive. Archives include executable, public
 cache, version manifest and checksums, excluding history and credentials.
 See [offline deployment](offline.md).
 
+## Document diagnostics
+
+Normal chat discovers local documents by path; no attachment startup option is required. document doctor reports converter paths and pdf_ready/office_render_ready without installing anything. document read PATH returns tool-result JSON: --mode auto (default), text or render; --start 1, --count 3 (1–5), --offset 0. Failures exit nonzero. Image data may be base64. Setup, supported formats, source labels and limits: [documents](documents.md).
+
 ## Program updates
 
 The standalone Python helper scripts/update.py is independent of ./local-ai subcommands. For --root, --version, --archive, --sha256 and --rollback, complete examples, backups and exit codes, use the [update guide](update.md). It never installs images/models/clients or restarts inference. Model/image changes and native OpenCode upgrades remain separate operations.

@@ -27,6 +27,8 @@
 
 [推理优化与引擎探索记录](docs/performance.md)保存 DSpark 参数依据、首次编译处理、SGLang 探索及后续复测方法，供继续开发参考。
 
+main 分支新增聊天中按目录读取 PDF、图片、Word、Excel 和 PPT；现有 v1.2.0 标签尚未包含。使用方法、取得此更新及客户端转换依赖见[富文档指南](docs/documents.md)。
+
 ## 安装前提
 
 GPU001 需 Linux、Python 3.10+、Bash、curl、tar、兼容 NVIDIA 驱动、支持 CDI 且 API 至少 1.49 的 Docker、NVIDIA Container Toolkit。先取得 GPU 使用权并确认资源充足。

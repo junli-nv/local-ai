@@ -64,6 +64,15 @@ def prepare(state, assets, session, base, model, project):
     instructions.chmod(0o600)
     cfg = config(base, model)
     cfg["instructions"] = [str(instructions)]
+    cfg["mcp"] = {
+        "documents": {
+            "type": "local",
+            "command": [sys.executable, "-m", "local_ai.document_mcp"],
+            "environment": {"PYTHONPATH": str(Path(__file__).resolve().parents[1])},
+            "enabled": True,
+            "timeout": 120000,
+        }
+    }
     tui = session / "tui.json"
     atomic_json(tui, {"mouse": False, "keybinds": {"messages_copy": "none", "input_paste": "none"}})
     atomic_json(file, cfg)

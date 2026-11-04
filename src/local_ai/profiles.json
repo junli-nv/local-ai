@@ -51,7 +51,17 @@
         "limit": {
           "context": 131072,
           "output": 32768
-        }
+        },
+        "modalities": {
+          "input": [
+            "text",
+            "image"
+          ],
+          "output": [
+            "text"
+          ]
+        },
+        "attachment": true
       }
     }
   },

@@ -29,6 +29,8 @@ Use appropriate sudo/Docker permissions; root may omit sudo. Data defaults follo
 
 The [optimization and engine exploration record](docs/en/performance.md) preserves DSpark parameter choices, first-use compilation work, SGLang experiments and future comparison methods.
 
+Rich-document reading is available in main after v1.2.0; the existing v1.2.0 tag does not include it. Read PDF, images, Word, Excel and PowerPoint by naming their directory during chat. Upgrade steps and optional client-side converters: [document guide](docs/en/documents.md).
+
 ## Prerequisites
 
 GPU001: Linux, Python 3.10+, Bash, curl, tar, compatible NVIDIA driver, CDI-capable Docker API 1.49+, and NVIDIA Container Toolkit. Obtain GPU allocation and sufficient resources.
