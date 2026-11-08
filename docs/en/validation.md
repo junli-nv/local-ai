@@ -7,7 +7,7 @@ user logs are intentionally omitted from this public record.
 
 The 2026-10-31 integration records below describe the previous client. Tunnel entries are historical; the current client uses API endpoints without built-in forwarding or a separate environment-doctor command. New local HTTP regressions cover direct connections, model checks, retry and no SSH subprocess. They do not constitute new GPU acceptance.
 
-Version labels 1.0.0/1.1.0 below identify historical candidate checks whose tags were withdrawn. The current version is v1.3.0; each acceptance record retains its original date, method and limits. Tagging does not expand support.
+Version labels 1.0.0/1.1.0 below identify historical candidate checks whose tags were withdrawn. The current version is v1.3.1; each acceptance record retains its original date, method and limits. Tagging does not expand support.
 
 ## Hardware and pinned versions
 
@@ -308,3 +308,7 @@ was not tuned. This is bounded API and small-load acceptance, not full 131072-to
 input, long-running stability, complex vision/tools or a native OpenCode end-to-end
 test on this node. Raw logs, operational scripts and snapshots remain outside
 tracked source or in ignored directories.
+
+## v1.3.1 version marking
+
+Explicitly requested version label for merging B200 support commit c802251 into main. Program metadata and download/update examples use 1.3.1. Includes independent GPU/CPU Engram TP4 profiles, seven added regression tests and bilingual deployment guides. B200 hardware acceptance remains bounded by the preceding record; this tag does not expand full-context, long-running or other-platform support.

@@ -109,7 +109,7 @@ MemAvailable 至少 256 GiB。这些值是保守配置保护值，不是实测�
 模型 revision、AMD64 镜像摘要及其他引擎参数沿用 B300 基线：
 131072 上下文、四个活动序列、8192 批处理 token、0.80 显存预算，不启用 DSpark。
 两套配方已在验证记录所列环境通过四卡 API 冒烟；完整上下文边界与长期负载未验收。
-已发布的 v1.3.0 源码包不含新增配方；先取得包含本变更的源码并检查 ./local-ai profiles。
+v1.3.1 已包含新增配方；按 README 获取该标签源码并检查 ./local-ai profiles。
 CPU 卸载释放的模型显存会被 vLLM 用作 KV cache，nvidia-smi 总占用不一定下降。
 API READY 也不表示所有形状已预热；首次请求仍可能出现 JIT 延迟。
 

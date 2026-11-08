@@ -102,7 +102,7 @@ AMD64 image digest and B300 baseline engine settings: 131072 context, four activ
 sequences, 8192 batched tokens and a 0.80 memory budget, without DSpark.
 Both passed bounded four-GPU API smoke checks in the recorded environment;
 full-context boundaries and long-running loads remain unvalidated.
-Published v1.3.0 archives lack these profiles; use source containing this change
+v1.3.1 includes these profiles; obtain that tagged source through README
 and check ./local-ai profiles. Freed weight memory may be reused for KV cache,
 so nvidia-smi total usage need not fall. API READY does not eliminate first-shape JIT.
 
