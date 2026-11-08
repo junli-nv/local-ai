@@ -101,6 +101,35 @@ docker rm local-ai-a
 
 启动预检允许已停止 HTTP 服务的 TCP TIME_WAIT 连接复用，但仍拒绝实际监听进程占用的端口。其他程序占用时应更换端口或由操作者明确处理。
 
+## B200 四卡（实验性）
+
+`b200-tp4-cpu` 将 Engram 表放到主机内存；`b200-tp4` 保留 GPU Engram。
+两者要求 AMD64、四张 B200、每卡至少 180000 MiB HBM；CPU 配方另检查
+MemAvailable 至少 256 GiB。这些值是保守配置保护值，不是实测最低需求。
+模型 revision、AMD64 镜像摘要及其他引擎参数沿用 B300 基线：
+131072 上下文、四个活动序列、8192 批处理 token、0.80 显存预算，不启用 DSpark。
+两套配方已在验证记录所列环境通过四卡 API 冒烟；完整上下文边界与长期负载未验收。
+已发布的 v1.3.0 源码包不含新增配方；先取得包含本变更的源码并检查 ./local-ai profiles。
+CPU 卸载释放的模型显存会被 vLLM 用作 KV cache，nvidia-smi 总占用不一定下降。
+API READY 也不表示所有形状已预热；首次请求仍可能出现 JIT 延迟。
+
+在 GPU001 执行，先按 README 核对 Docker、所选 GPU 的 CDI UUID 和空闲状态。
+以下使用通用编号 0–3；部署时按本机拓扑选择已分配的健康 GPU，优先同一 NUMA 节点，
+编号不是配方的一部分。CPU 内存位置还需单独核对，不能仅靠选卡保证 NUMA 局部性。
+
+```bash
+cd /raid/local-ai
+./local-ai install --role server --profile b200-tp4-cpu
+./local-ai server plan --profile b200-tp4-cpu --host 0.0.0.0 --gpus 0,1,2,3 --name a --port 18000
+./local-ai server start --profile b200-tp4-cpu --host 0.0.0.0 --gpus 0,1,2,3 --name a --port 18000
+./local-ai server status --name a
+```
+
+比较 GPU Engram 时保持同样的设备、上下文、并发和请求，显式重建实例并改选
+`b200-tp4`，不要同时在这四张卡上启动两套服务。分别测量首 token 延迟、
+生成速度、显存与主存；CPU 配方的容量优势不等于性能已经验证。
+外部 LOCAL_AI_CATALOG 或 config/catalog.json 完整替代内置配方，需要手动合并新配置。
+
 ## 单用户 DSpark 与显式预热
 
 默认 b300-tp4 保留原参数；可选 b300-tp4-dspark 偏向单用户生成速度，并发吞吐可能下降。DSpark 通过草稿和目标模型校验的投机解码提高生成阶段速度，不保证 TTFT 下降。两者使用相同镜像和权重，无需另下模型。测量方法和适用范围见[验证记录](validation.md)。GB300 未验证，不直接套用此配方。

@@ -150,6 +150,44 @@
         "TILELANG_CACHE_DIR": "/root/.cache/tilelang",
         "CUDA_CACHE_PATH": "/root/.cache/nvidia"
       }
+    },
+    "b200-tp4": {
+      "arch": "amd64",
+      "platform": "linux/amd64",
+      "tp": 4,
+      "cpu_offload": false,
+      "min_vram_mib": 180000,
+      "gpu_names": [
+        "B200"
+      ],
+      "validation": "hardware-validated-api-smoke",
+      "platform_digest": "sha256:327eb19763b5c91a06e750082348170eafb99e476f91eb0cb60328dc18b04961",
+      "model": "deepseek-v4.1-flash",
+      "engine_options": {
+        "--engram-config": {
+          "cpu_offload": false
+        }
+      }
+    },
+    "b200-tp4-cpu": {
+      "arch": "amd64",
+      "platform": "linux/amd64",
+      "tp": 4,
+      "cpu_offload": true,
+      "min_vram_mib": 180000,
+      "gpu_names": [
+        "B200"
+      ],
+      "validation": "hardware-validated-api-smoke",
+      "platform_digest": "sha256:327eb19763b5c91a06e750082348170eafb99e476f91eb0cb60328dc18b04961",
+      "model": "deepseek-v4.1-flash",
+      "engine_options": {
+        "--engram-config": {
+          "cpu_offload": true
+        }
+      },
+      "min_host_available_gib": 256,
+      "host_memory_note": "256 GiB MemAvailable is a conservative guard, not a measured minimum. Engram uses host memory; validate NUMA placement and performance."
     }
   },
   "legacy_environment": {

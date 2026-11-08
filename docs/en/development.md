@@ -103,7 +103,7 @@ through its client configuration.
 9. Record hardware/version/method/results/limits for real GPU tests. CPU tests alone never promote a hardware validation level.
 10. Review staged files, record release evidence, clean temporary containers/client-processes/resources, push and inspect CI.
 
-Use the profile workflow below when B200 or later hardware becomes available. Do not relabel a validated profile as support for an untested GPU.
+Separate B200 TP4 profiles and the sanitized tests/fixtures/b200-tp4.json inventory now have bounded four-GPU API smoke acceptance; see validation for limits. Use the same workflow for later hardware. Do not relabel validated profiles.
 
 ## Development without a GPU
 

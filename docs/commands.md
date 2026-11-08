@@ -140,6 +140,8 @@ install/export 默认写安装根目录的 install.log；低级 image/model/serv
 | `--output` | image export | 必填，导出镜像的归档路径 |
 | `--archive`、`--lock` | image import | 均必填，镜像归档及其配套 .lock.json 路径 |
 
+B200 四卡可选 b200-tp4-cpu（CPU Engram）或 b200-tp4（GPU Engram），均为实验性；保护值和操作见[部署指南](deployment.zh-CN.md#b200-四卡实验性)。
+
 TP 表示张量并行：b300-tp4 在同一主机上使用 4 张 B300；GB300 配置及验证限制见[部署指南](deployment.zh-CN.md)。
 默认程序和数据都在解压目录（示例 /raid/local-ai）；--data-dir 可覆盖数据位置，不同命令不会继承前一次的参数。下载、计划、启动和停止须使用同一数据根目录。
 

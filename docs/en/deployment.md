@@ -92,6 +92,39 @@ Weights and host logs remain. Different specs are never silently substituted. Re
 
 Startup checks permit TCP TIME_WAIT reuse after a stopped HTTP service, while rejecting active listeners. Other applications owning the port still require a different port or explicit operator action.
 
+## B200 four-GPU (experimental)
+
+`b200-tp4-cpu` stores Engram tables in host memory; `b200-tp4` retains GPU Engram.
+Both require AMD64, four B200 GPUs and at least 180000 MiB HBM per GPU.
+The CPU profile additionally checks 256 GiB MemAvailable. These are conservative
+guards, not measured minimum requirements. Both retain the fixed model revision,
+AMD64 image digest and B300 baseline engine settings: 131072 context, four active
+sequences, 8192 batched tokens and a 0.80 memory budget, without DSpark.
+Both passed bounded four-GPU API smoke checks in the recorded environment;
+full-context boundaries and long-running loads remain unvalidated.
+Published v1.3.0 archives lack these profiles; use source containing this change
+and check ./local-ai profiles. Freed weight memory may be reused for KV cache,
+so nvidia-smi total usage need not fall. API READY does not eliminate first-shape JIT.
+
+Run on GPU001 after the README Docker, selected CDI UUID and idle-device checks.
+Examples use generic GPUs 0–3; select allocated healthy devices using your topology, preferably on one NUMA node.
+Indices are not part of the recipe. Host-memory locality needs a separate check;
+selecting GPUs alone does not bind CPU memory.
+
+```bash
+cd /raid/local-ai
+./local-ai install --role server --profile b200-tp4-cpu
+./local-ai server plan --profile b200-tp4-cpu --host 0.0.0.0 --gpus 0,1,2,3 --name a --port 18000
+./local-ai server start --profile b200-tp4-cpu --host 0.0.0.0 --gpus 0,1,2,3 --name a --port 18000
+./local-ai server status --name a
+```
+
+For GPU Engram, explicitly replace the instance using `b200-tp4`, keeping devices,
+context, concurrency and requests identical. Do not run both on the same GPUs.
+Measure TTFT, generation speed, HBM and host memory; capacity does not establish
+performance. LOCAL_AI_CATALOG or config/catalog.json replaces the entire catalog;
+merge these recipes explicitly into a custom catalog.
+
 ## Single-user DSpark and explicit warmup
 
 The default b300-tp4 keeps its existing settings. Optional b300-tp4-dspark favors single-user generation speed, with a possible concurrency throughput cost. DSpark uses speculative decoding with target-model verification to improve the decode phase; lower TTFT is not guaranteed. It uses the same image and weights. See [validation](validation.md) for measurements and limits. This recipe is not validated on GB300.

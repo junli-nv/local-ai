@@ -39,8 +39,12 @@ BCM 需 Linux AMD64 或 ARM64、Python 3.10+、Bash、curl、tar、Git、rg 和 
 |---|---|---|---|---|
 | b300-tp4 | AMD64 / linux/amd64 | 4 张 B300 | GPU | 已实机验证 |
 | b300-tp4-dspark | AMD64 / linux/amd64 | 4 张 B300 | GPU | 可选单用户配方，范围见验证记录 |
+| b200-tp4-cpu | AMD64 / linux/amd64 | 4 张 B200 | CPU | 四卡 API 冒烟通过，范围见验证记录 |
+| b200-tp4 | AMD64 / linux/amd64 | 4 张 B200 | GPU | 四卡 API 冒烟通过，范围见验证记录 |
 | gb300-tp4 | ARM64 / linux/arm64 | 4 张 GB300/B300 | GPU | 未实机验证 |
 | gb300-tp2 | ARM64 / linux/arm64 | 2 张 GB300/B300 | CPU | 上游配方，未实机验证 |
+
+B200 部署及同条件 CPU/GPU Engram 对照见[部署指南](docs/deployment.zh-CN.md#b200-四卡实验性)。两套配置有独立的有限验收记录，不继承 B300 性能结论。新增 B200 配方不在已发布的 v1.3.0 源码包中；使用包含本变更的开发源码，并先确认 ./local-ai profiles 能列出两套 B200 配方。
 
 BCM 架构独立选择。配置只使用同一 OS 可见的本地 GPU；GB300 TP2 检查 MemAvailable 至少 256 GiB，不能套用 B300 实测结论。
 

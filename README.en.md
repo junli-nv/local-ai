@@ -41,8 +41,12 @@ BCM: Linux AMD64/ARM64, Python 3.10+, Bash, curl, tar, Git, rg, util-linux scrip
 |---|---|---|---|---|
 | b300-tp4 | AMD64 / linux/amd64 | 4 B300 | GPU | Hardware validated |
 | b300-tp4-dspark | AMD64 / linux/amd64 | 4 B300 | GPU | Optional single-user recipe; see validation |
+| b200-tp4-cpu | AMD64 / linux/amd64 | 4 B200 | CPU | Four-GPU API smoke passed; see validation |
+| b200-tp4 | AMD64 / linux/amd64 | 4 B200 | GPU | Four-GPU API smoke passed; see validation |
 | gb300-tp4 | ARM64 / linux/arm64 | 4 GB300/B300 | GPU | Not hardware validated |
 | gb300-tp2 | ARM64 / linux/arm64 | 2 GB300/B300 | CPU | Upstream recipe, unvalidated |
+
+See [B200 deployment](docs/en/deployment.md#b200-four-gpu-experimental) for CPU/GPU Engram comparison. Both have separate bounded acceptance and do not inherit B300 performance results. Published v1.3.0 archives lack these additions; use development source containing this change and confirm ./local-ai profiles lists both B200 recipes.
 
 BCM architecture is independent. Profiles use GPUs visible to one OS. GB300 TP2 checks at least 256 GiB MemAvailable; B300 acceptance does not cover GB300.
 

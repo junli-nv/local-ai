@@ -139,6 +139,8 @@ Ongoing model output remains in instances/NAME/server.log; chat history and sess
 | --output | image export | Required destination archive path |
 | --archive; --lock | image import | Required image archive and matching .lock.json |
 
+Experimental B200 TP4 profiles are b200-tp4-cpu (CPU Engram) and b200-tp4 (GPU Engram). See [deployment](deployment.md#b200-four-gpu-experimental) for guards and usage.
+
 TP is tensor parallelism: b300-tp4 uses four local B300 GPUs. See [deployment](deployment.md) for GB300 limitations. Program and data default to the unpacked directory (/raid/local-ai here). Options do not persist between commands; use the same data root for preparation, planning, starting and stopping.
 
 On GPU001:

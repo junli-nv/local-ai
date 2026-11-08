@@ -251,3 +251,60 @@ Limits: simple one-page English visual fixtures, not a comprehensive OCR/layout 
 ## v1.3.0 version marking
 
 Explicitly requested release including ordinary-chat rich-document reading, model image capability declarations, client-side PDF/Office tools and bilingual guides. Existing v1.2.0 remains unchanged. The feature commit 8fc8a37 passed 154 tests, native OpenCode compatibility and CI; the release commit updates version metadata and consistent tagged download/update examples. Earlier hardware and document-quality limits remain unchanged.
+
+## 2026-11-08: Bounded four-B200 hardware acceptance
+
+Added b200-tp4 (GPU Engram) and b200-tp4-cpu (CPU Engram) without runtime code changes.
+Four allocated healthy B200 GPUs on one NUMA node each reported 183359 MiB.
+Environment: AMD64, approximately 2 TiB RAM, driver 580.173.02, Docker 29.6.2,
+Toolkit 1.20.1; the pinned vLLM 0.32.0 image includes PyTorch 2.13.0+cu130 and sm_100.
+Model revision, image and platform digests remain pinned in profiles.json.
+Actually downloaded 48 shards, approximately 475.25 GiB, and checked the revision
+lock, configuration, index and shard lengths. Four-GPU BF16 matmul, peer visibility
+and 16 MiB NCCL AllReduce passed.
+
+Both native server start commands reached health HTTP 200 with TP4, configured
+131072 context, four active sequences, 8192 batched tokens, 0.80 memory budget,
+FP8 KV and identical parsers, without DSpark.
+
+| Metric | CPU Engram | GPU Engram |
+|---|---:|---:|
+| First-instance READY time, seconds | 289.18 | 267.12 |
+| Resident model memory, approximately GiB/GPU | 78.53 | 125.74–125.75 |
+| Available KV cache at initialization, GiB/GPU | 59.76 | 12.68 |
+| Arithmetic, streaming, tool round trip, one red PNG | Passed | Passed |
+
+The model requested add_numbers; deterministic integer addition was executed,
+returned as a tool result, and the final answer checked. Vision covered only a
+640×480 solid-red PNG, not OCR or complex documents.
+Initial API acceptance used 15 requests per profile, including 10 performance
+requests: 6680 input tokens, 128 output tokens, temperature=0, thinking disabled,
+ignore_eos=true, concurrency 1/4 and two rounds each. CPU/GPU payload hashes matched.
+First large inputs showed approximately 11-second TTFT with inference-time JIT.
+Initial second-round four-request throughput was 388.91 CPU versus 144.17 GPU
+tokens/s; this prompted supplementary sampling rather than a steady-state claim.
+
+Supplementary sampling uses different prefixes and matched payload hashes, six
+rounds at concurrency 1/4. Two rounds prepare shapes; four contribute summaries.
+Total throughput includes TTFT; per-request decode speed uses first-to-last
+content-chunk time. These are different metrics.
+
+Supplementary input length was 6684 tokens per request; all 30 requests per profile returned 128 tokens. All 12 corresponding batch payload hashes matched. The following uses four measured rounds per concurrency, including every outlier:
+
+| Metric | CPU Engram | GPU Engram |
+|---|---:|---:|
+| Single-request TTFT, median seconds | 0.172 | 0.174 |
+| Single-request decode, median tokens/s | 241.984 | 241.589 |
+| Four-request total throughput, median tokens/s | 396.379 | 393.317 |
+| Four-request batch throughput range, tokens/s | 144.40–398.89 | 391.62–394.18 |
+
+The CPU run also had a four-request latency spike (144.40 tokens/s), so the earlier GPU spike is not evidence of a general offload speed advantage. In this small sample median single-request decode and four-request throughput were similar; it does not establish equal latency tails or general workload performance. Together with the initial API checks, 45 requests per profile completed successfully.
+
+Default KV allocation can keep nvidia-smi total usage similar after CPU offload.
+The 256 GiB host and 180000 MiB/GPU guards are not measured minimum requirements;
+acceptance used approximately 2 TiB RAM, not a 256 GiB host.
+Host page caches were not cleared, CPU/RAM were shared, and NUMA CPU/memory binding
+was not tuned. This is bounded API and small-load acceptance, not full 131072-token
+input, long-running stability, complex vision/tools or a native OpenCode end-to-end
+test on this node. Raw logs, operational scripts and snapshots remain outside
+tracked source or in ignored directories.
