@@ -77,7 +77,7 @@ GPU 服务按示例监听 0.0.0.0，默认参数仍为 127.0.0.1；监听地址�
 
 初次 install 可保存初始默认值；后续通过 config show/set/unset 或直接编辑 installation.json 配置 endpoint/model；chat 的显式参数只覆盖本次，不写回安装设置。每次连接的 API 检查与客户端配置均使用所选 endpoint，--check 返回 endpoint/model。切换到不同模型时显式指定 --model ID；不匹配直接失败，不回退。多个服务复用同一客户端程序。
 
-思考档位由模型配方的 client.variants 声明，OpenCode 原生 Ctrl+T 在当前会话选择，并随下一条用户消息传到 HTTP 请求。default 是空覆盖，沿用原行为；DeepSeek 档位显式携带 chat_template_kwargs，并禁用不兼容的 medium/minimal。它不改变服务端实例配置摘要、GPU 分配或 Engram 放置。
+思考档位由模型配方的 client.variants 声明，OpenCode 原生 Ctrl+T 在当前会话选择，并随下一条用户消息传到 HTTP 请求。normal 是空覆盖，沿用原行为；DeepSeek 档位显式携带 chat_template_kwargs，并禁用不兼容的 medium/minimal。它不改变服务端实例配置摘要、GPU 分配或 Engram 放置。
 
 ## 性能配置的依据
 

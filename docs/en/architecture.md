@@ -86,7 +86,7 @@ network access. Tools may use SSH for onward tasks, independently of inference t
 
 Initial install can save optional defaults in installation.json; later changes use config show/set/unset or direct file editing. CLI arguments override those defaults for one invocation without writing them back. Each chat uses its selected endpoint for checks and provider configuration; --check reports endpoint/model. Switching to a different model requires its explicit --model ID; unavailable IDs fail without fallback. The same client binary is reused across services.
 
-Model-level client.variants defines thinking choices. OpenCode Ctrl+T selects a variant for the next user message and its HTTP requests. The empty default variant preserves original behavior. DeepSeek variants carry chat_template_kwargs and disable incompatible medium/minimal choices. Server spec fingerprints, GPU allocation and Engram placement are unaffected.
+Model-level client.variants defines thinking choices. OpenCode Ctrl+T selects a variant for the next user message and its HTTP requests. The empty normal variant preserves original behavior. DeepSeek variants carry chat_template_kwargs and disable incompatible medium/minimal choices. Server spec fingerprints, GPU allocation and Engram placement are unaffected.
 
 ## Performance policy
 

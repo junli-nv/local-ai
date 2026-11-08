@@ -63,7 +63,7 @@
         },
         "attachment": true,
         "variants": {
-          "default": {},
+          "normal": {},
           "low": {
             "chat_template_kwargs": {
               "thinking": true,

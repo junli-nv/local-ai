@@ -11,7 +11,8 @@ class ReasoningTests(unittest.TestCase):
     def test_default_keeps_model_behavior_and_server_args(self):
         cfg = config("http://GPU001:18000/v1", "DeepSeek-V4.1-Flash")
         model = cfg["provider"]["local-deepseek"]["models"]["DeepSeek-V4.1-Flash"]
-        self.assertEqual(model["variants"]["default"], {})
+        self.assertEqual(model["variants"]["normal"], {})
+        self.assertNotIn("default", model["variants"])
         self.assertNotIn("options", model)
         self.assertNotIn("variant", cfg)
         self.assertTrue(model["reasoning"])
@@ -39,7 +40,7 @@ class ReasoningTests(unittest.TestCase):
                 model = file_cfg["provider"]["local-deepseek"]["models"]["DeepSeek-V4.1-Flash"]
                 self.assertEqual(
                     [key for key, value in model["variants"].items() if not value.get("disabled")],
-                    ["default", "low", "high", "xhigh", "max", "none"],
+                    ["normal", "low", "high", "xhigh", "max", "none"],
                 )
                 self.assertEqual(
                     model["variants"]["none"]["chat_template_kwargs"], {"thinking": False}

@@ -322,3 +322,11 @@ Native OpenCode 1.19.5 used an isolated temporary HOME, state and project with a
 This acceptance invokes no production model, cluster operation or GPU load. It establishes no speedup, reduction in reasoning tokens or preservation of complex-task quality. New or resumed clients load the variants once; subsequent switching is live. Custom complete catalogs need an explicit merge.
 
 The user explicitly requested retagging v1.3.1. Its previous commit was fb3590a52c211472063d0d00b0756fd5074739b4 and annotated tag object was 300e2aba37202788b1f002b7bd0038147d78192c. The replacement points to the CI-passed commit containing this record; consult the remote tag for its exact SHA. Previous v1.3.1 downloads need fresh source or another program update; the unchanged version string alone does not identify source content. Original B200 hardware acceptance limits remain unchanged.
+
+## 2026-11-08: Fix skipped reasoning variants
+
+The user reported missing low/max choices. Reproduction showed an explicit default variant colliding with OpenCode 1.19.5's internal default wrap value. Generated variants merged ahead of it; cycling wrapped back to the middle and made earlier entries unreachable. The previous single-switch check missed full-cycle coverage.
+
+Rename the visible original-strength choice to normal while retaining native unselected behavior. Other request values are unchanged. Strengthen PTY acceptance with nine Ctrl+T presses and mock requests, inspecting frontend-selected names through the public message API. Cover all six visible choices, native default and wrap back to low. Including seven API variant requests, 17 mock-model requests passed. This is no real-GPU or performance claim.
+
+The user's explicit v1.3.1 retag authorization covers this correction. Previous commit: 4be659fa87d2ceee1a605fae5b0f9843f465c06a; previous annotated tag object: 001ba472ea6287755b645ab75bfe616f88f58846. Consult the remote tag and delivery commit for the replacement. Current guides use normal; the preceding default description records the former implementation.

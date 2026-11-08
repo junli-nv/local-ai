@@ -214,20 +214,22 @@ One BCM installation can connect to many endpoints. See [multiple-service exampl
 
 ### Dynamic reasoning variants
 
-On bcm-headnode, press **Ctrl+T** at the interactive prompt and check the displayed variant before sending. The choice applies to the next user message and its model calls; it does not interrupt or rewrite an ongoing response. No session exit, config edit or GPU restart is needed. After initially upgrading, exit the old client and resume the same session as described below to load the variants while retaining history. OpenCode manages remembered selections; explicitly choose `default` to restore the original behavior.
+On bcm-headnode, press **Ctrl+T** at the interactive prompt and check the displayed variant before sending. The choice applies to the next user message and its model calls; it does not interrupt or rewrite an ongoing response. No session exit, config edit or GPU restart is needed. After initially upgrading, exit the old client and resume the same session as described below to load the variants while retaining history. OpenCode manages remembered selections; explicitly choose `normal` to restore the original behavior.
 
 | Variant | DeepSeek-V4.1-Flash request behavior |
 |---|---|
-| `default` | Add no thinking parameters; preserve the original server default |
+| `normal` | Add no thinking parameters; preserve the original server default |
 | `low` | Thinking enabled, effort 25 |
 | `high` | Thinking enabled, effort 50 |
 | `xhigh` | Thinking enabled, effort 75 |
 | `max` | Thinking enabled, effort 100 |
 | `none` | Thinking disabled |
 
-Effort is a model hint, not a hard token budget or latency guarantee. Lower effort or disabled thinking can affect complex-task quality. Both `default` and no selection preserve existing parameters. OpenCode determines cycle order after merging configuration; table order is not promised. Unsupported generic `medium`/`minimal` variants are disabled.
+Effort is a model hint, not a hard token budget or latency guarantee. Lower effort or disabled thinking can affect complex-task quality. Both `normal` and no selection preserve existing parameters. OpenCode determines cycle order after merging configuration; table order is not promised. Unsupported generic `medium`/`minimal` variants are disabled.
 
 Variants belong to model-level `client.variants`, not GPU engine options. Merge them into a custom complete catalog explicitly; other models do not inherit DeepSeek settings. Change variants in the chat UI. See [validation](validation.md) for native-client acceptance; other versions require separate checks.
+
+Cycling also passes through the native default state with no variant label; it adds no thinking parameters, like normal. Do not declare an explicit default variant: that name conflicts with OpenCode 1.19.5 cycle-wrap state.
 
 ### Resume and terminal clipboard
 

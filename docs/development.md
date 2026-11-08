@@ -149,9 +149,9 @@ CPU CI 检查策略与失败边界，无法证明 CUDA 内核兼容性、硬件�
 
 ## 会话内思考档位
 
-用户要求保持现有默认强度，同时在正在使用的会话内动态调整。使用模型 client.variants 和 OpenCode 原生 Ctrl+T，不增加 local-ai 参数或持久默认设置。default 必须为空覆盖；仅对声明该配方的模型发送专用参数。原生 SDK 会把自动生成的通用档位与配置合并，须禁用模型不支持的 medium/minimal，并核对实际请求中的所有思考字段。
+用户要求保持现有默认强度，同时在正在使用的会话内动态调整。使用模型 client.variants 和 OpenCode 原生 Ctrl+T，不增加 local-ai 参数或持久默认设置。normal 必须为空覆盖；仅对声明该配方的模型发送专用参数。原生 SDK 会把自动生成的通用档位与配置合并，须禁用模型不支持的 medium/minimal，并核对实际请求中的所有思考字段。
 
-CPU 验收：PYTHONPATH=src python3 scripts/check-reasoning.py --client-dir /path/to/client。它在临时 HOME/状态中启动本地模拟模型和原生客户端，核对同一会话七次档位请求、default 恢复及 PTY 中 Ctrl+T 后的下一条请求。清理全部临时进程；不请求实际 GPU，不据此宣称速度或回答质量改善。CI 的 client-contract 也执行本检查。
+CPU 验收：PYTHONPATH=src python3 scripts/check-reasoning.py --client-dir /path/to/client。它在临时 HOME/状态中启动本地模拟模型和原生客户端，核对同一会话七次档位请求、normal 恢复及 PTY 中 Ctrl+T 后的下一条请求。清理全部临时进程；不请求实际 GPU，不据此宣称速度或回答质量改善。CI 的 client-contract 也执行本检查。
 
 ## 没有 GPU 时也能开发
 

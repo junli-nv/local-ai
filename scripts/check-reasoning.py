@@ -52,7 +52,7 @@ def stop_process(child):
         child.wait(timeout=5)
 
 
-def check_keyboard(assets, base, session_id, project, env, captured):
+def check_keyboard(assets, base, session_id, project, env, captured, variants):
     master, slave = pty.openpty()
     fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack("HHHH", 44, 160, 0, 0))
     child = subprocess.Popen(
@@ -91,22 +91,45 @@ def check_keyboard(assets, base, session_id, project, env, captured):
         )
         assert captured[-1].get("reasoning_effort") is None, captured[-1].get("reasoning_effort")
         drain_until(lambda: False, 1)
+        observed = set()
+        selected_labels = set()
+        sequence = []
         payload = None
-        for _ in range(2):
+        for _ in range(len(variants) + 3):
             count = len(captured)
             os.write(master, b"\x14")
             drain_until(lambda: False, 0.5)
             os.write(master, b"Return OK. No tools.\r")
             assert drain_until(lambda: len(captured) > count, 15), output.decode(errors="replace")
             payload = captured[-1].get("chat_template_kwargs")
+            if payload is None:
+                mode, alias = "default", None
+            elif payload.get("thinking") is False:
+                mode, alias = "none", "none"
+                assert payload == {"thinking": False}
+            else:
+                mode = payload["reasoning_effort"]
+                alias = {25: "low", 50: "high", 75: "xhigh", 100: "max"}[mode]
+                assert payload == {"thinking": True, "reasoning_effort": mode}
+            assert captured[-1].get("reasoning_effort") in (None, alias)
+            messages = request(base + "/session/" + session_id + "/message")
+            user = next(
+                item["info"] for item in reversed(messages) if item["info"]["role"] == "user"
+            )
+            selected = user.get("model", {}).get("variant", user.get("variant"))
+            selected_labels.add(selected)
+            selected_options = variants.get(selected, {}).get("chat_template_kwargs")
+            assert payload == selected_options, (selected, payload, list(user))
+            print("FRONTEND_SELECTED_VARIANT", selected or "implicit-default", flush=True)
+            observed.add(mode)
+            sequence.append(mode)
+            print("KEYBOARD_CYCLE_VERIFIED", mode, payload, flush=True)
             drain_until(lambda: False, 1)
-            if payload:
-                break
-        assert (
-            payload
-            and payload.get("thinking") is True
-            and payload.get("reasoning_effort") in (25, 50, 75, 100)
-        ), payload
+        assert observed == {"default", "none", 25, 50, 75, 100}, observed
+        assert any(
+            sequence[i : i + 3] == ["none", "default", 25] for i in range(len(sequence) - 2)
+        ), sequence
+        assert set(variants) <= selected_labels, selected_labels
         os.write(master, b"\x18q")
         assert drain_until(lambda: child.poll() is not None, 8), "TUI did not exit"
         assert child.wait(timeout=3) == 0, output.decode(errors="replace")
@@ -210,24 +233,24 @@ def check(assets):
                     if provider["id"] == "local-deepseek":
                         resolved = provider["models"][MODEL]["variants"]
                         assert set(resolved) == {
-                            "default",
+                            "normal",
                             "low",
                             "high",
                             "xhigh",
                             "max",
                             "none",
                         }, resolved
-                        assert resolved["default"] == {}
+                        assert resolved["normal"] == {} and "default" not in resolved
                         print("RESOLVED_VARIANTS", list(resolved), flush=True)
                 created = request(base + "/session", {"title": "reasoning variant contract"})
                 expected = [
-                    ("default", None),
+                    ("normal", None),
                     ("low", {"thinking": True, "reasoning_effort": 25}),
                     ("high", {"thinking": True, "reasoning_effort": 50}),
                     ("xhigh", {"thinking": True, "reasoning_effort": 75}),
                     ("max", {"thinking": True, "reasoning_effort": 100}),
                     ("none", {"thinking": False}),
-                    ("default", None),
+                    ("normal", None),
                 ]
                 for variant, kwargs in expected:
                     count = len(captured)
@@ -248,7 +271,7 @@ def check(assets):
                     assert actual.get("reasoning_effort") in (None, variant)
                     assert response["info"].get("error") is None, response["info"].get("error")
                     print("VARIANT_REQUEST_VERIFIED", variant, kwargs, flush=True)
-                check_keyboard(assets, base, created["id"], project, env, captured)
+                check_keyboard(assets, base, created["id"], project, env, captured, resolved)
                 report = {
                     "client_version": manifest["version"],
                     "same_session": True,
@@ -258,6 +281,8 @@ def check(assets):
                     "default_restored": True,
                     "mock_only": True,
                     "ctrl_t_verified": True,
+                    "all_keyboard_variants_verified": True,
+                    "cycle_wrap_verified": True,
                 }
                 print(json.dumps(report), flush=True)
         finally:

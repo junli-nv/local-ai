@@ -172,7 +172,7 @@ All three commands use GPU001:18000. chat --endpoint URL overrides one invocatio
 
 ### Switch reasoning during a session
 
-With DeepSeek-V4.1-Flash, press **Ctrl+T** at the chat prompt to cycle reasoning variants and check the displayed variant. `default` preserves the original server behavior, `low` suits simpler tasks, and `none` disables thinking. See [dynamic reasoning variants](docs/en/commands.md#dynamic-reasoning-variants) for other levels and limits. Changes affect the next message without leaving the session or restarting the GPU service. Clients opened before upgrading must exit and resume once to load the new variants. OpenCode may remember a selection; choose `default` explicitly to restore the original behavior.
+With DeepSeek-V4.1-Flash, press **Ctrl+T** at the chat prompt to cycle reasoning variants and check the displayed variant. `normal` preserves the original server behavior, `low` suits simpler tasks, and `none` disables thinking. See [dynamic reasoning variants](docs/en/commands.md#dynamic-reasoning-variants) for other levels and limits. Changes affect the next message without leaving the session or restarting the GPU service. Clients opened before upgrading must exit and resume once to load the new variants. OpenCode may remember a selection; choose `normal` explicitly to restore the original behavior.
 
 ### Configure the default connection
 
