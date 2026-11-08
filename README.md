@@ -168,6 +168,10 @@ mkdir -p /home/alice/project
 
 三条命令连接同一个 GPU001:18000 服务，分别演示检查、交互和单次任务。临时覆盖连接用 chat --endpoint URL，不会改写已保存的地址。第二实例的端口见[双实例](docs/deployment.zh-CN.md#双实例与多人使用)。
 
+### 会话内切换思考强度
+
+使用 DeepSeek-V4.1-Flash 时，在聊天输入界面按 **Ctrl+T** 循环切换思考档位，查看输入区显示的档位。`default` 保持原有服务端默认行为，`low` 适合较简单任务，`none` 关闭思考；其他档位及限制见[动态思考档位](docs/commands.md#动态思考档位)。切换影响下一条消息，无须退出会话或重启 GPU 服务。升级前已打开的客户端需退出后恢复一次以加载新增档位。OpenCode 可能记住选择，恢复默认时显式选 `default`。
+
 ### 配置默认连接
 
 在 BCM 的 /raid/local-ai 执行。例如保存 GPU001 为默认地址；更换时将 URL 替换成目标地址：

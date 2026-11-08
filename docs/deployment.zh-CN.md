@@ -130,6 +130,8 @@ cd /raid/local-ai
 生成速度、显存与主存；CPU 配方的容量优势不等于性能已经验证。
 外部 LOCAL_AI_CATALOG 或 config/catalog.json 完整替代内置配方，需要手动合并新配置。
 
+客户端思考强度可在 BCM 的交互界面用 Ctrl+T 动态切换，见[动态思考档位](commands.md#动态思考档位)。这与 B200 的 CPU/GPU Engram 放置独立，无须重建服务。
+
 ## 单用户 DSpark 与显式预热
 
 默认 b300-tp4 保留原参数；可选 b300-tp4-dspark 偏向单用户生成速度，并发吞吐可能下降。DSpark 通过草稿和目标模型校验的投机解码提高生成阶段速度，不保证 TTFT 下降。两者使用相同镜像和权重，无需另下模型。测量方法和适用范围见[验证记录](validation.md)。GB300 未验证，不直接套用此配方。

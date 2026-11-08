@@ -105,6 +105,12 @@ through its client configuration.
 
 Separate B200 TP4 profiles and the sanitized tests/fixtures/b200-tp4.json inventory now have bounded four-GPU API smoke acceptance; see validation for limits. Use the same workflow for later hardware. Do not relabel validated profiles.
 
+## Reasoning variants during a session
+
+The requested behavior preserves original defaults while allowing live user selection. Use model client.variants and native OpenCode Ctrl+T without adding local-ai flags or saved defaults. The default variant must be an empty override; model-specific fields belong only to models declaring that recipe. Native SDK-generated variants merge with configuration, so disable unsupported medium/minimal and verify all actual request thinking fields.
+
+Run PYTHONPATH=src python3 scripts/check-reasoning.py --client-dir /path/to/client. It uses temporary HOME/state, a local mock model and the native client to verify seven same-session variant requests, default restoration and the next request after PTY Ctrl+T input. All temporary processes are cleaned up. It invokes no real GPU and proves no latency or answer-quality improvement. CI client-contract runs the same check.
+
 ## Development without a GPU
 
 Base sanitized inventories on the [existing fixture](../../tests/fixtures/b300-tp4.json). Validate argument generation and rejection cases first.

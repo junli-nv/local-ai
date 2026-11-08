@@ -46,3 +46,4 @@ jobs:
             ./local-ai client install --client-dir /tmp/local-ai-client
           fi
       - run: python scripts/check-client.py --client-dir /tmp/local-ai-client
+      - run: python scripts/check-reasoning.py --client-dir /tmp/local-ai-client

@@ -312,3 +312,13 @@ tracked source or in ignored directories.
 ## v1.3.1 version marking
 
 Explicitly requested version label for merging B200 support commit c802251 into main. Program metadata and download/update examples use 1.3.1. Includes independent GPU/CPU Engram TP4 profiles, seven added regression tests and bilingual deployment guides. B200 hardware acceptance remains bounded by the preceding record; this tag does not expand full-context, long-running or other-platform support.
+
+## 2026-11-08: Live reasoning variants and v1.3.1 retag
+
+Model client.variants exposes default, low, high, xhigh, max and none. The empty default adds no thinking parameters and preserves original behavior. Disable native generic medium/minimal variants unsupported by this model. Runtime code and GPU engine arguments remain unchanged.
+
+Native OpenCode 1.19.5 used an isolated temporary HOME, state and project with a local mock endpoint. Seven sequential requests in one session and backend process checked four numeric effort levels, disabled thinking and restored default. A PTY check verified no initial override, sent the actual Ctrl+T key, and checked the next HTTP request for changed effort. Existing resume and terminal-mode acceptance remains required. Added default-behavior/model-isolation regressions and the native check to CI client-contract. All 164 unit tests, Ruff lint/format checks, Git whitespace validation and both native-client checks passed.
+
+This acceptance invokes no production model, cluster operation or GPU load. It establishes no speedup, reduction in reasoning tokens or preservation of complex-task quality. New or resumed clients load the variants once; subsequent switching is live. Custom complete catalogs need an explicit merge.
+
+The user explicitly requested retagging v1.3.1. Its previous commit was fb3590a52c211472063d0d00b0756fd5074739b4 and annotated tag object was 300e2aba37202788b1f002b7bd0038147d78192c. The replacement points to the CI-passed commit containing this record; consult the remote tag for its exact SHA. Previous v1.3.1 downloads need fresh source or another program update; the unchanged version string alone does not identify source content. Original B200 hardware acceptance limits remain unchanged.

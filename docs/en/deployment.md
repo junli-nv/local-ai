@@ -125,6 +125,8 @@ Measure TTFT, generation speed, HBM and host memory; capacity does not establish
 performance. LOCAL_AI_CATALOG or config/catalog.json replaces the entire catalog;
 merge these recipes explicitly into a custom catalog.
 
+Reasoning can be switched with Ctrl+T in the BCM chat UI; see [dynamic reasoning variants](commands.md#dynamic-reasoning-variants). This is independent of B200 CPU/GPU Engram placement and needs no server replacement.
+
 ## Single-user DSpark and explicit warmup
 
 The default b300-tp4 keeps its existing settings. Optional b300-tp4-dspark favors single-user generation speed, with a possible concurrency throughput cost. DSpark uses speculative decoding with target-model verification to improve the decode phase; lower TTFT is not guaranteed. It uses the same image and weights. See [validation](validation.md) for measurements and limits. This recipe is not validated on GB300.

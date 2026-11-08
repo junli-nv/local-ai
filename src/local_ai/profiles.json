@@ -61,7 +61,45 @@
             "text"
           ]
         },
-        "attachment": true
+        "attachment": true,
+        "variants": {
+          "default": {},
+          "low": {
+            "chat_template_kwargs": {
+              "thinking": true,
+              "reasoning_effort": 25
+            }
+          },
+          "high": {
+            "chat_template_kwargs": {
+              "thinking": true,
+              "reasoning_effort": 50
+            }
+          },
+          "xhigh": {
+            "chat_template_kwargs": {
+              "thinking": true,
+              "reasoning_effort": 75
+            }
+          },
+          "max": {
+            "chat_template_kwargs": {
+              "thinking": true,
+              "reasoning_effort": 100
+            }
+          },
+          "none": {
+            "chat_template_kwargs": {
+              "thinking": false
+            }
+          },
+          "medium": {
+            "disabled": true
+          },
+          "minimal": {
+            "disabled": true
+          }
+        }
       }
     }
   },
