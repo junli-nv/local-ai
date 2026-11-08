@@ -1,5 +1,9 @@
 # local-ai
 
+[GPU server software prerequisites](docs/en/prerequisites.md)
+
+[Experimental RTX 6000D profile](docs/en/rtx6000d.md)
+
 [中文（默认）](README.md)
 
 Run vLLM on the GPU server and OpenCode on BCM. File, shell, Git and SSH tools execute on BCM as the current user.

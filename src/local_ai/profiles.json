@@ -101,6 +101,105 @@
           }
         }
       }
+    },
+    "deepseek-v4.1-flash-sm120": {
+      "repo": "deepseek-ai/DeepSeek-V4.1-Flash",
+      "revision": "314113f8a7dadb388215396ba5fbee2c610a04d6",
+      "model_directory": "DeepSeek-V4.1-Flash",
+      "served_name": "DeepSeek-V4.1-Flash-SM120",
+      "image": "vllm/vllm-openai@sha256:390a656b54e12144ad15ff32244c6e848408b0ee94f2c4c5a84451e7430f1aa7",
+      "image_tag": "vllm/vllm-openai:nightly-cf5cea2da37d3dfed27d2e0aa3041c3e553c2d57",
+      "engine_options": {
+        "--tokenizer-mode": "deepseek_v41",
+        "--tool-call-parser": "deepseek_v41",
+        "--reasoning-parser": "deepseek_v41",
+        "--enable-auto-tool-choice": true,
+        "--max-model-len": "32768",
+        "--max-num-seqs": "1",
+        "--max-num-batched-tokens": "8192",
+        "--gpu-memory-utilization": "0.80",
+        "--kv-cache-dtype": "fp8",
+        "--attention-config": {
+          "backend": "FLASHINFER_MLA_SPARSE_DSV41",
+          "indexer_kv_dtype": "fp8"
+        },
+        "--engram-config": {
+          "cpu_offload": true
+        },
+        "--kernel-config": {
+          "enable_flashinfer_autotune": false
+        },
+        "--compilation-config": {
+          "mode": 0,
+          "cudagraph_mode": "NONE"
+        },
+        "--block-size": "64",
+        "--enforce-eager": true,
+        "--language-model-only": true
+      },
+      "environment": {
+        "VLLM_USE_RUST_FRONTEND": "1",
+        "VLLM_ALLREDUCE_USE_FLASHINFER": "0",
+        "NCCL_IB_DISABLE": "1"
+      },
+      "client": {
+        "reasoning": true,
+        "tool_call": true,
+        "interleaved": {
+          "field": "reasoning"
+        },
+        "limit": {
+          "context": 32768,
+          "output": 8192
+        },
+        "modalities": {
+          "input": [
+            "text"
+          ],
+          "output": [
+            "text"
+          ]
+        },
+        "attachment": true,
+        "variants": {
+          "normal": {},
+          "low": {
+            "chat_template_kwargs": {
+              "thinking": true,
+              "reasoning_effort": 25
+            }
+          },
+          "high": {
+            "chat_template_kwargs": {
+              "thinking": true,
+              "reasoning_effort": 50
+            }
+          },
+          "xhigh": {
+            "chat_template_kwargs": {
+              "thinking": true,
+              "reasoning_effort": 75
+            }
+          },
+          "max": {
+            "chat_template_kwargs": {
+              "thinking": true,
+              "reasoning_effort": 100
+            }
+          },
+          "none": {
+            "chat_template_kwargs": {
+              "thinking": false
+            }
+          },
+          "medium": {
+            "disabled": true
+          },
+          "minimal": {
+            "disabled": true
+          }
+        }
+      }
     }
   },
   "profiles": {
@@ -226,6 +325,21 @@
       },
       "min_host_available_gib": 256,
       "host_memory_note": "256 GiB MemAvailable is a conservative guard, not a measured minimum. Engram uses host memory; validate NUMA placement and performance."
+    },
+    "rtx6000d-tp8": {
+      "arch": "amd64",
+      "platform": "linux/amd64",
+      "tp": 8,
+      "cpu_offload": true,
+      "min_vram_mib": 85000,
+      "gpu_names": [
+        "RTX 6000D"
+      ],
+      "validation": "experimental-hardware-validated-api-smoke",
+      "platform_digest": "sha256:9db5b819a319fb99998c1fc262d06643208e03c6903a7e2aaa5de7ea832d6d9f",
+      "model": "deepseek-v4.1-flash-sm120",
+      "min_host_available_gib": 256,
+      "host_memory_note": "Experimental SM120 TP8; at least 256 GiB available host memory for CPU Engram. Eight-GPU CUDA/NCCL, verified model loading, API smoke and native OpenCode tool roundtrip passed. Full 32K boundary, concurrency, long-run stability and performance tuning are not validated."
     }
   },
   "legacy_environment": {

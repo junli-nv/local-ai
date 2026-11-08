@@ -1,5 +1,7 @@
 # Deployment and operations
 
+[Software prerequisites and version checks](prerequisites.md)
+
 [中文（默认）](../deployment.zh-CN.md)
 
 Follow [README](../../README.en.md) for first online installation. This page expands deployment branches and recovery, without repeating source download, client installation or chat. See [offline deployment](offline.md) for migration, and the [manual](commands.md) for parameters.

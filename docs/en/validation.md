@@ -330,3 +330,7 @@ The user reported missing low/max choices. Reproduction showed an explicit defau
 Rename the visible original-strength choice to normal while retaining native unselected behavior. Other request values are unchanged. Strengthen PTY acceptance with nine Ctrl+T presses and mock requests, inspecting frontend-selected names through the public message API. Cover all six visible choices, native default and wrap back to low. Including seven API variant requests, 17 mock-model requests passed. This is no real-GPU or performance claim.
 
 The user's explicit v1.3.1 retag authorization covers this correction. Previous commit: 4be659fa87d2ceee1a605fae5b0f9843f465c06a; previous annotated tag object: 001ba472ea6287755b645ab75bfe616f88f58846. Consult the remote tag and delivery commit for the replacement. Current guides use normal; the preceding default description records the former implementation.
+
+## Experimental RTX 6000D TP8
+
+See [RTX 6000D](rtx6000d.md) for versions and limited hardware smoke coverage. Existing platform validation scope is unchanged.

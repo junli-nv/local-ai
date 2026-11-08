@@ -1,5 +1,7 @@
 # 部署与运行维护
 
+[软件前提与版本检查](prerequisites.md)
+
 首次在线安装按 [README](../README.md) 顺序完成；本页只展开部署分支和故障处理，不重复软件下载、客户端安装和聊天主流程。离线准备与迁移见[离线部署](offline.md)，参数和默认值见[命令手册](commands.md)。
 
 沿用 README：GPU001、bcm-headnode、alice、安装根 /raid/local-ai、实例 a、端口 18000。以下 local-ai 命令在 GPU001 的 /raid/local-ai 执行；标明 BCM 的命令才在 BCM 执行。本页不设置数据目录覆盖。

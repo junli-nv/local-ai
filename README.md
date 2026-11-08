@@ -1,5 +1,9 @@
 # local-ai
 
+[GPU 服务端软件前提与版本检查](docs/prerequisites.md)
+
+[RTX 6000D 实验配方](docs/rtx6000d.md)
+
 在 GPU 服务器运行 vLLM，在 BCM 头节点运行 OpenCode。文件、Shell、Git、SSH 等工具由 BCM 上的当前用户执行。
 
 当前版本为 v1.3.1，以下示例下载该标签的完整源码。./local-ai --version 应显示 1.3.1，实际验收范围与未覆盖平台见[验证记录](docs/validation.md)。
