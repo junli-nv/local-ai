@@ -141,6 +141,8 @@ Ongoing model output remains in instances/NAME/server.log; chat history and sess
 
 Experimental B200 TP4 profiles are b200-tp4-cpu (CPU Engram) and b200-tp4 (GPU Engram). See [deployment](deployment.md#b200-four-gpu-experimental) for guards and usage.
 
+RTX 6000D uses independent `rtx6000d-tp8`: eight GPUs, CPU Engram, 32K, one sequence and text only. On BCM explicitly pass `--model DeepSeek-V4.1-Flash-SM120`. See [RTX 6000D](rtx6000d.md) for guards, complete deployment commands and bounded acceptance.
+
 TP is tensor parallelism: b300-tp4 uses four local B300 GPUs. See [deployment](deployment.md) for GB300 limitations. Program and data default to the unpacked directory (/raid/local-ai here). Options do not persist between commands; use the same data root for preparation, planning, starting and stopping.
 
 On GPU001:

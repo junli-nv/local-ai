@@ -10,7 +10,7 @@ history and transcripts. Tool calls returned by the model are executed on BCM
 with the current user's permissions.
 
 These identities are independent:
-1. GPU/model policy: B300 TP4, GB300 TP4 or GB300 TP2.
+1. GPU/model policy: B300 TP4, B200 TP4 (CPU/GPU Engram), RTX 6000D TP8 or GB300 TP4/TP2, each with independent validation scope.
 2. Server CPU/image platform: AMD64 or ARM64.
 3. Client binary: selected from the BCM host CPU, never from the GPU profile.
 

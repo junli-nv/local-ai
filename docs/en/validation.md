@@ -7,7 +7,7 @@ user logs are intentionally omitted from this public record.
 
 The 2026-10-31 integration records below describe the previous client. Tunnel entries are historical; the current client uses API endpoints without built-in forwarding or a separate environment-doctor command. New local HTTP regressions cover direct connections, model checks, retry and no SSH subprocess. They do not constitute new GPU acceptance.
 
-Version labels 1.0.0/1.1.0 below identify historical candidate checks whose tags were withdrawn. The current version is v1.3.1; each acceptance record retains its original date, method and limits. Tagging does not expand support.
+Version labels 1.0.0/1.1.0 below identify historical candidate checks whose tags were withdrawn. The current version is v1.3.2; each acceptance record retains its original date, method and limits. Tagging does not expand support.
 
 ## Hardware and pinned versions
 
@@ -334,3 +334,9 @@ The user's explicit v1.3.1 retag authorization covers this correction. Previous 
 ## Experimental RTX 6000D TP8
 
 See [RTX 6000D](rtx6000d.md) for versions and limited hardware smoke coverage. Existing platform validation scope is unchanged.
+
+## v1.3.2 version marking
+
+Explicitly requested release integrating independent RTX 6000D TP8 support (feature commit 29e6ad2). Align program versions, README profile tables, bilingual deployment, client model selection, offline and update examples. Existing models, profiles and defaults remain unchanged. See [RTX 6000D](rtx6000d.md) for eight-GPU, bounded API and native-client tool evidence. Full 32K boundaries, concurrency and sustained stability remain unvalidated; merging into main or tagging does not expand support. Require CPU regressions, Ruff, documentation consistency and CI before creating the annotated tag. Historical version records retain their original labels.
+
+Pre-release checks passed: 167 tests in clean source, Ruff lint and formatting of 46 files, 250 local links/anchors and 126 Bash blocks across 26 Markdown files. The version command reports 1.3.2.

@@ -8,7 +8,7 @@ BCM 负责 OpenCode、项目文件、Shell/Git/SSH 工具、用户凭据、历�
 
 必须分别确定三个配置，不能互相代替：
 
-1. GPU 与模型策略：B300 TP4、GB300 TP4 或 GB300 TP2。
+1. GPU 与模型策略：B300 TP4、B200 TP4（CPU/GPU Engram）、RTX 6000D TP8 或 GB300 TP4/TP2；各自验收范围独立。
 2. 服务端 CPU 与镜像平台：AMD64 或 ARM64。
 3. 客户端程序：按 BCM 自身的 CPU 架构选择，不能由服务端 GPU 型号推断。
 

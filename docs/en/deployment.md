@@ -94,6 +94,10 @@ Weights and host logs remain. Different specs are never silently substituted. Re
 
 Startup checks permit TCP TIME_WAIT reuse after a stopped HTTP service, while rejecting active listeners. Other applications owning the port still require a different port or explicit operator action.
 
+## RTX 6000D eight-GPU (experimental)
+
+v1.3.2 adds independent `rtx6000d-tp8`: AMD64, eight GPUs with at least 85000 MiB each, and 256 GiB available host RAM. It uses 32K, one sequence, CPU Engram and text input, without DSpark/CUDA graphs. Complete [software prerequisites](prerequisites.md) and CDI checks, then follow the [RTX 6000D guide](rtx6000d.md) to install, start and select `DeepSeek-V4.1-Flash-SM120` on BCM. Eight-GPU API smoke and native tool round trips passed; full 32K, concurrency and sustained stability remain unvalidated.
+
 ## B200 four-GPU (experimental)
 
 `b200-tp4-cpu` stores Engram tables in host memory; `b200-tp4` retains GPU Engram.
@@ -104,7 +108,7 @@ AMD64 image digest and B300 baseline engine settings: 131072 context, four activ
 sequences, 8192 batched tokens and a 0.80 memory budget, without DSpark.
 Both passed bounded four-GPU API smoke checks in the recorded environment;
 full-context boundaries and long-running loads remain unvalidated.
-v1.3.1 includes these profiles; obtain that tagged source through README
+v1.3.2 includes these profiles; obtain that tagged source through README
 and check ./local-ai profiles. Freed weight memory may be reused for KV cache,
 so nvidia-smi total usage need not fall. API READY does not eliminate first-shape JIT.
 

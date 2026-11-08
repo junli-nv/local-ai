@@ -8,6 +8,10 @@ Separate weight loading, startup compilation, API health, first-request compilat
 
 Earlier work changed TP8/eager/CPU Engram into a combined GPU Engram/CUDA Graph configuration before comparing TP4. It supports the current TP4 baseline, but simultaneous changes prevent attributing improvements to TP count or one optimization alone. See validation for scope. Default b300-tp4 remains unchanged.
 
+## RTX 6000D scope
+
+Independent `rtx6000d-tp8` uses CPU Engram, eager, 32K, one sequence and text input. It does not enable the B300 DSpark/CUDA graph optimizations below. See [RTX 6000D](rtx6000d.md) for smoke tests, single-request latency and unvalidated work; these do not establish throughput differences or a performance ranking against B200/B300.
+
 ## What changed for vLLM DSpark
 
 The separate b300-tp4-dspark recipe lives in [profiles.json](../../src/local_ai/profiles.json). It retains the model revision, image, TP4, GPU Engram, FP8 KV, 131072 context, four active sequences and 8192 batched tokens.

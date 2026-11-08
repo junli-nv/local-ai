@@ -1,14 +1,10 @@
 # local-ai
 
-[GPU server software prerequisites](docs/en/prerequisites.md)
-
-[Experimental RTX 6000D profile](docs/en/rtx6000d.md)
-
 [中文（默认）](README.md)
 
 Run vLLM on the GPU server and OpenCode on BCM. File, shell, Git and SSH tools execute on BCM as the current user.
 
-The current version is v1.3.1. Examples download complete source from this tag; ./local-ai --version should report 1.3.1. See [validation](docs/en/validation.md) for acceptance scope and unvalidated platforms.
+The current version is v1.3.2. Examples download complete source from this tag; ./local-ai --version should report 1.3.2. See [validation](docs/en/validation.md) for acceptance scope and unvalidated platforms.
 
 ## Example conventions and documentation
 
@@ -33,9 +29,11 @@ Use appropriate sudo/Docker permissions; root may omit sudo. Data defaults follo
 
 The [optimization and engine exploration record](docs/en/performance.md) preserves DSpark parameter choices, first-use compilation work, SGLang experiments and future comparison methods.
 
-v1.3.1 includes rich-document reading during ordinary chat. Read PDF, images, Word, Excel and PowerPoint by naming their directory during chat. Upgrade steps and optional client-side converters: [document guide](docs/en/documents.md).
+v1.3.2 includes rich-document reading during ordinary chat. Read PDF, images, Word, Excel and PowerPoint by naming their directory during chat. Upgrade steps and optional client-side converters: [document guide](docs/en/documents.md).
 
 ## Prerequisites
+
+See [server software prerequisites](docs/en/prerequisites.md) for Docker CE, containerd, driver and CDI requirements and checks.
 
 GPU001: Linux, Python 3.10+, Bash, curl, tar, compatible NVIDIA driver, CDI-capable Docker API 1.49+, and NVIDIA Container Toolkit. Obtain GPU allocation and sufficient resources.
 
@@ -47,10 +45,13 @@ BCM: Linux AMD64/ARM64, Python 3.10+, Bash, curl, tar, Git, rg, util-linux scrip
 | b300-tp4-dspark | AMD64 / linux/amd64 | 4 B300 | GPU | Optional single-user recipe; see validation |
 | b200-tp4-cpu | AMD64 / linux/amd64 | 4 B200 | CPU | Four-GPU API smoke passed; see validation |
 | b200-tp4 | AMD64 / linux/amd64 | 4 B200 | GPU | Four-GPU API smoke passed; see validation |
+| rtx6000d-tp8 | AMD64 / linux/amd64 | 8 RTX 6000D | CPU | Experimental: eight-GPU API smoke and native-client tool round trip passed |
 | gb300-tp4 | ARM64 / linux/arm64 | 4 GB300/B300 | GPU | Not hardware validated |
 | gb300-tp2 | ARM64 / linux/arm64 | 2 GB300/B300 | CPU | Upstream recipe, unvalidated |
 
-See [B200 deployment](docs/en/deployment.md#b200-four-gpu-experimental) for CPU/GPU Engram comparison. Both have separate bounded acceptance and do not inherit B300 performance results. v1.3.1 includes both B200 recipes; confirm them with ./local-ai profiles.
+See [B200 deployment](docs/en/deployment.md#b200-four-gpu-experimental) for CPU/GPU Engram comparison. Both have separate bounded acceptance and do not inherit B300 performance results. v1.3.2 includes both B200 recipes; confirm them with ./local-ai profiles.
+
+Starting with v1.3.2, the independent `rtx6000d-tp8` profile requires at least 85000 MiB per GPU and 256 GiB available host RAM. It uses a separately pinned SM120 image, 32K context, one sequence and text input, without DSpark or CUDA graphs. See [RTX 6000D deployment](docs/en/rtx6000d.md) for installation, eight-GPU startup and BCM commands. Explicitly select served model `DeepSeek-V4.1-Flash-SM120` on the client. Full 32K boundaries, concurrency and sustained stability remain unvalidated. The main workflow below continues to use four B300 GPUs; follow the dedicated guide for RTX 6000D.
 
 BCM architecture is independent. Profiles use GPUs visible to one OS. GB300 TP2 checks at least 256 GiB MemAvailable; B300 acceptance does not cover GB300.
 
@@ -62,7 +63,7 @@ Download into an empty directory and check Docker, GPUs and CDI:
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.3.1.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.3.2.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ./local-ai --version
@@ -138,7 +139,7 @@ Log in as alice on bcm-headnode and use BCM's own empty directory:
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.3.1.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.3.2.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ```
@@ -220,7 +221,7 @@ Tasks include hardware troubleshooting, scripts, services and Slurm/Kubernetes j
 
 ## Update an existing installation
 
-Use the [program update guide](docs/en/update.md) to update GPU and BCM installations separately while retaining resources, configuration and running instances. The standalone scripts/update.py supports explicit tags, local source archives and backup rollback, without install or resource preparation. v1.3.1 includes the updater; the guide also covers bootstrapping installations that lack it.
+Use the [program update guide](docs/en/update.md) to update GPU and BCM installations separately while retaining resources, configuration and running instances. The standalone scripts/update.py supports explicit tags, local source archives and backup rollback, without install or resource preparation. v1.3.2 includes the updater; the guide also covers bootstrapping installations that lack it.
 
 ## Export and offline installation
 

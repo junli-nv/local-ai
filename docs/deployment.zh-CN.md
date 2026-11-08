@@ -103,6 +103,10 @@ docker rm local-ai-a
 
 启动预检允许已停止 HTTP 服务的 TCP TIME_WAIT 连接复用，但仍拒绝实际监听进程占用的端口。其他程序占用时应更换端口或由操作者明确处理。
 
+## RTX 6000D 八卡（实验性）
+
+v1.3.2 提供独立 `rtx6000d-tp8`。八卡 AMD64、每卡至少 85000 MiB、主存可用至少 256 GiB；32K、单序列、CPU Engram、纯文本，不启用 DSpark/CUDA Graph。先完成[软件前提](prerequisites.md)和 CDI 检查，再按 [RTX 6000D 专项指南](rtx6000d.md)安装、启动并在 BCM 选择 `DeepSeek-V4.1-Flash-SM120`。八卡 API 冒烟与原生工具往返已通过；完整 32K、并发和长期稳定性未验收。
+
 ## B200 四卡（实验性）
 
 `b200-tp4-cpu` 将 Engram 表放到主机内存；`b200-tp4` 保留 GPU Engram。
@@ -111,7 +115,7 @@ MemAvailable 至少 256 GiB。这些值是保守配置保护值，不是实测�
 模型 revision、AMD64 镜像摘要及其他引擎参数沿用 B300 基线：
 131072 上下文、四个活动序列、8192 批处理 token、0.80 显存预算，不启用 DSpark。
 两套配方已在验证记录所列环境通过四卡 API 冒烟；完整上下文边界与长期负载未验收。
-v1.3.1 已包含新增配方；按 README 获取该标签源码并检查 ./local-ai profiles。
+v1.3.2 已包含新增配方；按 README 获取该标签源码并检查 ./local-ai profiles。
 CPU 卸载释放的模型显存会被 vLLM 用作 KV cache，nvidia-smi 总占用不一定下降。
 API READY 也不表示所有形状已预热；首次请求仍可能出现 JIT 延迟。
 

@@ -8,6 +8,10 @@
 
 早期从 TP8/eager/CPU Engram 调整到 GPU Engram 与 CUDA Graph 的组合配置，再比较 TP4。它支持当前 TP4 基线的选择，但多项参数同时变化，不能单独归因于 TP 数或某一种优化。原始测量范围见验证记录；默认 b300-tp4 继续保留。
 
+## RTX 6000D 的适用边界
+
+独立 `rtx6000d-tp8` 使用 CPU Engram、eager、32K、单序列和纯文本；没有启用下文 B300 的 DSpark/CUDA Graph 优化。RTX 实机冒烟、单次延迟与未验收项见 [RTX 6000D](rtx6000d.md)，不能据此推断与 B200/B300 的吞吐差距或性能排名。
+
 ## 本次 vLLM DSpark 如何调整
 
 配置落在 [profiles.json](../src/local_ai/profiles.json) 的独立 b300-tp4-dspark，而非修改默认模型参数。模型 revision、镜像、TP4、GPU Engram、FP8 KV、131072 上下文、四个活动序列及 8192 批处理 token 维持基线。
