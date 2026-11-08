@@ -30,6 +30,7 @@ BCM 负责 OpenCode、项目文件、Shell/Git/SSH 工具、用户凭据、历�
 | `deployment.py` / `bundle.py` | 就地准备角色资源、完整导出与清单校验 |
 | `resume.py` / `operations.py` | 原生会话恢复与通用任务指引 |
 | `cli.py` | 解析参数并显式分派操作 |
+| `completion.py` | 从 argparse 读取补全候选并生成 Bash 脚本；绕过业务分派与安装日志 |
 
 导入模块不会启动进程。聊天操作不会隐式部署 GPU 服务。
 

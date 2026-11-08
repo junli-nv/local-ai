@@ -7,7 +7,28 @@ user logs are intentionally omitted from this public record.
 
 The 2026-10-31 integration records below describe the previous client. Tunnel entries are historical; the current client uses API endpoints without built-in forwarding or a separate environment-doctor command. New local HTTP regressions cover direct connections, model checks, retry and no SSH subprocess. They do not constitute new GPU acceptance.
 
-Version labels 1.0.0/1.1.0 below identify historical candidate checks whose tags were withdrawn. The current version is v1.3.2; each acceptance record retains its original date, method and limits. Tagging does not expand support.
+Version labels 1.0.0/1.1.0 below identify historical candidate checks whose tags were withdrawn. The current version is v1.3.3; each acceptance record retains its original date, method and limits. Tagging does not expand support.
+
+## Bash completion CPU regressions: 2026-11-08
+
+v1.3.3 adds completion bash. Six new regressions
+pass on macOS ARM64, Python 3.14 and Bash 3.2.57: command levels, options, fixed choices,
+custom catalogs, repeated options, equals syntax, paths with spaces, global arguments and
+read-only boundaries, including actual Bash function calls. A Bash PTY smoke test also typed
+ser, Tab and --help, confirming completion to server and its command help. Ruff lint/format and diff checks
+pass; documentation contracts cover bilingual CLI examples, options, links and Bash syntax.
+
+The full unittest suite has 173 tests: 171 pass and two fail due to local platform constraints:
+127.0.0.2 cannot be bound, and an AMD64 server offline-install fixture conflicts with the ARM64
+host. The original 167-test source has the same two failures. Existing tests were neither
+modified nor skipped. Temporary paths and private state use /private/tmp to avoid macOS
+temporary-directory symlink differences in path comparisons. Linux interactive terminals and
+GPUs were not validated; hardware support is unchanged.
+
+Manually reviewed both README workflows and Chinese/English command, deployment, offline,
+architecture, development, performance, update and validation materials. Completion remains
+optional shell setup; installation/migration steps, defaults and historical acceptance limits
+remain consistent.
 
 ## Hardware and pinned versions
 
@@ -340,3 +361,17 @@ See [RTX 6000D](rtx6000d.md) for versions and limited hardware smoke coverage. E
 Explicitly requested release integrating independent RTX 6000D TP8 support (feature commit 29e6ad2). Align program versions, README profile tables, bilingual deployment, client model selection, offline and update examples. Existing models, profiles and defaults remain unchanged. See [RTX 6000D](rtx6000d.md) for eight-GPU, bounded API and native-client tool evidence. Full 32K boundaries, concurrency and sustained stability remain unvalidated; merging into main or tagging does not expand support. Require CPU regressions, Ruff, documentation consistency and CI before creating the annotated tag. Historical version records retain their original labels.
 
 Pre-release checks passed: 167 tests in clean source, Ruff lint and formatting of 46 files, 250 local links/anchors and 126 Bash blocks across 26 Markdown files. The version command reports 1.3.2.
+
+## v1.3.3 version marking
+
+Explicitly requested release adding completion bash for nested commands, options, current recipes,
+other fixed choices and local paths. Runtime dependencies remain standard-library-only; completion
+does not probe GPUs, connect to models or edit shell startup files. Align versions, README,
+recursive help, bilingual command, deployment, offline and update entry points. Preserve historical
+v1.3.2 and earlier acceptance records. The version command reports 1.3.3.
+
+See the Bash completion CPU regression section for 171 passing tests out of 173, the two existing
+local platform failures, Bash 3.2 completion and documentation checks. The release commit's CI
+validates Linux unit tests on Python 3.10/3.12/3.13 and native client contracts before creating
+the annotated v1.3.3 tag and verifying its remote target. This release adds no GPU acceptance
+and changes no existing recipes, installation defaults or hardware support levels.

@@ -6,26 +6,26 @@ GPU001 与 bcm-headnode 分别更新各自的程序目录。以下沿用 /raid/l
 
 ## 首次取得脚本并升级
 
-v1.3.2 已包含 scripts/update.py；旧安装没有脚本时，先按下面的方法单独获取。先结束本机聊天，避免更新期间启动新的管理命令；GPU 推理容器可保持运行。
+v1.3.3 已包含 scripts/update.py；旧安装没有脚本时，先按下面的方法单独获取。先结束本机聊天，避免更新期间启动新的管理命令；GPU 推理容器可保持运行。
 
 在 GPU001 执行；在 BCM 按相同过程更新它自己的目录：
 
 ```bash
-curl -fL --retry 3 https://raw.githubusercontent.com/junli-nv/local-ai/v1.3.2/scripts/update.py -o /tmp/local-ai-update.py
-python3 /tmp/local-ai-update.py --root /raid/local-ai --version v1.3.2
+curl -fL --retry 3 https://raw.githubusercontent.com/junli-nv/local-ai/v1.3.3/scripts/update.py -o /tmp/local-ai-update.py
+python3 /tmp/local-ai-update.py --root /raid/local-ai --version v1.3.3
 /raid/local-ai/local-ai --version
 ```
 
---version 显式选择 Git 标签，后续将它替换为目标版本。脚本不自动追 main，也不把 v1.3.2 作为版本白名单。成功应输出 state=updated、version=1.3.2、resources_changed=false、service_restarted=false，以及实际 backup 路径；命令退出 0。
+--version 显式选择 Git 标签，后续将它替换为目标版本。脚本不自动追 main，也不把 v1.3.3 作为版本白名单。成功应输出 state=updated、version=1.3.3、resources_changed=false、service_restarted=false，以及实际 backup 路径；命令退出 0。
 
 运行后脚本保留在安装目录 scripts/update.py，后续可以直接使用：
 
 ```bash
 cd /raid/local-ai
-python3 scripts/update.py --root /raid/local-ai --version v1.3.2
+python3 scripts/update.py --root /raid/local-ai --version v1.3.3
 ```
 
-上例仍指定 v1.3.2；升级下一版时显式替换版本号。再次执行会重新校验源码并创建新的程序备份，不处理模型等大资源。旧标签没有脚本时也会保留当前运行的更新脚本，便于以后更新和导出。
+上例仍指定 v1.3.3；升级下一版时显式替换版本号。再次执行会重新校验源码并创建新的程序备份，不处理模型等大资源。旧标签没有脚本时也会保留当前运行的更新脚本，便于以后更新和导出。
 
 ## 检查结果
 
@@ -63,9 +63,9 @@ cd /raid/local-ai
 ```bash
 mkdir -p /media/local-ai/update
 cd /media/local-ai/update
-curl -fL --retry 3 https://raw.githubusercontent.com/junli-nv/local-ai/v1.3.2/scripts/update.py -o update.py
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.3.2.tar.gz -o local-ai-v1.3.2-source.tar.gz
-sha256sum update.py local-ai-v1.3.2-source.tar.gz > SHA256SUMS
+curl -fL --retry 3 https://raw.githubusercontent.com/junli-nv/local-ai/v1.3.3/scripts/update.py -o update.py
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.3.3.tar.gz -o local-ai-v1.3.3-source.tar.gz
+sha256sum update.py local-ai-v1.3.3-source.tar.gz > SHA256SUMS
 ```
 
 将介质挂载到目标机 /media/local-ai，然后执行：
@@ -73,7 +73,7 @@ sha256sum update.py local-ai-v1.3.2-source.tar.gz > SHA256SUMS
 ```bash
 cd /media/local-ai/update
 sha256sum -c SHA256SUMS
-python3 update.py --root /raid/local-ai --archive local-ai-v1.3.2-source.tar.gz
+python3 update.py --root /raid/local-ai --archive local-ai-v1.3.3-source.tar.gz
 /raid/local-ai/local-ai --version
 ```
 

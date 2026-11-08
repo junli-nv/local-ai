@@ -12,6 +12,7 @@ from . import (
     artifacts,
     bundle,
     client,
+    completion,
     configuration,
     deployment,
     documents,
@@ -40,7 +41,8 @@ def parser():
         description="GPU inference server + BCM-local OpenCode client. Example hosts: GPU001 / bcm-headnode.",
         epilog="Manual in source checkout: docs/commands.md (Chinese), docs/en/commands.md (English). "
         "Online: https://github.com/junli-nv/local-ai/blob/main/docs/commands.md. "
-        "Use COMMAND --help or GROUP COMMAND --help for options.",
+        "Use COMMAND --help or GROUP COMMAND --help for options. "
+        'Enable Bash Tab completion: eval "$(./local-ai completion bash)".',
     )
     a.add_argument(
         "--version",
@@ -59,6 +61,14 @@ def parser():
         help="Append installation/deployment steps to this file; default DATA_DIR/install.log or CLIENT_DIR/install.log; put before the command group",
     )
     groups = a.add_subparsers(dest="group", required=True)
+    b = groups.add_parser(
+        "completion",
+        help="Print shell completion setup; no files are changed",
+        description="Print Bash 3.2+ completion setup to stdout without JSON or installation logs.",
+        epilog='Enable in Bash: eval "$(./local-ai completion bash)". '
+        "Subcommands, options, choices and local paths are completed without executing commands.",
+    )
+    b.add_argument("shell", choices=["bash"], help="Shell to generate Tab completion for")
     groups.add_parser("profiles", help="Show hardware profiles and validation levels")
     document = groups.add_parser(
         "document", help="Client host: read rich documents or check conversion tools"
@@ -537,7 +547,15 @@ def dispatch(q):
 def main(argv=None):
     q = None
     try:
+        argv = list(sys.argv[1:] if argv is None else argv)
+        if argv[:1] == ["--_complete"]:
+            mode, values = completion.candidates(parser(), argv[1:])
+            print("\n".join([mode, *values]))
+            return 0
         q = parser().parse_args(argv)
+        if q.group == "completion":
+            print(completion.bash_script(root() / "local-ai"))
+            return 0
         with installlog.session(q):
             value = dispatch(q)
             if not isinstance(value, int):

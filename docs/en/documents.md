@@ -2,7 +2,7 @@
 
 Run normal chat on the **BCM client**. Files must be readable by the current user on that client. The GPU host only receives model requests; files stored only on that host are not automatically visible. You may name the project directory or another local directory explicitly.
 
-This feature is included in v1.3.0. Existing installations should follow the [program update guide](update.md) and select --version v1.3.2; no model/image download is needed.
+This feature is included in v1.3.0. Existing installations should follow the [program update guide](update.md) and select --version v1.3.3; no model/image download is needed.
 
 ## Setup and use
 

@@ -4,7 +4,7 @@
 
 Run vLLM on the GPU server and OpenCode on BCM. File, shell, Git and SSH tools execute on BCM as the current user.
 
-The current version is v1.3.2. Examples download complete source from this tag; ./local-ai --version should report 1.3.2. See [validation](docs/en/validation.md) for acceptance scope and unvalidated platforms.
+The current version is v1.3.3. Examples download complete source from this tag; ./local-ai --version should report 1.3.3. See [validation](docs/en/validation.md) for acceptance scope and unvalidated platforms.
 
 ## Example conventions and documentation
 
@@ -63,7 +63,7 @@ Download into an empty directory and check Docker, GPUs and CDI:
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.3.2.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.3.3.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ./local-ai --version
@@ -139,7 +139,7 @@ Log in as alice on bcm-headnode and use BCM's own empty directory:
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.3.2.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.3.3.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ```
@@ -174,6 +174,18 @@ This example saved GPU001:18000, so the following chat commands may omit --endpo
 ```
 
 All three commands use GPU001:18000. chat --endpoint URL overrides one invocation without changing the saved address. Another port is introduced only for a [second instance](docs/en/deployment.md#two-instances-and-multiple-users).
+
+### Enable Tab completion (optional)
+
+v1.3.3 adds Bash Tab completion. In a Bash terminal on GPU001 or BCM, from the program directory, run:
+
+```bash
+eval "$(./local-ai completion bash)"
+```
+
+Complete subcommands, options, fixed choices such as recipes, and local paths without extra
+dependencies. This enables the current terminal; see [command completion](docs/en/commands.md#bash-command-completion)
+for examples and login persistence.
 
 ### Switch reasoning during a session
 

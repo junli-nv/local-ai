@@ -32,6 +32,7 @@ These identities are independent:
 | resume.py / operations.py | Native session resume and general task instructions |
 | installlog.py | Actual installation commands, output and failure diagnostics |
 | cli.py | Explicit role/operation dispatch |
+| completion.py | Read argparse completion candidates and emit Bash setup, bypassing dispatch and installation logs |
 
 No module launches a process at import. Chat never invokes GPU deployment.
 

@@ -30,6 +30,7 @@
 | 命令 | 执行位置 | 作用与结果 |
 |---|---|---|
 | `config show` | BCM | 查看默认值及配置文件位置 |
+| `completion bash` | 任意一端 | 输出 Bash Tab 补全脚本，不改写文件 |
 | `config set` | BCM | 仅修改 endpoint/model 默认值，不安装资源 |
 | `config unset` | BCM | 清除 endpoint/model 默认值 |
 | `install` | 目标主机或准备机 | 就地准备所选角色资源并保存安装设置 |
@@ -53,6 +54,40 @@ server 通过 Docker 运行 vLLM；plan 的 JSON 中 `command` 字段就是将�
 chat 连接指定 API 并启动本机 OpenCode；不是登录容器后再执行你的工具命令。
 
 引擎参数不做任意透传；模型和 vLLM 参数在 profiles.json/profiles.py 中维护。启动后实例目录保存 spec.json、args.json、docker-command.json 和 launch.log，便于核对实际配置。
+
+## Bash 命令补全
+
+v1.3.3 新增此功能。
+
+在 GPU001 或 bcm-headnode 的 Bash 终端、程序目录 /raid/local-ai 中启用：
+
+```bash
+eval "$(./local-ai completion bash)"
+```
+
+要求 Bash 3.2+，无需额外依赖，当前终端立即生效。输入 `./local-ai ser` 后按 Tab
+补全 server；`./local-ai server ` 后按两次 Tab 列出子命令；`./local-ai server start --`
+补全参数；`--profile ` 补全配方名，`--project ` 或 `document read ` 补全本地路径
+（含空格）。也支持 `--role=client` 这类等号形式。
+
+候选来自当前解析器和配方（含 LOCAL_AI_CATALOG），命令升级后自动跟随。
+不探测 GPU、不请求模型 API、不下载，也不创建 install.log。自由文本参数如 endpoint、
+GPU 编号、实例名和会话 ID 不自动猜测。仅支持 Bash，不提供 Zsh/Fish 脚本。
+
+如需每次登录启用，可自行将以下一行加入当前用户的 ~/.profile；交互式非登录 Bash
+需由自己的启动配置加载它。程序不会自动编辑启动文件，也不会把命令加入 PATH：
+
+```bash
+eval "$(/raid/local-ai/local-ai completion bash)"
+```
+
+注册 local-ai、./local-ai 和生成脚本时的绝对路径；local-ai 形式须已在 PATH。
+目录迁移后更新启动配置中的路径并重新启用。`completion bash` 成功退出 0，标准输出为
+Shell 源码（不是 JSON）；配置读取失败时退出 1，错误写标准错误。撤销当前终端的补全：
+
+```bash
+complete -r local-ai ./local-ai /raid/local-ai/local-ai
+```
 
 ## 统一安装与完整导出
 

@@ -31,6 +31,7 @@ Syntax: ./local-ai GROUP COMMAND OPTIONS. install, export, profiles and chat hav
 | Command | Run on | Purpose and result |
 |---|---|---|
 | config show | BCM | Read saved defaults and configuration path |
+| completion bash | Either host | Print Bash Tab completion setup without modifying files |
 | config set | BCM | Change endpoint/model without installation |
 | config unset | BCM | Clear endpoint/model defaults |
 | install | Target host/preparation host | Prepare selected role and save settings in the installation root |
@@ -53,6 +54,44 @@ Syntax: ./local-ai GROUP COMMAND OPTIONS. install, export, profiles and chat hav
 server runs vLLM through Docker; the plan's command field shows the Docker arguments. chat connects to the specified API and starts native OpenCode. Tools do not execute inside the GPU container.
 
 Engine options are not passed through arbitrarily; maintain model/vLLM presets in profiles.json/profiles.py. Each started instance records spec.json, args.json, docker-command.json and launch.log for inspection.
+
+## Bash command completion
+
+Available starting with v1.3.3.
+
+Enable in a Bash terminal on GPU001 or bcm-headnode, from /raid/local-ai:
+
+```bash
+eval "$(./local-ai completion bash)"
+```
+
+Requires Bash 3.2+ with no additional dependencies; takes effect in this terminal.
+Type `./local-ai ser` and press Tab to complete server; press Tab twice after
+`./local-ai server ` to list subcommands. Complete options after `./local-ai server start --`,
+recipes after `--profile `, and local paths (including spaces) after `--project ` or
+`document read `. Equals forms such as `--role=client` are supported too.
+
+Candidates follow the current parser and catalog, including LOCAL_AI_CATALOG, after upgrades.
+Completion does not probe GPUs, call model APIs, download or create install.log. Free text such
+as endpoints, GPU indices, instance names and session IDs is not guessed. Only Bash is supported;
+no Zsh/Fish scripts are provided.
+
+For login persistence, manually add this line to your ~/.profile. Interactive non-login Bash
+must load it through your own startup configuration. The program does not edit startup files
+or add the command to PATH:
+
+```bash
+eval "$(/raid/local-ai/local-ai completion bash)"
+```
+
+Registers local-ai, ./local-ai and the absolute launcher path at generation time; the local-ai
+form requires PATH configuration. After moving the directory, update the startup path and enable
+again. `completion bash` exits 0 with shell source on stdout, rather than JSON; configuration
+read failures exit 1 with errors on stderr. Remove completion in the current terminal with:
+
+```bash
+complete -r local-ai ./local-ai /raid/local-ai/local-ai
+```
 
 ## Unified installation and complete export
 
