@@ -13,7 +13,7 @@ from . import __version__, installlog
 from .common import arch, sha256, verify_elf
 from .deployment import ensure_archive
 from .paths import root, settings
-from .profiles import profile
+from .profiles import profile, require_deployable
 from .program import source_files
 
 
@@ -88,6 +88,8 @@ def export(options):
                 "Export inside an installation must use dist/; other paths must be outside"
             )
     selected = options.profile or settings().get("profiles", [])
+    for name in selected:
+        require_deployable(profile(name))
     files = source_files(base)
     profiles = sorted(set(selected))
     for name in profiles:

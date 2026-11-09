@@ -24,7 +24,7 @@ from . import (
 )
 from .common import arch, client_home
 from .paths import client_assets, data_root, root, settings
-from .profiles import catalog, profile
+from .profiles import catalog, profile, require_deployable
 
 
 class CommandParser(argparse.ArgumentParser):
@@ -69,7 +69,9 @@ def parser():
         "Subcommands, options, choices and local paths are completed without executing commands.",
     )
     b.add_argument("shell", choices=["bash"], help="Shell to generate Tab completion for")
-    groups.add_parser("profiles", help="Show hardware profiles and validation levels")
+    groups.add_parser(
+        "profiles", help="Show hardware profiles, validation levels and planning-only frameworks"
+    )
     document = groups.add_parser(
         "document", help="Client host: read rich documents or check conversion tools"
     ).add_subparsers(dest="action", required=True)
@@ -178,7 +180,7 @@ def parser():
     )
     for action in ["plan", "start", "status", "stop", "warmup"]:
         details = {
-            "plan": "GPU001: print a plan without starting a container",
+            "plan": "GPU001: print a plan without starting a container; frameworks return deployable=false and command=null",
             "start": "GPU001: validate resources, start an instance and wait for API readiness",
             "status": "GPU001: report whether the named service API is ready",
             "stop": "GPU001: stop the named instance and preserve host data",
@@ -544,6 +546,19 @@ def dispatch(q):
     raise ValueError("Unsupported command")
 
 
+def preflight(q):
+    """Reject incomplete recipes before logging, probing or changing resources."""
+    if (
+        q.group in {"image", "model"}
+        or (q.group == "install" and q.role in {"server", "both"})
+        or (q.group == "server" and q.action == "start")
+    ):
+        require_deployable(profile(q.profile))
+    elif q.group == "export":
+        for name in q.profile or settings().get("profiles", []):
+            require_deployable(profile(name))
+
+
 def main(argv=None):
     q = None
     try:
@@ -556,6 +571,7 @@ def main(argv=None):
         if q.group == "completion":
             print(completion.bash_script(root() / "local-ai"))
             return 0
+        preflight(q)
         with installlog.session(q):
             value = dispatch(q)
             if not isinstance(value, int):

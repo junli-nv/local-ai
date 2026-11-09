@@ -12,6 +12,10 @@ For program-only upgrades of an existing installation, use the [update guide](up
 
 ## CDI setup
 
+For the v1.3.4 GB200 TP4 candidate and planning-only Rubin TP2 framework, first follow
+the [dedicated guide](gb200-rubin.md). Neither has hardware acceptance; B200/B300 startup and
+performance evidence does not transfer. Rubin cannot be installed or started.
+
 The complete first-deployment check, refresh/manual-generation commands and UUID acceptance criteria are in [README: configure GPU CDI definitions](../../README.en.md#configure-gpu-cdi-definitions-before-first-deployment), before model installation/startup. Follow that procedure on the target GPU host; do not copy another host's definitions.
 
 For missing/duplicate aliases, inspect /etc/cdi and /var/run/cdi and resolve conflicting definitions before continuing. Regenerate manual definitions after driver, GPU or MIG changes; existing complete aliases do not require regeneration.

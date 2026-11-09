@@ -4,6 +4,11 @@ This records the 2026-11-01 reasoning, parameter choices, failed approaches and 
 
 ## Identify the slow phase
 
+The v1.3.4 GB200 TP4 candidate and Rubin TP2 framework have no performance results.
+Rubin's 288GB/GPU informs capacity assessment; TP2 with CPU Engram offload is not a validated
+speed optimization. Measure CPU/NVLink-C2C, NUMA, KV and kernel costs separately; see the
+[dedicated guide](gb200-rubin.md) for candidates and blockers.
+
 Separate weight loading, startup compilation, API health, first-request compilation, prefill, decoding and queueing. TTFT needs actual input tokens, prefix-cache state, concurrency and whether the first reasoning token counts. Decode tokens/s does not replace TTFT, and reasoning output is not the final answer.
 
 Earlier work changed TP8/eager/CPU Engram into a combined GPU Engram/CUDA Graph configuration before comparing TP4. It supports the current TP4 baseline, but simultaneous changes prevent attributing improvements to TP count or one optimization alone. See validation for scope. Default b300-tp4 remains unchanged.

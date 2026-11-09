@@ -36,6 +36,12 @@ BCM 负责 OpenCode、项目文件、Shell/Git/SSH 工具、用户凭据、历�
 
 ## 服务端执行顺序
 
+配方可声明 planning_only，并保留未知 image、platform_digest、min_vram_mib 为 null。
+profiles.py 汇总阻塞项；框架计划保留硬件选择结果，但不生成引擎参数或 Docker 命令。
+CLI 在日志之前拒绝部署/准备操作，底层入口也检查配方完整性。deployable=true 仅说明
+配方可生成命令，不能替代 start 的实时资源检查或硬件验收。GB200/Rubin 边界见
+[候选与框架](gb200-rubin.md)。现有实例 spec 和配置摘要不增加这些计划结果字段。
+
 ```mermaid
 flowchart TD
     Inputs[配置与 GPU 选择] --> Inventory[发现本机硬件]

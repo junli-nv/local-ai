@@ -11,7 +11,14 @@ from pathlib import Path
 from . import readiness, warmup
 from .common import arch, atomic_json, fingerprint, run
 from .images import resolve_image
-from .profiles import engine_args, legacy_environment, legacy_model_identity, select_gpus
+from .profiles import (
+    deployment_blockers,
+    engine_args,
+    legacy_environment,
+    legacy_model_identity,
+    require_deployable,
+    select_gpus,
+)
 
 
 def inventory():
@@ -72,6 +79,7 @@ def plan(root, policy, gpus, name, port, hardware, host="127.0.0.1"):
         raise ValueError("Port must be 1024..65535")
     host = listen_address(host)
     chosen = select_gpus(hardware, gpus, policy)
+    blockers = deployment_blockers(policy)
     root = Path(root).expanduser().resolve()
     spec = {
         "data_dir": str(root),
@@ -82,8 +90,21 @@ def plan(root, policy, gpus, name, port, hardware, host="127.0.0.1"):
         "port": port,
         "image": policy["image"],
         "gpus": [g["uuid"] for g in chosen],
-        "args": engine_args(policy, port, host),
+        "args": None if blockers else engine_args(policy, port, host),
     }
+    if blockers:
+        return {
+            "spec": spec,
+            "selected_devices": chosen,
+            "command": None,
+            "deployable": False,
+            "blockers": blockers,
+            "validation": policy["validation"],
+            "notes": [
+                policy.get("host_memory_note", ""),
+                "Framework plan only: memory capacity and engine compatibility are not checked.",
+            ],
+        }
     identity = {key: policy[key] for key in ["repo", "revision"]}
     if identity != legacy_model_identity():
         spec["model_identity"] = identity
@@ -137,6 +158,8 @@ def plan(root, policy, gpus, name, port, hardware, host="127.0.0.1"):
         "selected_devices": chosen,
         "command": command,
         "validation": policy["validation"],
+        "deployable": True,
+        "blockers": [],
         "notes": [
             policy.get("host_memory_note", ""),
             "Planning does not allocate GPUs or check current port/GPU occupancy.",
@@ -213,6 +236,7 @@ def conflicts(spec, containers, compute):
 
 
 def start(value, policy):
+    require_deployable(policy)
     spec = value["spec"]
     root = Path(spec["data_dir"])
     inst = root / "instances" / spec["instance"]

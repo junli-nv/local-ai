@@ -4,6 +4,10 @@
 
 ## 先判断慢在哪一段
 
+v1.3.4 的 GB200 四卡候选与 Rubin 两卡框架没有性能结果。Rubin 288GB/卡仅用于容量
+评估，TP2＋CPU Engram 卸载不是已验证的速度优化；CPU/NVLink-C2C、NUMA、KV 与内核
+开销须分别测量，候选和阻塞条件见[专项指南](gb200-rubin.md)。
+
 将权重加载、启动编译、API 健康、首次请求编译、预填充、解码与排队分开。TTFT 必须说明真实输入 token、是否命中前缀缓存、并发和是否包含首个 reasoning token。解码 token/s 不能代替 TTFT，也不能把 reasoning 首输出当成最终答案。
 
 早期从 TP8/eager/CPU Engram 调整到 GPU Engram 与 CUDA Graph 的组合配置，再比较 TP4。它支持当前 TP4 基线的选择，但多项参数同时变化，不能单独归因于 TP 数或某一种优化。原始测量范围见验证记录；默认 b300-tp4 继续保留。

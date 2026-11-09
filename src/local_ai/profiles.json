@@ -216,6 +216,21 @@
       "platform_digest": "sha256:327eb19763b5c91a06e750082348170eafb99e476f91eb0cb60328dc18b04961",
       "model": "deepseek-v4.1-flash"
     },
+    "gb200-tp4": {
+      "arch": "arm64",
+      "platform": "linux/arm64",
+      "tp": 4,
+      "cpu_offload": false,
+      "min_vram_mib": 180000,
+      "gpu_names": [
+        "GB200",
+        "B200"
+      ],
+      "validation": "experimental-no-local-hardware",
+      "platform_digest": "sha256:b1bea6490db94268e68577929ae4b800a662b91a3cd4a1fcba81cfb3946ddcff",
+      "model": "deepseek-v4.1-flash",
+      "host_memory_note": "Unvalidated GB200 TP4 candidate using the B200 engine baseline on ARM64. 180000 MiB per GPU is a provisional guard, not a measured minimum. Validate actual memory, local four-GPU visibility, NUMA and kernels before deployment."
+    },
     "gb300-tp4": {
       "arch": "arm64",
       "platform": "linux/arm64",
@@ -340,6 +355,31 @@
       "model": "deepseek-v4.1-flash-sm120",
       "min_host_available_gib": 256,
       "host_memory_note": "Experimental SM120 TP8; at least 256 GiB available host memory for CPU Engram. Eight-GPU CUDA/NCCL, verified model loading, API smoke and native OpenCode tool roundtrip passed. Full 32K boundary, concurrency, long-run stability and performance tuning are not validated."
+    },
+    "rubin-tp2-framework": {
+      "arch": "arm64",
+      "platform": "linux/arm64",
+      "tp": 2,
+      "gpu_names": [
+        "RUBIN",
+        "VR200"
+      ],
+      "min_vram_mib": null,
+      "image": null,
+      "image_tag": null,
+      "platform_digest": null,
+      "model": "deepseek-v4.1-flash",
+      "planning_only": true,
+      "validation": "framework-only-no-local-hardware",
+      "host_memory_note": "Vera Rubin single-OS two-GPU framework with planned CPU Engram offload. Official nominal HBM is 288 GB per GPU, not measured usable memory. The 256 GiB host-memory guard is provisional. No executable engine plan or deployable image is supplied. Validate ARM64 Rubin kernels, model settings, actual memory and a pinned image before removing planning_only.",
+      "cpu_offload": true,
+      "min_host_available_gib": 256,
+      "nominal_vram_gb": 288,
+      "engine_options": {
+        "--engram-config": {
+          "cpu_offload": true
+        }
+      }
     }
   },
   "legacy_environment": {

@@ -2,7 +2,7 @@
 
 在 GPU 服务器运行 vLLM，在 BCM 头节点运行 OpenCode。文件、Shell、Git、SSH 等工具由 BCM 上的当前用户执行。
 
-当前版本为 v1.3.3，以下示例下载该标签的完整源码。./local-ai --version 应显示 1.3.3，实际验收范围与未覆盖平台见[验证记录](docs/validation.md)。
+当前版本为 v1.3.4，以下示例下载该标签的完整源码。./local-ai --version 应显示 1.3.4，实际验收范围与未覆盖平台见[验证记录](docs/validation.md)。
 
 ## 示例约定与文档入口
 
@@ -45,11 +45,17 @@ BCM 需 Linux AMD64 或 ARM64、Python 3.10+、Bash、curl、tar、Git、rg 和 
 | b200-tp4 | AMD64 / linux/amd64 | 4 张 B200 | GPU | 四卡 API 冒烟通过，范围见验证记录 |
 | rtx6000d-tp8 | AMD64 / linux/amd64 | 8 张 RTX 6000D | CPU | 实验性：八卡 API 冒烟与原生客户端工具往返通过 |
 | gb300-tp4 | ARM64 / linux/arm64 | 4 张 GB300/B300 | GPU | 未实机验证 |
+| gb200-tp4 | ARM64 / linux/arm64 | 4 张 GB200/B200 | GPU | 实验候选，未实机验证 |
+| rubin-tp2-framework | ARM64 / linux/arm64 | 2 张 Rubin/VR200（规划） | CPU（规划） | 仅规划框架，禁止部署 |
 | gb300-tp2 | ARM64 / linux/arm64 | 2 张 GB300/B300 | CPU | 上游配方，未实机验证 |
 
 B200 部署及同条件 CPU/GPU Engram 对照见[部署指南](docs/deployment.zh-CN.md#b200-四卡实验性)。两套配置有独立的有限验收记录，不继承 B300 性能结论。v1.3.2 已包含两套 B200 配方，可用 ./local-ai profiles 核对。
 
 RTX 6000D 从 v1.3.2 起提供独立 `rtx6000d-tp8` 配方：每卡至少 85000 MiB、主存可用至少 256 GiB，32K 上下文、单序列、纯文本，使用独立固定的 SM120 镜像，不启用 DSpark 或 CUDA Graph。安装、八卡启动及 BCM 连接命令见 [RTX 6000D 部署](docs/rtx6000d.md)；服务模型名为 `DeepSeek-V4.1-Flash-SM120`，客户端必须显式选择该模型。完整 32K 边界、并发及长期稳定性仍未验收。下方主流程继续使用 B300 四卡；RTX 6000D 请按专项指南选择八卡配方。
+
+v1.3.4 新增 GB200 四卡候选和 Rubin 两卡框架。无硬件的模拟计划、Rubin 部署阻塞项和后续验收见
+[GB200 与 Rubin](docs/gb200-rubin.md)。Rubin 的 288GB/卡规格支持两卡容量评估，框架规划
+CPU Engram 卸载，不能据标称容量宣称模型可运行。
 
 BCM 架构独立选择。配置只使用同一 OS 可见的本地 GPU；GB300 TP2 检查 MemAvailable 至少 256 GiB，不能套用 B300 实测结论。
 
@@ -61,7 +67,7 @@ BCM 架构独立选择。配置只使用同一 OS 可见的本地 GPU；GB300 TP
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.3.3.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.3.4.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ./local-ai --version
@@ -137,7 +143,7 @@ start 默认等待 600 秒，加载和编译期间显示 NOT READY 及日志位�
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.3.3.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.3.4.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ```

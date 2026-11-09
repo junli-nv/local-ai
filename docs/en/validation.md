@@ -7,7 +7,36 @@ user logs are intentionally omitted from this public record.
 
 The 2026-10-31 integration records below describe the previous client. Tunnel entries are historical; the current client uses API endpoints without built-in forwarding or a separate environment-doctor command. New local HTTP regressions cover direct connections, model checks, retry and no SSH subprocess. They do not constitute new GPU acceptance.
 
-Version labels 1.0.0/1.1.0 below identify historical candidate checks whose tags were withdrawn. The current version is v1.3.3; each acceptance record retains its original date, method and limits. Tagging does not expand support.
+Version labels 1.0.0/1.1.0 below identify historical candidate checks whose tags were withdrawn. The current version is v1.3.4; each acceptance record retains its original date, method and limits. Tagging does not expand support.
+
+## GB200 candidate and Rubin framework: 2026-11-09
+
+No target hardware is available. Adds only ARM64 gb200-tp4 and rubin-tp2-framework without
+changing existing models/recipes or existing tags; update the version for this release. GB200 retains B200 TP4 engine
+parameters without hardware validation. Rubin's official 288GB HBM4/GPU motivates two GPUs
+with CPU Engram offload and a provisional 256 GiB host guard. These capacity assumptions
+are not measured minima or evidence of successful model startup.
+
+The public registry confirmed the existing pinned image has linux/arm64 platform digest
+sha256:b1bea6490db94268e68577929ae4b800a662b91a3cd4a1fcba81cfb3946ddcff and
+CUDA_VERSION=13.0.2. No image layers or weights were downloaded and no GPU was used.
+Rubin does not borrow this image: image, platform_digest and min_vram_mib remain null with
+planning_only=true. Framework plans return deployable=false, blockers, command=null and
+spec.args=null.
+
+Thirteen new CPU tests cover GB200 card counts, UUID order, reported B200 names, wrong
+CPU/GPU/memory, pure plans, Rubin TP2/offload targets, early CLI/Python framework rejection,
+completion and help. Clearing only the flag or filling only image fields cannot enable the
+framework. Fixtures are explicitly synthetic. Preserve the RTX original-catalog hash constant,
+excluding only the new entries, and additionally verify all existing recipes/models against
+the complete v1.3.3 catalog hash. Existing protections were not removed, skipped or relaxed.
+
+Of 186 local tests, 184 pass; two existing macOS/ARM64 limitations match the next section.
+Ruff lint, formatting of 49 files, Git whitespace and bilingual documentation contracts pass.
+Local checks did not run Linux CI, native-client or GPU acceptance; release CI remains required. Loading, full context,
+concurrency, speed and sustained stability remain unvalidated. Reviewed both README workflows
+and Chinese/English deployment, offline, architecture, development, performance, update,
+command and historical validation materials, distinguishing v1.3.4 candidates from historical acceptance. See [GB200 and Rubin](gb200-rubin.md) for methods and future acceptance.
 
 ## Bash completion CPU regressions: 2026-11-08
 
@@ -375,3 +404,21 @@ local platform failures, Bash 3.2 completion and documentation checks. The relea
 validates Linux unit tests on Python 3.10/3.12/3.13 and native client contracts before creating
 the annotated v1.3.3 tag and verifying its remote target. This release adds no GPU acceptance
 and changes no existing recipes, installation defaults or hardware support levels.
+
+## v1.3.4 version marking
+
+Explicitly requested release of the experimental GB200 TP4 candidate and planning-only Rubin
+TP2 framework. GB200 uses the pinned ARM64 image and B200 TP4 engine baseline, without hardware
+acceptance. Rubin plans CPU Engram offload but leaves image, platform digest and minimum HBM
+unresolved. Planning succeeds while deployment, downloads and resource export are refused.
+The new deployable/blockers fields describe plan results without changing old instance specs,
+default recipes or validated models.
+
+Align versions and bilingual README, command, deployment, offline, update, development,
+architecture and acceptance documentation. The version command reports 1.3.4; previous versions,
+tags and hardware acceptance limits are preserved. Of 186 local tests, 184 pass with the same
+two macOS/ARM64 constraints; all 13 new tests and original-catalog hash protections pass.
+Ruff lint, formatting of 49 files, 276 local links/anchors and 140 Bash blocks across 28 Markdown
+files pass. Require Linux Python 3.10/3.12/3.13 and native-client CI on the release commit before
+creating the annotated v1.3.4 tag and verifying remote main/tag targets. Release marking does
+not promote GB200/Rubin hardware support levels.

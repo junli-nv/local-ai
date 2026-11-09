@@ -14,6 +14,9 @@ class RTX6000DTests(unittest.TestCase):
     def test_original_catalog_is_unchanged(self):
         value = copy.deepcopy(catalog())
         value.pop("model", None)
+        # New platform recipes have separate tests; preserve the original baseline hash.
+        value["profiles"].pop("gb200-tp4")
+        value["profiles"].pop("rubin-tp2-framework")
         value["profiles"].pop("rtx6000d-tp8")
         value["models"].pop("deepseek-v4.1-flash-sm120")
         actual = hashlib.sha256(json.dumps(value, sort_keys=True).encode()).hexdigest()

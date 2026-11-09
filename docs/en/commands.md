@@ -158,6 +158,13 @@ Ongoing model output remains in instances/NAME/server.log; chat history and sess
 
 ## Server parameters
 
+v1.3.4 also includes the gb200-tp4 candidate and rubin-tp2-framework, neither
+hardware-validated. `server plan`'s `deployable` indicates complete recipe inputs and command
+generation, not validated hardware. A successful framework plan still exits 0 but returns
+`deployable=false`, `command=null`, `spec.args=null` and unresolved `blockers`. Selecting a
+framework for server/both install, start, image/model preparation or resource export exits 1
+before logging/resource operations. See [GB200 and Rubin](gb200-rubin.md) for CPU examples and limits.
+
 | Option | Commands | Meaning and default |
 |---|---|---|
 | --data-dir | server plan/start/status/stop/warmup; image; model download | Data root: LOCAL_AI_DATA_DIR, otherwise the unpacked program directory. status actually looks up the instance by name. |

@@ -6,6 +6,7 @@ from pathlib import Path
 
 from . import installlog
 from .common import arch, atomic_json, fingerprint, run, sha256
+from .profiles import require_deployable
 
 
 def inspect_image(reference, platform=None):
@@ -52,6 +53,7 @@ def save_lock(root, policy, image):
 
 
 def resolve_image(root, policy, allow_missing=False):
+    require_deployable(policy)
     image = inspect_image(policy["image"], policy["platform"])
     if image:
         validate_image(image, policy)
@@ -85,6 +87,7 @@ def download_command(command, log):
 
 
 def pull(root, policy, force=False):
+    require_deployable(policy)
     root = Path(root)
     (root / "logs").mkdir(parents=True, exist_ok=True)
     log = installlog.path() or root / "logs" / ("image-pull-" + policy["arch"] + ".log")
@@ -200,6 +203,7 @@ def cached_model(root, policy):
 
 
 def download_model(root, policy, force=False):
+    require_deployable(policy)
     installlog.event("CHECK local model files and revision; expected=" + policy["revision"])
     if not force:
         cached = cached_model(root, policy)
@@ -261,6 +265,7 @@ def download_model(root, policy, force=False):
 
 
 def import_image(root, policy, archive, lock_file):
+    require_deployable(policy)
     from .common import sha256
 
     lock = json.loads(Path(lock_file).read_text())

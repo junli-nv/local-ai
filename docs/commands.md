@@ -155,6 +155,12 @@ install/export 默认写安装根目录的 install.log；低级 image/model/serv
 
 ## 服务端参数
 
+v1.3.4 另含 gb200-tp4 候选和 rubin-tp2-framework；两者都没有实机验收。
+`server plan` 的 `deployable` 只表示配方是否完整，可生成执行命令，不表示硬件已验证。
+框架计划成功仍退出 0，但 `deployable=false`、`command=null`、`spec.args=null`，
+`blockers` 列出未解决字段。选择框架执行安装 server/both、启动、镜像/模型准备或资源
+导出时退出 1，在日志和资源操作前拒绝。CPU 示例与限制见[GB200 与 Rubin](gb200-rubin.md)。
+
 | 参数 | 适用命令 | 含义与默认值 |
 |---|---|---|
 | `--data-dir` | server 的 plan/start/status/stop/warmup；image；model download | 运行数据根目录；先取 LOCAL_AI_DATA_DIR，未设置则为程序所在的解压目录。status 实际按实例名查询。 |

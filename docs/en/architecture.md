@@ -38,6 +38,13 @@ No module launches a process at import. Chat never invokes GPU deployment.
 
 ## Server flow
 
+Recipes may declare planning_only with null image, platform_digest and min_vram_mib inputs.
+profiles.py reports blockers. Framework plans retain hardware selection without generating engine
+arguments or Docker commands. CLI rejects deployment/preparation before logging; lower-level entry
+points also check completeness. deployable=true means a command can be generated, not that live
+resource checks or hardware acceptance passed. See [GB200/Rubin](gb200-rubin.md). Existing instance
+specs and fingerprints do not gain these plan-result fields.
+
 ```mermaid
 flowchart TD
     Inputs[Profile + GPU selectors] --> Inventory

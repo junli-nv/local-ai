@@ -4,7 +4,7 @@
 
 Run vLLM on the GPU server and OpenCode on BCM. File, shell, Git and SSH tools execute on BCM as the current user.
 
-The current version is v1.3.3. Examples download complete source from this tag; ./local-ai --version should report 1.3.3. See [validation](docs/en/validation.md) for acceptance scope and unvalidated platforms.
+The current version is v1.3.4. Examples download complete source from this tag; ./local-ai --version should report 1.3.4. See [validation](docs/en/validation.md) for acceptance scope and unvalidated platforms.
 
 ## Example conventions and documentation
 
@@ -47,11 +47,17 @@ BCM: Linux AMD64/ARM64, Python 3.10+, Bash, curl, tar, Git, rg, util-linux scrip
 | b200-tp4 | AMD64 / linux/amd64 | 4 B200 | GPU | Four-GPU API smoke passed; see validation |
 | rtx6000d-tp8 | AMD64 / linux/amd64 | 8 RTX 6000D | CPU | Experimental: eight-GPU API smoke and native-client tool round trip passed |
 | gb300-tp4 | ARM64 / linux/arm64 | 4 GB300/B300 | GPU | Not hardware validated |
+| gb200-tp4 | ARM64 / linux/arm64 | 4 GB200/B200 | GPU | Experimental candidate, no hardware validation |
+| rubin-tp2-framework | ARM64 / linux/arm64 | 2 Rubin/VR200 (planned) | CPU (planned) | Planning-only framework, deployment blocked |
 | gb300-tp2 | ARM64 / linux/arm64 | 2 GB300/B300 | CPU | Upstream recipe, unvalidated |
 
 See [B200 deployment](docs/en/deployment.md#b200-four-gpu-experimental) for CPU/GPU Engram comparison. Both have separate bounded acceptance and do not inherit B300 performance results. v1.3.2 includes both B200 recipes; confirm them with ./local-ai profiles.
 
 Starting with v1.3.2, the independent `rtx6000d-tp8` profile requires at least 85000 MiB per GPU and 256 GiB available host RAM. It uses a separately pinned SM120 image, 32K context, one sequence and text input, without DSpark or CUDA graphs. See [RTX 6000D deployment](docs/en/rtx6000d.md) for installation, eight-GPU startup and BCM commands. Explicitly select served model `DeepSeek-V4.1-Flash-SM120` on the client. Full 32K boundaries, concurrency and sustained stability remain unvalidated. The main workflow below continues to use four B300 GPUs; follow the dedicated guide for RTX 6000D.
+
+v1.3.4 adds the GB200 TP4 candidate and Rubin TP2 framework. See [GB200 and Rubin](docs/en/gb200-rubin.md)
+for synthetic plans, Rubin blockers and future acceptance. Rubin's 288GB per GPU motivates
+two-GPU capacity evaluation with planned CPU Engram offload, not a claim of model readiness.
 
 BCM architecture is independent. Profiles use GPUs visible to one OS. GB300 TP2 checks at least 256 GiB MemAvailable; B300 acceptance does not cover GB300.
 
@@ -63,7 +69,7 @@ Download into an empty directory and check Docker, GPUs and CDI:
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.3.3.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.3.4.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ./local-ai --version
@@ -139,7 +145,7 @@ Log in as alice on bcm-headnode and use BCM's own empty directory:
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.3.3.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.3.4.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ```

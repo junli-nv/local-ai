@@ -8,11 +8,12 @@ from . import __version__, artifacts, images, installlog
 from .common import arch, atomic_json, sha256
 from .endpoint import endpoint_url
 from .paths import client_assets, root, settings
-from .profiles import catalog, profile
+from .profiles import catalog, profile, require_deployable
 from .program import source_files
 
 
 def archive_path(data, policy):
+    require_deployable(policy)
     return (
         Path(data)
         / "images"
@@ -60,6 +61,8 @@ def publish_client(directory):
 def install(options):
     from .bundle import verify
 
+    if options.role in {"server", "both"}:
+        require_deployable(profile(options.profile))
     base = root()
     source_files(base)
     bundle = base / "bundle.json"

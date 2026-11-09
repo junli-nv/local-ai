@@ -1,0 +1,21 @@
+{
+  "synthetic": true,
+  "description": "CPU test data only; GPU counts, names and memory values are illustrative, not hardware measurements.",
+  "arch": "arm64",
+  "gpus": [
+    {
+      "index": 0,
+      "uuid": "GPU-rubin-tp2-synthetic-0",
+      "name": "NVIDIA VR200",
+      "memory_mib": 294912,
+      "pci": "0000:01:00.0"
+    },
+    {
+      "index": 1,
+      "uuid": "GPU-rubin-tp2-synthetic-1",
+      "name": "NVIDIA VR200",
+      "memory_mib": 294912,
+      "pci": "0000:02:00.0"
+    }
+  ]
+}

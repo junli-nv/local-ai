@@ -53,6 +53,25 @@ def legacy_environment():
     return bundled["legacy_environment"]
 
 
+def deployment_blockers(policy):
+    """Report unresolved framework inputs without probing hardware or images."""
+    reasons = []
+    if policy.get("planning_only"):
+        reasons.append(
+            "planning_only is set; complete the hardware and kernel acceptance checklist"
+        )
+    for key in ("image", "platform_digest", "min_vram_mib"):
+        if not policy.get(key):
+            reasons.append(key + " is unresolved")
+    return reasons
+
+
+def require_deployable(policy):
+    reasons = deployment_blockers(policy)
+    if reasons:
+        raise ValueError("Profile " + policy["name"] + " is not deployable: " + "; ".join(reasons))
+
+
 def legacy_model_identity():
     # Migration metadata, not an allowlist of model releases.
     bundled = json.loads(files("local_ai").joinpath("profiles.json").read_text())
@@ -82,7 +101,10 @@ def select_gpus(inventory, selectors, policy):
         raise ValueError("Select exactly %d distinct local GPUs" % policy["tp"])
     if arch(inventory["arch"]) != policy["arch"]:
         raise ValueError("Profile CPU architecture does not match this server")
-    if any(g["memory_mib"] < policy["min_vram_mib"] for g in chosen):
+    minimum = policy.get("min_vram_mib")
+    if not minimum and not policy.get("planning_only"):
+        raise ValueError("min_vram_mib is unresolved")
+    if minimum and any(g["memory_mib"] < minimum for g in chosen):
         raise ValueError("Selected GPU has less HBM than this profile permits")
     for gpu in chosen:
         if not any(name in gpu["name"].upper() for name in policy["gpu_names"]):
