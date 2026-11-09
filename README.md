@@ -27,7 +27,7 @@
 
 ## 安装与使用
 
-当前版本为 v1.3.5，以下示例下载该标签的完整源码。./local-ai --version 应显示 1.3.5，实际验收范围与未覆盖平台见[验证记录](docs/validation.md)。
+当前版本为 v1.3.6，以下示例下载该标签的完整源码。./local-ai --version 应显示 1.3.6，实际验收范围与未覆盖平台见[验证记录](docs/validation.md)。
 
 ## 示例约定与文档入口
 
@@ -92,7 +92,7 @@ BCM 架构独立选择。配置只使用同一 OS 可见的本地 GPU；GB300 TP
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.3.5.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.3.6.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ./local-ai --version
@@ -168,7 +168,7 @@ start 默认等待 600 秒，加载和编译期间显示 NOT READY 及日志位�
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.3.5.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.3.6.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ```
@@ -266,7 +266,7 @@ chat --endpoint 不改写 installation.json，也不要求重新安装。--check
 
 ## 导出与离线安装
 
-联网准备可在任意 CPU 架构上执行 prepare --profile 目标配方；主要准备目标平台镜像和固定 revision 模型，不执行目标镜像。混合架构步骤见[离线指南](docs/offline.md#场景二从联网环境下载并准备)。v1.3.5 已包含此能力。
+联网准备可在任意 CPU 架构上执行 prepare --profile 目标配方；主要准备目标平台镜像和固定 revision 模型，不执行目标镜像。混合架构步骤见[离线指南](docs/offline.md#场景二从联网环境下载并准备)。v1.3.6 已包含此能力。
 
 这是独立的迁移场景：服务端镜像和模型在**源 GPU 节点**导出，在**新 GPU 节点**校验、解压并执行 install --offline。BCM 导出通常只有客户端材料，不能替代 GPU 服务端部署包。
 

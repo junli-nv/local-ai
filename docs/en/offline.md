@@ -90,12 +90,12 @@ target profile as needed. The preparation host needs Python 3.10+, tar, sha256su
 1.49+ and access to GitHub, the registry and public Hugging Face models. It needs no
 GPU, NVIDIA driver, CDI, ARM emulation or QEMU.
 
-v1.3.5 includes prepare. Download the complete tagged source; the unpacked directory
+v1.3.6 includes prepare. Download the complete tagged source; the unpacked directory
 remains the installation root:
 
 ```bash
-local_ai_source=/tmp/local-ai-v1.3.5-source.tar.gz
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.3.5.tar.gz -o "$local_ai_source"
+local_ai_source=/tmp/local-ai-v1.3.6-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.3.6.tar.gz -o "$local_ai_source"
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
 tar -xzf "$local_ai_source" --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
@@ -193,7 +193,7 @@ Preserve custom source edits first. Obtain the complete program from GitHub and 
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.3.5.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.3.6.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ./local-ai --version
