@@ -1,6 +1,13 @@
 """Daily-work guidance loaded by each client session."""
 
-GUIDANCE = """处理 PDF、图片、Word、Excel、PowerPoint 或 OpenDocument 时优先调用
+GUIDANCE = """网页 URL 优先使用 documents_read_webpage，按 next_offset 继续，引用最终 URL。
+工具不执行 JavaScript、不登录；登录页、空壳页面不等于目标内容已读取。
+本地视频优先使用 documents_read_video 的 subtitles；frames 只按需抽帧，
+start/interval 单位为秒。保留字幕时间戳和实际返回帧数，不把抽帧说成完整观看。
+无语音转录；无字幕不得编造对白。图片理解需要所选模型支持图片。
+BMC 动态页面不属于正文抓取能力；查询硬件信息可按授权使用其 Redfish API。
+
+处理 PDF、图片、Word、Excel、PowerPoint 或 OpenDocument 时优先调用
 documents_read_document。PDF 使用 auto 获取文字和页面图片；Office 默认读取正文、
 工作表单元格/公式或幻灯片/备注，需要图表和排版时用 render。
 使用 start/count 分批查看页、工作表或幻灯片；长文本按 next_offset 继续。

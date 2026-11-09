@@ -88,11 +88,11 @@ gb200-tp4；它仍是未实机验收的候选，要求同一 OS 可见四张卡�
 准备机需 Python 3.10+、tar、sha256sum、Docker API 1.49+，可访问 GitHub、镜像仓库和公开的
 Hugging Face 模型；准备阶段无需 GPU、驱动、CDI、ARM 仿真或 QEMU。
 
-v1.3.6 已包含 prepare。下载固定标签的完整源码；解压目录仍是安装根：
+v1.3.7 已包含 prepare。下载固定标签的完整源码；解压目录仍是安装根：
 
 ```bash
-local_ai_source=/tmp/local-ai-v1.3.6-source.tar.gz
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.3.6.tar.gz -o "$local_ai_source"
+local_ai_source=/tmp/local-ai-v1.3.7-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.3.7.tar.gz -o "$local_ai_source"
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
 tar -xzf "$local_ai_source" --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
@@ -187,7 +187,7 @@ cd /raid/ai-prod
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.3.6.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.3.7.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ./local-ai --version
@@ -220,7 +220,7 @@ GPU 启动前若缺少 UUID 别名，先完成[CDI 配置](deployment.zh-CN.md#c
 
 ## 可选文档转换依赖
 
-从包含富文档功能的版本导出时，包内携带文档 MCP 工具源码，但不携带宿主机 Poppler/LibreOffice。使用 PDF、旧版 Office 或版面渲染前，须在目标 BCM 通过匹配的离线系统软件包准备依赖，见[文档离线要求](documents.md#离线环境)。
+从包含富文档功能的版本导出时，包内携带文档 MCP 工具源码，但不携带宿主机 Poppler/LibreOffice 或可选 FFmpeg。网页和侧挂字幕仅用标准库；视频抽帧需另行准备目标 BCM 的 FFmpeg 系统包。使用 PDF、旧版 Office 或版面渲染前，须在目标 BCM 通过匹配的离线系统软件包准备依赖，见[文档离线要求](documents.md#离线环境)。
 
 ## 日志与失败处理
 

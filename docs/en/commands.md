@@ -345,6 +345,18 @@ See [offline deployment](offline.md).
 
 Normal chat discovers local documents by path; no attachment startup option is required. document doctor reports converter paths and pdf_ready/office_render_ready without installing anything. document read PATH returns tool-result JSON: --mode auto (default), text or render; --start 1, --count 3 (1–5), --offset 0. Failures exit nonzero. Image data may be base64. Setup, supported formats, source labels and limits: [documents](documents.md).
 
+v1.3.7 adds document web URL (--offset=0), fetching HTTP(S) text only, without
+a search engine. document video PATH accepts --mode subtitles (default), info or frames.
+Frame-only options: --start=0 seconds, --count=3 (1–5), --interval=10 seconds.
+Subtitle-only --offset defaults to 0; nondefault options for other modes are rejected.
+document doctor additionally reports web_ready, video_sidecar_ready, video_info_ready,
+video_frames_ready and video_tool_errors, running FFmpeg/ffprobe version checks.
+No new base dependencies; optional FFmpeg is not installed automatically. Startup and local
+documents do not request the internet. A failed explicit URL request returns a tool error
+without blocking subsequent local calls. See [web/video](documents.md#web-pages-and-local-video-v137).
+
+web_ready indicates stdlib reader availability, not network reachability; diagnostics do not request the internet.
+
 ## Program updates
 
 The standalone Python helper scripts/update.py is independent of ./local-ai subcommands. For --root, --version, --archive, --sha256 and --rollback, complete examples, backups and exit codes, use the [update guide](update.md). It never installs images/models/clients or restarts inference. Model/image changes and native OpenCode upgrades remain separate operations.

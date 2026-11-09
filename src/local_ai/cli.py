@@ -21,7 +21,9 @@ from . import (
     preparation,
     readiness,
     server,
+    video,
     warmup,
+    webpage,
 )
 from .common import arch, client_home
 from .paths import client_assets, data_root, root, settings
@@ -88,6 +90,21 @@ def parser():
     doc.add_argument("--start", type=int, default=1, help="First page, sheet or slide (one-based)")
     doc.add_argument("--count", type=int, default=3, help="Number of pages/sections, 1..5")
     doc.add_argument("--offset", type=int, default=0, help="Text character offset for continuation")
+    web = document.add_parser("web", help="Fetch HTTP(S) text without a browser or login")
+    web.add_argument("url", help="HTTP(S) page reachable from this client")
+    web.add_argument("--offset", type=int, default=0, help="Text character offset")
+    vid = document.add_parser("video", help="Read local subtitles, metadata or sampled frames")
+    vid.add_argument("path", type=Path, help="Local video file, at most 4 GiB")
+    vid.add_argument(
+        "--mode",
+        choices=["info", "subtitles", "frames"],
+        default="subtitles",
+        help="Subtitles by default; info/frames need optional FFmpeg tools",
+    )
+    vid.add_argument("--start", type=float, default=0, help="Frames: first seek time in seconds")
+    vid.add_argument("--count", type=int, default=3, help="Frames: number of samples, 1..5")
+    vid.add_argument("--interval", type=float, default=10, help="Frames: spacing in seconds")
+    vid.add_argument("--offset", type=int, default=0, help="Subtitles: text character offset")
     config = groups.add_parser(
         "config",
         help="View or change saved client defaults without installing",
@@ -470,6 +487,10 @@ def dispatch(q):
     if q.group == "document":
         if q.action == "doctor":
             return documents.dependencies()
+        if q.action == "web":
+            return webpage.read_webpage(q.url, q.offset)
+        if q.action == "video":
+            return video.read_video(q.path, q.mode, q.start, q.count, q.interval, q.offset)
         return documents.read_document(q.path, q.mode, q.start, q.count, q.offset)
     if q.group == "config":
         if q.action == "show":

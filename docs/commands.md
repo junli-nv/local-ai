@@ -338,6 +338,17 @@ tmux 自身的选取设置仍由用户管理；长对话可用 `/export` 导出�
 
 正常聊天直接指定文件或目录，不需要附件启动参数。document doctor 只检查转换器路径及 pdf_ready/office_render_ready，不安装软件。document read PATH 返回工具结果 JSON；--mode 可选 auto（默认）、text、render；--start 默认 1，--count 默认 3（允许 1–5），--offset 默认 0。失败退出非零，图片可能包含 base64。依赖安装、格式范围、出处与读取边界见[富文档指南](documents.md)。
 
+v1.3.7 新增 document web URL（--offset 默认 0），仅按请求读取 HTTP(S) 正文，
+不提供搜索引擎。document video PATH 的 --mode 默认为 subtitles，可选 info、frames。
+frames 的 --start 默认 0 秒、--count 默认 3（1–5）、--interval 默认 10 秒；
+subtitles 的 --offset 默认 0。其余模式不接受这些非默认参数。document doctor
+额外报告 web_ready、video_sidecar_ready、video_info_ready、video_frames_ready
+和 video_tool_errors；FFmpeg/ffprobe 会实际执行版本检查。基础客户端无新增依赖，
+FFmpeg 可选，不会自动安装。启动与本地文档处理不请求外网，指定 URL 的请求失败会
+返回工具错误，不阻断后续本地工具调用。完整示例见[网页与视频](documents.md#网页与本地视频v137)。
+
+web_ready 仅表示标准库网页读取可用，不代表当前网络连通；自检不会请求外网。
+
 ## 程序更新
 
 独立 Python 脚本 scripts/update.py 不属于 ./local-ai 子命令。--root、--version、--archive、--sha256、--rollback 的含义、完整示例、备份和退出码统一见[更新指南](update.md)。它不准备镜像、模型或客户端，也不重启推理服务；更换模型/镜像与升级原生 OpenCode 是独立操作。

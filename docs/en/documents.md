@@ -2,7 +2,7 @@
 
 Run normal chat on the **BCM client**. Files must be readable by the current user on that client. The GPU host only receives model requests; files stored only on that host are not automatically visible. You may name the project directory or another local directory explicitly.
 
-This feature is included in v1.3.0. Existing installations should follow the [program update guide](update.md) and select --version v1.3.6; no model/image download is needed.
+This feature is included in v1.3.0. Existing installations should follow the [program update guide](update.md) and select --version v1.3.7; no model/image download is needed.
 
 ## Setup and use
 
@@ -40,11 +40,49 @@ No attachment startup flag is required. New chats and chats resumed through loca
 | ODT, ODS, ODP | Body or table/page text | LibreOffice to PDF |
 | UTF-8 text, Markdown, CSV/TSV, JSON, HTML/XML, source code | Text; no web loading or script execution | No browser layout rendering |
 
-Codex's common document workflows are a usability reference, not a claim of identical format coverage, layout fidelity or recognition accuracy. Encrypted files, complex layouts, embedded objects, formula display and unusual fonts may need additional processing. Audio, video and arbitrary binaries are not promised.
+Codex's common document workflows are a usability reference, not a claim of identical format coverage, layout fidelity or recognition accuracy. Encrypted files, complex layouts, embedded objects, formula display and unusual fonts may need additional processing. Video support is limited to the subtitles and sampled frames below; no speech transcription or arbitrary binary parsing.
 
 The default selection is 3 pages/sheets/slides. Tool start is one-based; count is 1–5. Text is limited to 40,000 characters per call, with next_offset for continuation. Body text without reliable page boundaries is labelled as body text, not invented page numbers. The assistant must continue reading when the task requires it. Input files are limited to 100 MiB; each returned image to 8 MiB.
 
 Spreadsheet text extraction does not evaluate formulas. Cached values may be stale and dates may retain serial values. Validate calculations separately. Office rendering may recalculate or alter display; the source file is not modified. Scans use visual recognition, so check critical numbers and tables against the original page.
+
+
+## Web pages and local video (v1.3.7)
+
+New chats expose documents_read_webpage and documents_read_video. Give a URL or local video
+path in ordinary chat. Web text and same-name UTF-8 SRT/VTT sidecars use only Python stdlib.
+
+The web reader fetches HTTP(S) text and returns title, requested/final URLs, links and
+next_offset. It prefers main/article text with a page-text fallback. Extraction is heuristic,
+not a complete layout representation. It runs no JavaScript, login or linked-page crawling.
+For BMC status, prefer authorized Redfish API queries; this reader does not automate BMC pages.
+URLs containing usernames/passwords are rejected. Responses are limited to 4 MiB and each text
+result to 40000 characters. Continuation refetches the page, which may change. Requests use
+the client proxy environment and system certificate trust.
+
+Local MP4/MKV/WebM/MOV/M4V/AVI files are limited to 4 GiB. Default subtitles mode reads a
+same-name .srt (preferred) or .vtt, preserving timestamps. Without a sidecar, optional FFmpeg
+extracts the first embedded text subtitle track. Subtitle text is limited to 4 MiB and
+supports offset continuation. info needs ffprobe; frames needs FFmpeg. Frame-only options:
+start=0 seconds, interval=10 seconds, count=3 (1–5). Results report actual frame count and
+requested seek times, not exact decoded-frame timestamps. Each image is limited to 8 MiB
+and needs an image-capable model. Subtitles and sampled frames do not imply full viewing.
+Video URLs, speech transcription and automatic dependency installation are not supported.
+
+Install the optional distribution ffmpeg package on BCM for video extensions. document doctor
+runs FFmpeg/ffprobe version checks and reports video_tool_errors for broken libraries.
+Ordinary web and sidecar text remain available. Offline targets need matching distribution/
+CPU packages; export does not bundle system dependencies. Restart the client after upgrading;
+the GPU model service does not need a restart.
+
+Optional diagnostics from the BCM program directory:
+
+```bash
+./local-ai document web https://example.com --offset 0
+./local-ai document video /home/alice/project/demo.mp4 --mode subtitles
+./local-ai document video /home/alice/project/demo.mp4 --mode info
+./local-ai document video /home/alice/project/demo.mp4 --mode frames --start 30 --count 3 --interval 5
+```
 
 ## Diagnostics
 

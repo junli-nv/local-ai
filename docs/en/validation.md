@@ -7,7 +7,7 @@ user logs are intentionally omitted from this public record.
 
 The 2026-10-31 integration records below describe the previous client. Tunnel entries are historical; the current client uses API endpoints without built-in forwarding or a separate environment-doctor command. New local HTTP regressions cover direct connections, model checks, retry and no SSH subprocess. They do not constitute new GPU acceptance.
 
-Version labels 1.0.0/1.1.0 below identify historical candidate checks whose tags were withdrawn. The current version is v1.3.6; each acceptance record retains its original date, method and limits. Tagging does not expand support.
+Version labels 1.0.0/1.1.0 below identify historical candidate checks whose tags were withdrawn. The current version is v1.3.7; each acceptance record retains its original date, method and limits. Tagging does not expand support.
 
 ## GB200 candidate and Rubin framework: 2026-11-09
 
@@ -444,3 +444,11 @@ No new GPU hardware acceptance was performed.
 This version includes the bilingual project introduction and updates version metadata, installation downloads, offline media and upgrade examples.
 At the user’s request, retain only v1.3.6 and delete local and remote tags v1.2.0, v1.3.0, v1.3.1, v1.3.2, v1.3.3, v1.3.4 and v1.3.5. Earlier records retain their original version labels as historical acceptance evidence, not downloadable tags; historical source remains accessible by commit.
 Release requires CPU/documentation tests, Ruff lint/format and patch checks, followed by an annotated tag on the exact commit passing CI. No client/server redeployment or new GPU hardware acceptance is included.
+
+## v1.3.7 web and video (2026-11-09)
+
+Adds stdlib HTTP(S) text, source metadata and continuation; local sidecar/embedded subtitles, metadata and bounded frame sampling. FFmpeg/ffprobe are optional OS tools with executable version checks. No new base dependencies. Per the final user instruction, no SearXNG, search tool or background network service is integrated or deployed.
+
+Coverage includes local HTTP extraction/redirects/pagination, oversized/incomplete response rejection, local file reads after offline web errors, sidecars without FFmpeg and actual error propagation. BCM passed real duration, two-frame and embedded-subtitle extraction on a 2-second clip. These are tool-layer checks, not model visual-understanding, long-video, arbitrary-site or new GPU acceptance.
+
+Align bilingual entry, offline/update docs and metadata. Require full tests, Ruff and CI on the exact release commit before creating annotated v1.3.7. Delete other tags as requested; retain historical record labels.

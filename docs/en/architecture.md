@@ -68,6 +68,10 @@ UUIDs, API port and engine arguments. Existing instances cannot silently adopt
 different specs or edited args.json. Stop/remove/recreate is explicit and
 retains host logs. Unrelated GPU processes are never killed.
 
+## Web and video tools
+
+client.py still launches one stdio document_mcp process. documents.py handles local documents, webpage.py explicitly requested HTTP(S) text and video.py local subtitles/frame samples. Startup/discovery do not request the internet; web failures are tool errors and subsequent local calls remain independent. No search service. FFmpeg is optional, never auto-installed; model inference responsibilities are unchanged.
+
 ## Image identity
 
 Profiles pin a manifest-list digest and record platform child digests.

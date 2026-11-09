@@ -32,6 +32,8 @@ OFFICE = {
 }
 IMAGES = {".png", ".jpg", ".jpeg", ".webp", ".gif"}
 TEXT = {
+    ".srt",
+    ".vtt",
     ".txt",
     ".md",
     ".csv",
@@ -51,10 +53,29 @@ TEXT = {
 
 
 def dependencies():
-    tools = {name: shutil.which(name) for name in ("pdftotext", "pdftoppm", "libreoffice")}
+    tools = {
+        name: shutil.which(name)
+        for name in ("pdftotext", "pdftoppm", "libreoffice", "ffmpeg", "ffprobe")
+    }
+    video_errors = {}
+    for name in ("ffmpeg", "ffprobe"):
+        if not tools[name]:
+            video_errors[name] = "Not installed (optional)"
+            continue
+        try:
+            probe = subprocess.run([tools[name], "-version"], capture_output=True, timeout=3)
+            if probe.returncode:
+                video_errors[name] = probe.stderr.decode(errors="replace")[-2000:]
+        except (OSError, subprocess.TimeoutExpired) as error:
+            video_errors[name] = str(error)
     return {
         "tools": tools,
         "native": ["DOCX", "XLSX", "PPTX", "ODT", "ODS", "ODP", "UTF-8 text"],
+        "web_ready": True,
+        "video_frames_ready": "ffmpeg" not in video_errors,
+        "video_info_ready": "ffprobe" not in video_errors,
+        "video_sidecar_ready": True,
+        "video_tool_errors": video_errors,
         "pdf_ready": bool(tools["pdftotext"] and tools["pdftoppm"]),
         "office_render_ready": bool(tools["libreoffice"] and tools["pdftoppm"]),
         "install_hint": "On the client host: sudo apt-get install poppler-utils libreoffice",

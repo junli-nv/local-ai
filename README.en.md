@@ -29,7 +29,7 @@ The managed server currently uses the NVIDIA toolchain. See the profile table be
 
 ## Installation and usage
 
-The current version is v1.3.6. Examples download complete source from this tag; ./local-ai --version should report 1.3.6. See [validation](docs/en/validation.md) for acceptance scope and unvalidated platforms.
+The current version is v1.3.7. Examples download complete source from this tag; ./local-ai --version should report 1.3.7. See [validation](docs/en/validation.md) for acceptance scope and unvalidated platforms.
 
 ## Example conventions and documentation
 
@@ -53,6 +53,8 @@ Use appropriate sudo/Docker permissions; root may omit sudo. Data defaults follo
 | [Architecture](docs/en/architecture.md), [development](docs/en/development.md) | Design, extension and contributor handoff |
 
 The [optimization and engine exploration record](docs/en/performance.md) preserves DSpark parameter choices, first-use compilation work, SGLang experiments and future comparison methods.
+
+v1.3.7 adds lightweight web text, local video subtitles and optional FFmpeg frame sampling without new base-client dependencies. See [web and video](docs/en/documents.md#web-pages-and-local-video-v137), including BMC/Redfish limits.
 
 v1.3.2 includes rich-document reading during ordinary chat. Read PDF, images, Word, Excel and PowerPoint by naming their directory during chat. Upgrade steps and optional client-side converters: [document guide](docs/en/documents.md).
 
@@ -94,7 +96,7 @@ Download into an empty directory and check Docker, GPUs and CDI:
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.3.6.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.3.7.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ./local-ai --version
@@ -170,7 +172,7 @@ Log in as alice on bcm-headnode and use BCM's own empty directory:
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.3.6.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.3.7.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ```
@@ -268,7 +270,7 @@ Use the [program update guide](docs/en/update.md) to update GPU and BCM installa
 
 ## Export and offline installation
 
-Online preparation can use any CPU architecture: prepare --profile selects target images and pinned models without executing the target image. See the [mixed-architecture procedure](docs/en/offline.md#scenario-2-download-on-an-online-preparation-host). This functionality is included in v1.3.6.
+Online preparation can use any CPU architecture: prepare --profile selects target images and pinned models without executing the target image. See the [mixed-architecture procedure](docs/en/offline.md#scenario-2-download-on-an-online-preparation-host). This functionality is included in v1.3.7.
 
 This is a separate migration scenario. Export server images/models on the **source GPU host**, then verify/extract and run install --offline on the **new GPU host**. A BCM export normally carries client assets and cannot replace the GPU server bundle.
 
