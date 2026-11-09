@@ -93,8 +93,7 @@ complete -r local-ai ./local-ai /raid/local-ai/local-ai
 ## 跨平台资源准备
 
 prepare 在任意 CPU 架构的联网准备机上下载目标 profile 的镜像与模型，不探测 GPU、
-不执行目标镜像、不安装客户端，也不修改 installation.json。prepare 为 v1.3.4
-标签之后的开发功能。完整介质流程见[离线准备](offline.md#场景二从联网环境下载并准备)。
+不执行目标镜像、不安装客户端，也不修改 installation.json。prepare 自 v1.3.5 提供。完整介质流程见[离线准备](offline.md#场景二从联网环境下载并准备)。
 
 --profile 必填且可重复；--data-dir 指定资源目录，默认程序根；--force 刷新镜像及
 固定模型 revision 的元数据。成功输出 prepared=true、started=false，日志为

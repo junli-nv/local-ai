@@ -6,30 +6,30 @@ Update the GPU001 and bcm-headnode program directories separately. Examples use 
 
 ## Bootstrap and upgrade
 
-v1.3.4 includes scripts/update.py. For an older installation without the helper, obtain it separately using the commands below. Exit local chat and avoid launching management commands during replacement. GPU inference can remain running.
+v1.3.5 includes scripts/update.py. For an older installation without the helper, obtain it separately using the commands below. Exit local chat and avoid launching management commands during replacement. GPU inference can remain running.
 
 On GPU001, and separately on BCM for its own installation:
 
 ```bash
-curl -fL --retry 3 https://raw.githubusercontent.com/junli-nv/local-ai/v1.3.4/scripts/update.py -o /tmp/local-ai-update.py
-python3 /tmp/local-ai-update.py --root /raid/local-ai --version v1.3.4
+curl -fL --retry 3 https://raw.githubusercontent.com/junli-nv/local-ai/v1.3.5/scripts/update.py -o /tmp/local-ai-update.py
+python3 /tmp/local-ai-update.py --root /raid/local-ai --version v1.3.5
 /raid/local-ai/local-ai --version
 ```
 
---version explicitly selects a Git tag. Substitute the next target version when appropriate; the updater neither tracks main automatically nor treats v1.3.4 as an allowlist. Success exits 0 with state=updated, version=1.3.4, resources_changed=false, service_restarted=false and the actual backup path.
+--version explicitly selects a Git tag. Substitute the next target version when appropriate; the updater neither tracks main automatically nor treats v1.3.5 as an allowlist. Success exits 0 with state=updated, version=1.3.5, resources_changed=false, service_restarted=false and the actual backup path.
 
 The helper is retained at scripts/update.py inside the installation. Later updates can use it directly:
 
 ```bash
 cd /raid/local-ai
-python3 scripts/update.py --root /raid/local-ai --version v1.3.4
+python3 scripts/update.py --root /raid/local-ai --version v1.3.5
 ```
 
-This example still selects v1.3.4; replace the version for a later upgrade. Repeating it verifies source and creates another program backup without handling large resources. When an old tag lacks the updater, the currently running helper is retained for future updates and exports.
+This example still selects v1.3.5; replace the version for a later upgrade. Repeating it verifies source and creates another program backup without handling large resources. When an old tag lacks the updater, the currently running helper is retained for future updates and exports.
 
 ## Check the result
 
-v1.3.4 includes the GB200 TP4 candidate and Rubin TP2 framework. Retain custom catalogs and
+v1.3.5 includes the GB200 TP4 candidate and Rubin TP2 framework. Retain custom catalogs and
 explicitly merge new recipes. Updating does not clear Rubin's planning_only or supply an image;
 see the [dedicated guide](gb200-rubin.md).
 
@@ -67,9 +67,9 @@ On an online preparation host, put the helper, small source archive and checksum
 ```bash
 mkdir -p /media/local-ai/update
 cd /media/local-ai/update
-curl -fL --retry 3 https://raw.githubusercontent.com/junli-nv/local-ai/v1.3.4/scripts/update.py -o update.py
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.3.4.tar.gz -o local-ai-v1.3.4-source.tar.gz
-sha256sum update.py local-ai-v1.3.4-source.tar.gz > SHA256SUMS
+curl -fL --retry 3 https://raw.githubusercontent.com/junli-nv/local-ai/v1.3.5/scripts/update.py -o update.py
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.3.5.tar.gz -o local-ai-v1.3.5-source.tar.gz
+sha256sum update.py local-ai-v1.3.5-source.tar.gz > SHA256SUMS
 ```
 
 Mount that media at /media/local-ai on the target, then run:
@@ -77,7 +77,7 @@ Mount that media at /media/local-ai on the target, then run:
 ```bash
 cd /media/local-ai/update
 sha256sum -c SHA256SUMS
-python3 update.py --root /raid/local-ai --archive local-ai-v1.3.4-source.tar.gz
+python3 update.py --root /raid/local-ai --archive local-ai-v1.3.5-source.tar.gz
 /raid/local-ai/local-ai --version
 ```
 

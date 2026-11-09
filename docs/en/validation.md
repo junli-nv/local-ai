@@ -7,7 +7,7 @@ user logs are intentionally omitted from this public record.
 
 The 2026-10-31 integration records below describe the previous client. Tunnel entries are historical; the current client uses API endpoints without built-in forwarding or a separate environment-doctor command. New local HTTP regressions cover direct connections, model checks, retry and no SSH subprocess. They do not constitute new GPU acceptance.
 
-Version labels 1.0.0/1.1.0 below identify historical candidate checks whose tags were withdrawn. The current version is v1.3.4; each acceptance record retains its original date, method and limits. Tagging does not expand support.
+Version labels 1.0.0/1.1.0 below identify historical candidate checks whose tags were withdrawn. The current version is v1.3.5; each acceptance record retains its original date, method and limits. Tagging does not expand support.
 
 ## GB200 candidate and Rubin framework: 2026-11-09
 
@@ -423,8 +423,18 @@ files pass. Require Linux Python 3.10/3.12/3.13 and native-client CI on the rele
 creating the annotated v1.3.4 tag and verifying remote main/tag targets. Release marking does
 not promote GB200/Rubin hardware support levels.
 
-## Cross-platform offline media preparation (development, 2026-11-09)
+## Cross-platform offline media preparation (v1.3.5, 2026-11-09)
 
 prepare pulls/saves target-profile images and downloads public models at pinned commits using host Python standard-library HTTP. It runs no target program, probes no GPU and leaves host installation settings unchanged. Profiles share one model per repo/revision/model_directory; conflicts fail before preparation. Target install CPU checks remain unchanged.
 
-196 CPU/documentation tests, Ruff lint/format and patch checks passed. New regressions cover shared models, ARM64 server/native client exports, no target execution, resumed/ignored Range, truncated/corrupt files, unprovenanced local files, unsafe paths and planning-only rejection. An AMD64 Linux/Python 3.12 smoke check downloaded and verified a 1701-byte Git file and 190736-byte LFS image. No full weights or real ARM64 image were downloaded and no GB200 hardware startup was tested. Hardware acceptance is unchanged; no new tag.
+196 CPU/documentation tests, Ruff lint/format and patch checks passed. New regressions cover shared models, ARM64 server/native client exports, no target execution, resumed/ignored Range, truncated/corrupt files, unprovenanced local files, unsafe paths and planning-only rejection. An AMD64 Linux/Python 3.12 smoke check downloaded and verified a 1701-byte Git file and 190736-byte LFS image. No full weights or real ARM64 image were downloaded and no GB200 hardware startup was tested. Hardware acceptance is unchanged; this capability ships in v1.3.5.
+
+## v1.3.5 version marking
+
+Explicitly requested release of cross-platform offline media preparation. Update version
+metadata and bilingual README, online preparation, command and upgrade examples.
+Preserve old tags and platform hardware acceptance limits. prepare obtains target images
+and public models on another CPU architecture and shares pinned models across profiles.
+Run 196 CPU/documentation tests, Ruff lint/format, patch and wheel-module checks before
+release; create the annotated v1.3.5 tag on the exact commit passing CI after push.
+No new GPU hardware acceptance was performed.

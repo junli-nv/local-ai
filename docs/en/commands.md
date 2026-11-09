@@ -98,7 +98,7 @@ complete -r local-ai ./local-ai /raid/local-ai/local-ai
 
 prepare downloads target-profile images and models on any preparation CPU architecture.
 It probes no GPU, executes no target image, installs no client and leaves installation.json
-unchanged. This is development functionality after the v1.3.4 tag. See the complete
+unchanged. Available in v1.3.5. See the complete
 [offline preparation route](offline.md#scenario-2-download-on-an-online-preparation-host).
 
 --profile is required and repeatable; --data-dir selects the resource directory, defaulting
