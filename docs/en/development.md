@@ -41,6 +41,7 @@ Chinese is primary; maintain English separately and synchronize both entry paths
 
 | Feedback | Behavior to preserve |
 |---|---|
+| Prepare other platforms on any CPU | prepare targets profile images/models using standard-library HTTP weights; never execute foreign images or probe GPUs. Retain target install architecture checks; list profiles explicitly at export. |
 | Develop before GB200/Rubin hardware is available | Add only an ARM64 GB200 TP4 candidate. Evaluate Rubin TP2 with CPU Engram from its 288GB/GPU nominal capacity, retaining a planning-only framework and unresolved image/memory guards. Mark fixtures synthetic; pure plans must not probe hardware or write files. Preserve existing recipes and acceptance levels |
 | Pull failure appears to mean missing image | Separate expected inspect absence from pull failure; show actual error and full log path. Missing metadata.db concerns Docker/containerd storage |
 | Share image/model materials | Share weights/export archives separately from active databases. --data-dir does not move Docker/containerd storage. Validate new storage schemes |

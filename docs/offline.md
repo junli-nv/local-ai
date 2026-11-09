@@ -76,31 +76,67 @@ cd /raid/local-ai
 
 ## 场景二：从联网环境下载并准备
 
-### 2.1 在 prep-host 下载、解压和安装
+### 2.1 在任意架构的 prep-host 准备目标资源
 
-准备机为兼容 Linux AMD64，具备 Python、Docker，可访问 GitHub、镜像仓库、Hugging Face 和 NPM；准备阶段不需要 GPU。
+准备机 CPU 不必与目标 GPU 主机一致。服务端介质的主要内容是目标平台的 vLLM
+镜像、固定 revision 的模型文件，以及源码和校验清单；模型与 Python 源码不区分
+AMD64/ARM64，镜像必须按目标 profile 选择。下载和保存镜像不执行镜像。
+
+本节改用 **AMD64 准备机、AMD64 BCM、ARM64 GB200 服务端**，因此目标配方为
+gb200-tp4；它仍是未实机验收的候选，要求同一 OS 可见四张卡，见
+[GB200 与 Rubin](gb200-rubin.md)。其他平台用自己的完整配方替换，不以准备机架构选配方。
+准备机需 Python 3.10+、tar、sha256sum、Docker API 1.49+，可访问 GitHub、镜像仓库和公开的
+Hugging Face 模型；准备阶段无需 GPU、驱动、CDI、ARM 仿真或 QEMU。
+
+prepare 是 v1.3.4 标签之后的开发功能。使用包含该命令的开发源码，并记录确切提交；
+旧标签源码包没有该命令。先取得开发交付的完整源码归档，核对配套 SHA256 并记录提供方的确切 Git 提交。将下方 /path/to 替换为该归档路径，解压目录仍是安装根：
 
 ```bash
+local_ai_source=/path/to/local-ai-prepare-source.tar.gz
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.3.4.tar.gz -o /tmp/local-ai-source.tar.gz
-tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
+tar -xzf "$local_ai_source" --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ./local-ai --version
-./local-ai install --role both --profile b300-tp4 --online
+./local-ai prepare --help
+./local-ai prepare --profile gb200-tp4
 ```
 
-成功标志：installed=true，目录中已有完整模型、镜像归档和客户端；此步骤不启动推理。
+成功标志：prepared=true、started=false；models/ 中有完整模型和 revision 锁，
+images/ 中有 linux/arm64 镜像归档及内容锁。模型由准备机 Python 标准库通过 HTTP
+下载，按文件长度及 Hub 内容标识校验，支持断点续传；不运行目标镜像或推理程序。
+完整本地模型和镜像会复用，日志在 install.log。当前下载器面向公开模型，不读取或打包凭据。
+
+如需在同一包内携带本例 AMD64 BCM 的客户端，在这台 AMD64 准备机执行：
+
+```bash
+cd /raid/local-ai
+./local-ai install --role client --online
+```
+
+这一步需访问 NPM，只准备本机架构的 OpenCode，不要求 GPU。仅需服务端介质时省略；
+准备机与 BCM 架构不同时，客户端按场景一的 BCM 路线单独准备，不能运行另一架构的客户端。
+不要在准备机执行 install --role server/both 来替代跨平台 prepare。
 
 ### 2.2 导出到 dist/ 并复制到介质
 
 ```bash
 cd /raid/local-ai
-./local-ai export
+./local-ai export --profile gb200-tp4
 mkdir -p /media/local-ai/both
 cp dist/local-ai.tar dist/local-ai.tar.sha256 /media/local-ai/both/
 ```
 
-将同一介质依次带到两台新机器；包内含两种角色的材料，安装时选择角色。
+导出时显式选择目标 profile。已执行可选客户端步骤时，同一包含 ARM64 服务端资源和 AMD64 客户端；否则仅供服务端使用。目标安装与启动仍检查实际 CPU、GPU 和 CDI。
+
+多个目标平台可在同一准备目录中选择；相同 repo/revision 的完整模型会复用。
+prepare 不写本机安装记录，因此 export 也须显式列出配方：
+
+```bash
+./local-ai prepare --profile b300-tp4 --profile gb200-tp4
+./local-ai export --profile b300-tp4 --profile gb200-tp4 --output dist/local-ai-multi.tar
+```
+
+同一 model_directory 对应不同 repo/revision 时应分开准备目录，不能混装。
 
 ### 2.3 在新 GPU 主机 GPU001 离线导入并启动
 
@@ -110,7 +146,7 @@ sha256sum -c local-ai.tar.sha256
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
 tar -xf local-ai.tar --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
-./local-ai install --role server --profile b300-tp4 --offline
+./local-ai install --role server --profile gb200-tp4 --offline
 ./local-ai server inventory
 nvidia-ctk cdi list
 ./local-ai server start --host 0.0.0.0 --gpus 0,1,2,3 --name a --port 18000

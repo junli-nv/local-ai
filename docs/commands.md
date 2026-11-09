@@ -22,7 +22,7 @@
 ./local-ai chat --help
 ```
 
-通用格式为 `./local-ai 命令组 子命令 参数`；install、export、profiles 和 chat 没有下级子命令。
+通用格式为 `./local-ai 命令组 子命令 参数`；install、prepare、export、profiles 和 chat 没有下级子命令。
 每一级都支持 `--help`。全局 `--debug` 必须放在命令组之前，用于错误时显示 Python 调用栈。
 
 ## 全部命令
@@ -34,6 +34,7 @@
 | `config set` | BCM | 仅修改 endpoint/model 默认值，不安装资源 |
 | `config unset` | BCM | 清除 endpoint/model 默认值 |
 | `install` | 目标主机或准备机 | 就地准备所选角色资源并保存安装设置 |
+| `prepare` | 任意架构联网准备机 | 按目标配方准备镜像和模型，不执行目标程序 |
 | `export` | 已安装主机或准备机 | 完整离线包及 SHA256，默认 dist/ |
 | `profiles` | 任意一端 | 输出配置目录和验证状态，JSON 格式 |
 | `server inventory` | GPU001 | 读取本机 CPU 架构及 GPU 型号、UUID、显存 |
@@ -88,6 +89,26 @@ Shell 源码（不是 JSON）；配置读取失败时退出 1，错误写标准�
 ```bash
 complete -r local-ai ./local-ai /raid/local-ai/local-ai
 ```
+
+## 跨平台资源准备
+
+prepare 在任意 CPU 架构的联网准备机上下载目标 profile 的镜像与模型，不探测 GPU、
+不执行目标镜像、不安装客户端，也不修改 installation.json。prepare 为 v1.3.4
+标签之后的开发功能。完整介质流程见[离线准备](offline.md#场景二从联网环境下载并准备)。
+
+--profile 必填且可重复；--data-dir 指定资源目录，默认程序根；--force 刷新镜像及
+固定模型 revision 的元数据。成功输出 prepared=true、started=false，日志为
+资源目录/install.log。公开模型由宿主 Python 标准库下载，校验长度与内容标识，
+复用完整模型，支持断点续传。规划框架和同目录不同模型 revision 会在准备前拒绝。
+
+```bash
+./local-ai prepare --profile gb200-tp4
+./local-ai prepare --profile b300-tp4 --profile gb200-tp4
+./local-ai export --profile b300-tp4 --profile gb200-tp4
+```
+
+export 显式选择已准备的配方。install --role server/both 仍检查本机 CPU，
+model download 的原生容器下载路径不变；跨架构准备请使用 prepare。
 
 ## 统一安装与完整导出
 

@@ -76,31 +76,72 @@ Success: chat --check returns ready=true; execute hostname through chat and veri
 
 ## Scenario 2: download on an online preparation host
 
-### 2.1 Download, unpack and install on prep-host
+### 2.1 Prepare target resources on any prep-host architecture
 
-Use compatible Linux AMD64 with Python, Docker and access to GitHub, the registry, Hugging Face and NPM. Preparation needs no GPU.
+The preparation CPU need not match the target GPU server. Server media mainly consists
+of the target vLLM image and pinned model files, plus source and checksums. Model files
+and Python source are independent of AMD64/ARM64; container images follow the target
+profile. Pulling and saving an image does not execute it.
+
+This example uses an **AMD64 preparation host, AMD64 BCM and ARM64 GB200 server**,
+so the target is gb200-tp4. It remains an unvalidated candidate requiring four GPUs
+visible to one OS; see [GB200 and Rubin](gb200-rubin.md). Substitute another complete
+target profile as needed. The preparation host needs Python 3.10+, tar, sha256sum, Docker API
+1.49+ and access to GitHub, the registry and public Hugging Face models. It needs no
+GPU, NVIDIA driver, CDI, ARM emulation or QEMU.
+
+prepare is development functionality after the v1.3.4 tag. Obtain source containing
+this command and record its exact commit; the old tagged archive lacks it. Obtain the complete development source archive, verify its accompanying SHA256 and record the supplied Git commit. Replace /path/to below with that archive path; the unpacked directory remains the installation root:
 
 ```bash
+local_ai_source=/path/to/local-ai-prepare-source.tar.gz
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.3.4.tar.gz -o /tmp/local-ai-source.tar.gz
-tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
+tar -xzf "$local_ai_source" --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ./local-ai --version
-./local-ai install --role both --profile b300-tp4 --online
+./local-ai prepare --help
+./local-ai prepare --profile gb200-tp4
 ```
 
-Success: installed=true with complete model, image archives and client assets; no inference is started.
+Success: prepared=true, started=false; models/ contains complete weights and a revision
+lock, and images/ contains the linux/arm64 image archive and content lock. Model downloads
+use the host Python standard library over HTTP, checking file lengths and Hub content
+identities with resumable transfers. No target container or inference program runs.
+Complete local models and images are reused. Progress is in install.log. This downloader
+supports public models; it neither reads nor bundles credentials.
+
+To include this example AMD64 BCM client in the same package, run on the AMD64 prep-host:
+
+```bash
+cd /raid/local-ai
+./local-ai install --role client --online
+```
+
+This optional step needs NPM and prepares the host-native OpenCode without GPUs. Omit it
+for server-only media. If BCM and prep-host architectures differ, prepare the client
+separately using the BCM route in scenario 1; do not execute foreign client binaries.
+Do not substitute install --role server/both for cross-platform prepare.
 
 ### 2.2 Export to dist/ and copy onto media
 
 ```bash
 cd /raid/local-ai
-./local-ai export
+./local-ai export --profile gb200-tp4
 mkdir -p /media/local-ai/both
 cp dist/local-ai.tar dist/local-ai.tar.sha256 /media/local-ai/both/
 ```
 
-Carry the media to each new host; this combined package supplies both roles, selected during installation.
+Select the target profile explicitly at export. With the optional client step, this package contains ARM64 server resources and an AMD64 client; otherwise it is server-only. Target installation and startup still check CPU, GPU and CDI compatibility.
+
+Prepare multiple target platforms together; complete models with the same repo/revision
+are reused. prepare does not write host installation settings, so export lists profiles explicitly:
+
+```bash
+./local-ai prepare --profile b300-tp4 --profile gb200-tp4
+./local-ai export --profile b300-tp4 --profile gb200-tp4 --output dist/local-ai-multi.tar
+```
+
+Use separate resource directories when one model_directory maps to different repo/revisions.
 
 ### 2.3 Import offline and start on new GPU host GPU001
 
@@ -110,7 +151,7 @@ sha256sum -c local-ai.tar.sha256
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
 tar -xf local-ai.tar --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
-./local-ai install --role server --profile b300-tp4 --offline
+./local-ai install --role server --profile gb200-tp4 --offline
 ./local-ai server inventory
 nvidia-ctk cdi list
 ./local-ai server start --host 0.0.0.0 --gpus 0,1,2,3 --name a --port 18000

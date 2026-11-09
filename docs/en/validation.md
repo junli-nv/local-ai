@@ -422,3 +422,9 @@ Ruff lint, formatting of 49 files, 276 local links/anchors and 140 Bash blocks a
 files pass. Require Linux Python 3.10/3.12/3.13 and native-client CI on the release commit before
 creating the annotated v1.3.4 tag and verifying remote main/tag targets. Release marking does
 not promote GB200/Rubin hardware support levels.
+
+## Cross-platform offline media preparation (development, 2026-11-09)
+
+prepare pulls/saves target-profile images and downloads public models at pinned commits using host Python standard-library HTTP. It runs no target program, probes no GPU and leaves host installation settings unchanged. Profiles share one model per repo/revision/model_directory; conflicts fail before preparation. Target install CPU checks remain unchanged.
+
+196 CPU/documentation tests, Ruff lint/format and patch checks passed. New regressions cover shared models, ARM64 server/native client exports, no target execution, resumed/ignored Range, truncated/corrupt files, unprovenanced local files, unsafe paths and planning-only rejection. An AMD64 Linux/Python 3.12 smoke check downloaded and verified a 1701-byte Git file and 190736-byte LFS image. No full weights or real ARM64 image were downloaded and no GB200 hardware startup was tested. Hardware acceptance is unchanged; no new tag.

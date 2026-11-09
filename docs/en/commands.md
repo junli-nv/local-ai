@@ -24,7 +24,7 @@ Discover commands without starting a model:
 ./local-ai chat --help
 ```
 
-Syntax: ./local-ai GROUP COMMAND OPTIONS. install, export, profiles and chat have no child command. Every level supports --help. The global --debug option goes before the command group and prints a Python traceback on failure.
+Syntax: ./local-ai GROUP COMMAND OPTIONS. install, prepare, export, profiles and chat have no child command. Every level supports --help. The global --debug option goes before the command group and prints a Python traceback on failure.
 
 ## All commands
 
@@ -35,6 +35,7 @@ Syntax: ./local-ai GROUP COMMAND OPTIONS. install, export, profiles and chat hav
 | config set | BCM | Change endpoint/model without installation |
 | config unset | BCM | Clear endpoint/model defaults |
 | install | Target host/preparation host | Prepare selected role and save settings in the installation root |
+| prepare | Any preparation CPU | Prepare target images/models without executing target programs |
 | export | Installed/preparation host | Complete portable bundle and SHA256, default dist/ |
 | profiles | Either host | Profile catalog and validation status as JSON |
 | server inventory | GPU001 | Local CPU architecture, GPU models, UUIDs and memory |
@@ -92,6 +93,29 @@ read failures exit 1 with errors on stderr. Remove completion in the current ter
 ```bash
 complete -r local-ai ./local-ai /raid/local-ai/local-ai
 ```
+
+## Cross-platform resource preparation
+
+prepare downloads target-profile images and models on any preparation CPU architecture.
+It probes no GPU, executes no target image, installs no client and leaves installation.json
+unchanged. This is development functionality after the v1.3.4 tag. See the complete
+[offline preparation route](offline.md#scenario-2-download-on-an-online-preparation-host).
+
+--profile is required and repeatable; --data-dir selects the resource directory, defaulting
+to the program root. --force refreshes images and pinned model metadata. Success returns
+prepared=true and started=false; logs go to DATA_DIR/install.log. Public model downloads
+use the host Python standard library with length/content checks, local reuse and resumable
+transfers. Planning-only profiles and conflicting revisions in one model directory are
+rejected before preparation.
+
+```bash
+./local-ai prepare --profile gb200-tp4
+./local-ai prepare --profile b300-tp4 --profile gb200-tp4
+./local-ai export --profile b300-tp4 --profile gb200-tp4
+```
+
+Select prepared profiles explicitly at export. install --role server/both still checks
+the local CPU; model download retains its native-container path. Use prepare across platforms.
 
 ## Unified installation and complete export
 

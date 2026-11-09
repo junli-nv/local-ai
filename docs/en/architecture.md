@@ -122,6 +122,10 @@ client.prepare registers document_mcp.py as a local stdio MCP service. documents
 
 scripts/update.py is a standalone standard-library helper so it can update an old installation without importing its modules. It replaces an explicit list of source paths, retains assets/configuration, backs up old code/installation metadata and invalidates the old bundle checksum receipt. It never calls install, Docker, model/client download or server restart. Backups remain outside the installation; scripts/ is included by ordinary exports, including the retained bootstrap helper.
 
+## Cross-platform media preparation
+
+preparation.py coordinates target images, models and archives. hub.py uses standard-library HTTP at a pinned model commit, verifies Git blob/LFS content identities and supports resume. prepare runs no target program, probes no GPU and leaves installation.json unchanged; export selects target profiles explicitly. Installation/startup still validate the target CPU and hardware. Legacy model download retains its native-container path.
+
 ## Portable installation directory
 
 The unpacked root retains complete program, models, image archives and public clients. Defaults follow its location. install prepares assets; server start creates host-local instances. export writes dist/ with relative checksums; install --offline verifies/imports after extraction elsewhere. Exclude dist/ itself, old instances, histories and credentials. Public clients contain only binaries/public cache; personal state stays isolated.

@@ -74,7 +74,7 @@ def session(options):
     global _current
     group, action = options.group, getattr(options, "action", None)
     enabled = (
-        (group in {"image", "install", "export"})
+        (group in {"image", "install", "export", "prepare"})
         or (group == "model")
         or (group == "client" and action in {"install", "export"})
         or (group == "server" and action in {"start", "warmup"})

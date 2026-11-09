@@ -87,6 +87,35 @@ class PortableTests(unittest.TestCase):
         (target / "local-ai").rename(renamed)
         return renamed
 
+    def test_arm_server_media_retains_native_client_and_one_model(self):
+        from local_ai.profiles import profile
+
+        policy = profile("gb200-tp4")
+        model_fixture(self.base)
+        archive = deployment.archive_path(self.base, policy)
+        archive.parent.mkdir(parents=True, exist_ok=True)
+        archive.write_bytes(b"target ARM64 image fixture")
+        Path(str(archive) + ".lock.json").write_text(
+            json.dumps(
+                {
+                    "reference": policy["image"],
+                    "platform": policy["platform"],
+                    "archive_sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
+                }
+            )
+        )
+        with patch("local_ai.images.run", side_effect=AssertionError("no target execution")):
+            result = self.export(["gb200-tp4"])
+        self.assertEqual(result["profiles"], ["gb200-tp4"])
+        self.assertEqual(result["clients"], [arch()])
+        renamed = self.unpack(result)
+        manifest = bundle.verify(renamed)
+        weights = [name for name in manifest["files"] if name.endswith(".safetensors")]
+        self.assertEqual(len(weights), 1)
+        self.assertIn("images/" + archive.name, manifest["files"])
+        installed = self.invoke(renamed, "install", "--role", "client", "--offline")
+        self.assertEqual(installed.returncode, 0, installed.stderr)
+
     def test_export_rename_delete_source_and_offline_install(self):
         for name in [
             ".env",

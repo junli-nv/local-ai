@@ -1,5 +1,7 @@
 # GB200 TP4 candidate and single-node Rubin framework
 
+Offline media can be prepared on another CPU architecture with prepare --profile gb200-tp4: reuse the pinned model and select the ARM64 image. See [online preparation](offline.md#scenario-2-download-on-an-online-preparation-host). This does not extend GB200 hardware acceptance.
+
 v1.3.4 includes the GB200 TP4 candidate and Rubin TP2 framework. Neither platform is
 available locally. CPU tests verify configuration, pure planning and rejection, without proving
 model startup or performance. GPU001 denotes the future GPU host. BCM continues using an API

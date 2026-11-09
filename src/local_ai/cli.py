@@ -18,6 +18,7 @@ from . import (
     documents,
     images,
     installlog,
+    preparation,
     readiness,
     server,
     warmup,
@@ -144,6 +145,29 @@ def parser():
         help="Allow downloads; extracted bundles otherwise default to offline",
     )
     b.set_defaults(offline=None)
+    b = groups.add_parser(
+        "prepare",
+        help="Online host: prepare target-platform images and models without running them",
+        description="Prepare offline server media on any host CPU architecture; no GPU required.",
+    )
+    b.add_argument(
+        "--profile",
+        action="append",
+        required=True,
+        choices=list(catalog()["profiles"]),
+        help="Target server recipe; repeat to prepare multiple platforms",
+    )
+    b.add_argument(
+        "--data-dir",
+        type=Path,
+        default=data_root(),
+        help="Prepared images and models directory; defaults to the program root",
+    )
+    b.add_argument(
+        "--force",
+        action="store_true",
+        help="Refresh target images and pinned model metadata",
+    )
     b = groups.add_parser("export", help="Export a portable complete local-ai directory")
     b.add_argument(
         "--output",
@@ -453,6 +477,8 @@ def dispatch(q):
         return configuration.update(q.key, getattr(q, "value", None), remove=q.action == "unset")
     if q.group == "install":
         return deployment.install(q)
+    if q.group == "prepare":
+        return preparation.prepare(q)
     if q.group == "export":
         return bundle.export(q)
     if q.group == "profiles":
@@ -548,6 +574,9 @@ def dispatch(q):
 
 def preflight(q):
     """Reject incomplete recipes before logging, probing or changing resources."""
+    if q.group == "prepare":
+        preparation.policies(q.profile)
+        return
     if (
         q.group in {"image", "model"}
         or (q.group == "install" and q.role in {"server", "both"})
