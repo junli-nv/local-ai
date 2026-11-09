@@ -2,7 +2,32 @@
 
 [中文（默认）](README.md)
 
-Run vLLM on the GPU server and OpenCode on BCM. File, shell, Git and SSH tools execute on BCM as the current user.
+**local-ai is an AI work assistant for local clusters, helping users perform system administration, software development and everyday file tasks through natural language.**
+
+It connects a locally hosted model with tools in the terminal. Users describe a task; the assistant examines project files and actual command results, then uses tools within the scope of the user’s authorization. The project uses vLLM for inference and OpenCode for interaction and tool execution, bringing installation, connectivity, configuration and offline delivery into a reusable workflow.
+
+## What it helps with
+
+- **System and cluster administration**: inspect system state, analyze logs, troubleshoot services and access remote hosts through SSH as needed.
+- **Scripts and software**: read projects, write and modify scripts or code, run validation and work with Git.
+- **Files and documents**: organize files, process data, and read and analyze PDFs, images, Word, Excel and PowerPoint content. Document conversion requires the relevant client dependencies.
+- **Compute workloads**: prepare, submit and track jobs in existing Slurm or Kubernetes environments as requested.
+
+These are typical uses. Available actions depend on user authorization, account permissions, installed tools and model capabilities.
+
+## How it works
+
+| Component | Responsibility |
+|---|---|
+| Model server | Runs a model through vLLM on a GPU server and exposes an HTTP API; the current default is DeepSeek-V4.1-Flash |
+| Work client | Runs OpenCode on the BCM head node, reads task files and executes file, shell, Git and SSH tools as the current user |
+| Deployment and delivery tools | Manage hardware profiles, models and images, service instances, client configuration, and offline media preparation, export and import |
+
+Inference and task execution run separately. The client needs no GPU, and client and server CPU architectures can differ. An online preparation host can prepare server images and models for other target platforms. Profiles referencing the same model and revision can reuse the model files; see [offline deployment](docs/en/offline.md).
+
+The managed server currently uses the NVIDIA toolchain. See the profile table below and [validation](docs/en/validation.md) for hardware acceptance scope. The client connects through a compatible model API; other backends still require model and tool-calling compatibility checks. The project currently provides no multi-tenant gateway or user quotas and is intended to operate within existing account permissions and network management.
+
+## Installation and usage
 
 The current version is v1.3.5. Examples download complete source from this tag; ./local-ai --version should report 1.3.5. See [validation](docs/en/validation.md) for acceptance scope and unvalidated platforms.
 
