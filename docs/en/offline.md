@@ -10,7 +10,7 @@ Prerequisites: Python 3.10+, Bash, curl, tar, sha256sum (required for transfer v
 
 Archives contain top-level local-ai/ and bundle.json checksums. They exclude dist/, instance state, logs, temporary caches, Git metadata, private histories and credentials. Docker active databases and drivers remain host-managed.
 
-Both routes below are complete and independent; follow one route from start to finish. gpu-old/bcm-old are the existing source hosts; prep-host downloads assets without starting GPUs. New targets use GPU001/bcm-headnode as in README. Source downloads pin v1.3.4; record an exact commit when using main for development.
+Both routes below are complete and independent; follow one route from start to finish. gpu-old/bcm-old are the existing source hosts; prep-host downloads assets without starting GPUs. New targets use GPU001/bcm-headnode as in README. Source downloads pin v1.3.7; record an exact commit when using main for development.
 
 ## Scenario 1: export an installed environment
 
@@ -223,6 +223,10 @@ Before GPU startup, resolve missing UUID aliases through [CDI setup](deployment.
 The source endpoint is not carried in the bundle. The new BCM examples set an initial default during client installation; later use config set endpoint URL or edit the file reported by config show, without installation. For one invocation, chat --endpoint URL selects another reachable internal service; add --model ID for a different model. See [multi-service usage](../../README.en.md#connect-to-multiple-services-from-one-bcm) for history isolation.
 
 Compilation caches and warmup records are excluded with instance state. After target installation and API startup, follow [explicit warmup](deployment.md#single-user-dspark-and-explicit-warmup) on the target GPU when needed; online preparation does not run inference.
+
+Source containing the benchmark feature can run the [local performance benchmark](commands.md#local-performance-benchmark)
+against a ready instance on the offline target GPU without internet or extra dependencies. Benchmark JSON files are excluded
+with instance state; measure again on the target. Existing v1.3.7 release archives do not include this command.
 
 ## Optional document converters
 

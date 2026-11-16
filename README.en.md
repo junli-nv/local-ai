@@ -166,6 +166,21 @@ Add --wait-timeout 1200 for longer startup. Timeout exits 1; Ctrl+C returns 130;
 
 For single-user generation, optional b300-tp4-dspark and explicit --warmup are described in [deployment](docs/en/deployment.md#single-user-dspark-and-explicit-warmup). READY confirms API health; WARMUP COMPLETE confirms the bounded inference suite. Existing instances require explicit replacement to change recipes.
 
+### Optional: benchmark on the server (new in development source)
+
+The current development source adds `server benchmark`; existing v1.3.7 release archives do not contain it.
+With source containing this feature, run on GPU001 from /raid/local-ai once instance a is ready and its GPU use is allocated:
+
+```bash
+./local-ai server benchmark --name a
+```
+
+Defaults use the local API, concurrency 1, 1024 input/256 output tokens, one warmup round and three measured rounds.
+Results report first-chunk latency, complete request duration, per-request output rate and aggregate throughput; rates include queueing/prefill rather than pure decoding.
+Progress/summary go to stderr; complete JSON is saved automatically as instances/a/benchmark-RANDOM.json.
+No BCM or additional dependencies are needed. Avoid other business traffic when comparing. See [local performance benchmark](docs/en/commands.md#local-performance-benchmark) for options, metric definitions and failure handling.
+Only local mock-API logic has been validated; no real GPU performance results are available for this tool yet.
+
 ## 2. Install and use on BCM
 
 Log in as alice on bcm-headnode and use BCM's own empty directory:

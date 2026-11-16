@@ -42,6 +42,7 @@
 | `server start` | GPU001 | 检查资源、启动并等待 API；成功表示已就绪，返回状态与日志位置 |
 | `server status` | GPU001 | 明确显示已就绪或尚未就绪；返回原因、监听状态和日志位置 |
 | `server warmup` | GPU001 | 对健康的受管实例显式执行有限推理预热，记录进度 |
+| `server benchmark` | GPU001 | 经本机 API 预热并测试受管实例，保存性能报告 |
 | `server stop` | GPU001 | 停止指定实例，保留权重和宿主机日志 |
 | `image pull` | 联网 GPU 准备机 | 拉取固定镜像并记录平台身份 |
 | `image export` | Docker 准备机 | 导出镜像归档及配套锁文件 |
@@ -183,20 +184,20 @@ v1.3.4 另含 gb200-tp4 候选和 rubin-tp2-framework；两者都没有实机验
 
 | 参数 | 适用命令 | 含义与默认值 |
 |---|---|---|
-| `--data-dir` | server 的 plan/start/status/stop/warmup；image；model download | 运行数据根目录；先取 LOCAL_AI_DATA_DIR，未设置则为程序所在的解压目录。status 实际按实例名查询。 |
+| `--data-dir` | server 的 plan/start/status/stop/warmup/benchmark；image；model download | 运行数据根目录；先取 LOCAL_AI_DATA_DIR，未设置则为程序所在的解压目录。status 实际按实例名查询。 |
 | `--profile` | plan/start、image、model download | 硬件与引擎配置。image 必填；plan/start/model 优先取已安装配方，未安装时默认 b300-tp4。 |
 | `--gpus` | plan/start | 必填，逗号分隔的本机 GPU 编号或完整 UUID；数量匹配配置 |
-| `--name` | plan/start/status/stop/warmup | 实例名，默认 a；须以小写字母开头，仅含小写字母、数字和连字符，最长 32 字符 |
+| `--name` | plan/start/status/stop/warmup/benchmark | 实例名，默认 a；须以小写字母开头，仅含小写字母、数字和连字符，最长 32 字符 |
 | `--host` | plan/start | IPv4 监听地址，默认 127.0.0.1；0.0.0.0 监听所有 IPv4 网卡，也可指定本机 IP；不接受主机名或 IPv6 |
 | `--port` | plan/start | 模型 API 端口，默认 18000，允许 1024–65535 |
 | `--wait-timeout` | 仅 start | 等待 API 就绪的秒数，默认 600，须大于 0；超时退出 1，保留容器 |
 | `--warmup` | 仅 start | API 就绪后显式执行真实推理预热，默认关闭 |
 | `--warmup-timeout` | 仅 start | 预热阶段独立期限，默认 600 秒，须为正数；配合 --warmup |
-| `--timeout` | 仅 warmup | 预热总期限，默认 600 秒，须为正数 |
-| `--input-tokens` | 仅 warmup | 逗号分隔正整数，精确输入长度；默认取上下文允许的 1024,8192,32768 |
-| `--concurrency` | 仅 warmup | 逗号分隔正整数，并发请求数；默认 1,2,4,8，各自不超过两倍 max-num-seqs |
-| `--output-tokens` | 仅 warmup | 输出长度，默认 256，须为正整数且输入加输出不超过上下文 |
-| `--repeats` | 仅 warmup | 每组输入长度与并发的轮数，默认 2，须为正整数 |
+| `--timeout` | warmup（benchmark 见下节）| 预热总期限，默认 600 秒，须为正数 |
+| `--input-tokens` | warmup（benchmark 见下节）| 逗号分隔正整数，精确输入长度；默认取上下文允许的 1024,8192,32768 |
+| `--concurrency` | warmup（benchmark 见下节）| 逗号分隔正整数，并发请求数；默认 1,2,4,8，各自不超过两倍 max-num-seqs |
+| `--output-tokens` | warmup（benchmark 见下节）| 输出长度，默认 256，须为正整数且输入加输出不超过上下文 |
+| `--repeats` | warmup（benchmark 见下节）| 每组输入长度与并发的轮数，默认 2，须为正整数 |
 | `--inventory` | 仅 plan | 从 JSON 测试清单生成计划，代替实时硬件发现；start 不接受 |
 | `--output` | image export | 必填，导出镜像的归档路径 |
 | `--archive`、`--lock` | image import | 均必填，镜像归档及其配套 .lock.json 路径 |
@@ -239,6 +240,59 @@ status 的人类可读提示写标准错误，标准输出保留 ready/listening
 当前状态不从日志推断，以实际容器和 API 检查为准。
 
 server warmup --name a 只处理所选数据根目录中运行且健康的受管实例，使用其保存的 spec.json/args.json，不改变配方。start --warmup 在 API 就绪后执行相同步骤。失败或超时退出 1，中断退出 130，均保留容器。status 将 warmup 与 API 就绪分开报告，不生成请求。日志与有限覆盖范围示例见[DSpark 与预热](deployment.zh-CN.md#单用户-dspark-与显式预热)。
+
+## 本机性能测试
+
+`server benchmark` 为当前开发源码新增功能，既有 v1.3.7 发布包不含此命令。
+在运行模型的 GPU001 上，以有 Docker 和实例目录读写权限的账户，从 /raid/local-ai 执行。
+前提是实例 a 已启动且 API 健康，不需要安装 BCM 客户端或额外 Python 包：
+
+```bash
+./local-ai server benchmark --help
+./local-ai server benchmark --name a
+# 同一输入输出规模的四并发测试，每轮四个请求
+./local-ai server benchmark --name a --input-tokens 1024 --output-tokens 256 --concurrency 4 --repeats 3
+```
+
+| 参数 | 含义与默认值 |
+|---|---|
+| --name | 实例名，默认 a；自动读取模型、端口、配方和引擎参数 |
+| --data-dir | 实例所属数据根目录，默认规则同 server start |
+| --input-tokens | 每个请求的精确合成输入长度，默认 1024，正整数 |
+| --output-tokens | 每个请求的精确生成长度，默认 256，正整数；输入加输出不得超过实例上下文 |
+| --concurrency | 每轮同时提交的请求数，默认 1，范围 1–64；超过引擎活动序列数会排队 |
+| --repeats | 正式测试轮数，默认 3，正整数；正式请求总数为轮数乘以并发 |
+| --warmup-rounds | 同样输入输出长度和并发的预热轮数，默认 1；0 跳过预热 |
+| --timeout | 分词、预热和正式请求的共同期限，默认 600 秒，正整数；不包含前置 Docker/健康检查 |
+
+实例监听 0.0.0.0 或 127.0.0.1 时连接 127.0.0.1；只监听具体本机 IPv4 时使用该 IP。
+直接使用本机 HTTP，不经过 BCM、OpenCode、环境 HTTP 代理或外部转发，不重启服务。
+只接受所选数据目录拥有且配置一致的受管实例；与同一实例的 benchmark/warmup 互斥。
+会生成真实 GPU 推理负载，请在有使用权的实例上执行；工具不阻止普通业务请求，比较时应避免其他流量。
+
+输出口径：
+
+- `first_chunk_seconds`：请求开始到首个非空文本片段的时间，近似 TTFT；流式片段可含多个 token，不能当作精确首 token 或最终答案延迟。
+- `request_seconds`：完整流式请求耗时，包括本机 HTTP、排队、预填充和生成。
+- `request_output_tokens_per_second`：每个请求的实际输出 token 数除以完整请求时间，报告均值、中位数和最近秩 P95；不是纯解码速度。
+- `aggregate_output_tokens_per_second`：正式请求输出总 token 数除以各正式轮墙钟时间之和；并发请求时间不相加，不含分词、预热和轮间检查。
+
+延迟也报告均值、中位数和最近秩 P95；默认只有三个正式样本，P95 不能用作生产 SLA。
+测试通过 vLLM `/tokenize` 获取 token ID，再请求 `/v1/completions`，使用固定长度的合成文本补全，
+不是完整聊天或工具任务。忽略 EOS、保留特殊 token，输出统计包含特殊/思考 token，不评价答案质量。
+每次请求使用随机前缀以减少前缀缓存复用，但不清空缓存，也不保证完全无命中；短输入尤其可能重合。
+只有流正常结束、结束原因为长度限制且 API usage 与输入输出数量精确一致时才算成功，不按字符数估算。
+
+进度与简要结果写 stderr；成功 stdout 为完整 JSON，并自动保存到
+`DATA_DIR/instances/a/benchmark-随机标识.json`，每次独立文件，权限 0600。
+记录包含程序版本、执行主机、模型、实例完整配置及摘要、容器镜像 ID/启动时间、预热和逐请求结果。
+本命令的持久记录为该 JSON，不写 install.log 或修改 warmup.json；status 不据此宣称已预热。
+成功退出 0；失败/超时退出 1，Ctrl+C 退出 130，保留服务。开始测试后的失败/取消会保存不含成功汇总的
+部分记录，路径写 stderr；前置配置/健康检查失败时不生成报告。测试中容器停止或重启会使本次结果失败。
+
+预热仅覆盖本次形状，不能保证消除全部 JIT；权重加载不计入性能汇总，swap 或运行期读盘仍会影响结果。
+固定模型/revision、镜像、输入输出、并发和其他负载再作比较；结果衡量整套部署，不能作为显卡独立排名。
+本地没有模型时只能验证工具逻辑，GPU 性能验收另见[验证记录](validation.md)。
 
 ## 客户端参数
 

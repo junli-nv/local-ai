@@ -320,7 +320,7 @@ def managed_spec(root, name):
     if labels.get("local-ai.project") != "cluster-local-ai" or labels.get(
         "local-ai.data-dir"
     ) != str(root):
-        raise ValueError("Refusing warmup of an unmanaged instance or another deployment")
+        raise ValueError("Refusing inference test of an unmanaged instance or another deployment")
     directory = root / "instances" / name
     spec = json.loads((directory / "spec.json").read_text())
     if (

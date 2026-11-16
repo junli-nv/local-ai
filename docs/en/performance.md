@@ -13,6 +13,17 @@ Separate weight loading, startup compilation, API health, first-request compilat
 
 Earlier work changed TP8/eager/CPU Engram into a combined GPU Engram/CUDA Graph configuration before comparing TP4. It supports the current TP4 baseline, but simultaneous changes prevent attributing improvements to TP count or one optimization alone. See validation for scope. Default b300-tp4 remains unchanged.
 
+## Built-in lightweight benchmark metrics
+
+Current development source provides `server benchmark --name a`; existing v1.3.7 release archives do not include it.
+It contacts the local API on the GPU server and measures fixed-length synthetic requests after a small same-shape warmup.
+See the [manual](commands.md#local-performance-benchmark) for operation, defaults and JSON fields.
+First nonempty text chunks approximate TTFT and output counts include special/reasoning tokens. Per-request rates use complete request time, not pure decode time.
+Aggregate throughput divides by summed measured-round wall time, excluding warmup, tokenization and checks between rounds, while including local HTTP and server queueing/prefill.
+Random prefixes reduce reuse without clearing caches. Results do not establish completely cold-cache behavior, weight loading speed, full chat experience or independent GPU performance.
+Protocol reference: [vLLM server APIs](https://docs.vllm.ai/en/stable/serving/online_serving/openai_compatible_server/).
+Only mock-API logic has been validated; real GPU measurements and profile comparisons need separate validation records.
+
 ## RTX 6000D scope
 
 Independent `rtx6000d-tp8` uses CPU Engram, eager, 32K, one sequence and text input. It does not enable the B300 DSpark/CUDA graph optimizations below. See [RTX 6000D](rtx6000d.md) for smoke tests, single-request latency and unvalidated work; these do not establish throughput differences or a performance ranking against B200/B300.

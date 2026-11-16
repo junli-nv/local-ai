@@ -49,6 +49,10 @@ cd /raid/local-ai
 
 应分别为 ready=true。更新程序不会切换现有实例配方、端口或启动参数。启用 DSpark 等新配置按[实例重建与预热步骤](deployment.zh-CN.md#单用户-dspark-与显式预热)另行处理。新版本若改用其他模型或镜像，资源准备也是独立操作；程序更新本身不会下载它们。
 
+当前开发源码新增的 `server benchmark` 不在既有 v1.3.7 发布包中；重复更新到该标签不会取得此功能。
+部署包含该功能的源码后，仅在 GPU001 执行[本机性能测试](commands.md#本机性能测试)，无需更新 BCM 或重新下载模型/镜像。
+更新本身不运行测试；instances/ 下的历史 benchmark JSON 保留，程序/镜像等条件改变后应重新测量。
+
 ## 已保留什么
 
 - models/、images/、clients/、instances/、dist/ 和 config/ 不参与程序替换；个人聊天历史也不处理。已有 OpenCode 版本保持原样。

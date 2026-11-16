@@ -23,6 +23,7 @@ BCM 负责 OpenCode、项目文件、Shell/Git/SSH 工具、用户凭据、历�
 | `endpoint.py` | HTTP(S) API 地址校验和模型就绪检查 |
 | `readiness.py` | 端口与 HTTP 健康探测、启动等待、明确就绪日志；状态查询只读 |
 | `warmup.py` | 显式有限推理预热、取消、进度与绑定容器启动时间的记录；状态查询不触发推理 |
+| `benchmark.py` | 显式本机流式合成测试；分开记录预热与正式计时，校验 API token 数并保存配置及结果 |
 | `client.py` | 用户私有状态、本地工具、连接配置和完整日志 |
 | `installlog.py` | 安装步骤、实际命令、实时输出及失败诊断集中记录；只读操作无文件副作用 |
 | `configuration.py` | 独立读写客户端默认值，不安装或连接服务 |

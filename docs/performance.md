@@ -12,6 +12,16 @@ v1.3.4 的 GB200 四卡候选与 Rubin 两卡框架没有性能结果。Rubin 28
 
 早期从 TP8/eager/CPU Engram 调整到 GPU Engram 与 CUDA Graph 的组合配置，再比较 TP4。它支持当前 TP4 基线的选择，但多项参数同时变化，不能单独归因于 TP 数或某一种优化。原始测量范围见验证记录；默认 b300-tp4 继续保留。
 
+## 内置轻量测试的口径
+
+当前开发源码提供 `server benchmark --name a`；v1.3.7 发布包尚无此命令。它在 GPU 服务端直连本机 API，
+记录固定长度合成请求在少量同形状预热后的性能。操作、默认值及 JSON 字段见[命令手册](commands.md#本机性能测试)。
+首个非空文本片段近似 TTFT，特殊/思考 token 纳入输出；每请求速度使用完整请求时间，不能当纯解码率。
+并发总吞吐按各正式轮墙钟时间求分母，排除预热、分词和轮间检查，保留本机 HTTP 与服务端排队/预填充开销。
+请求使用随机前缀但不清理缓存；结果不代表完全冷缓存、模型加载速度、完整聊天体验或单张 GPU 性能。
+标准接口依据见 [vLLM 服务接口](https://docs.vllm.ai/en/stable/serving/online_serving/openai_compatible_server/)。
+当前只有模拟 API 逻辑验收，真实 GPU 测量与跨配方对比须另外记录在验证材料中。
+
 ## RTX 6000D 的适用边界
 
 独立 `rtx6000d-tp8` 使用 CPU Engram、eager、32K、单序列和纯文本；没有启用下文 B300 的 DSpark/CUDA Graph 优化。RTX 实机冒烟、单次延迟与未验收项见 [RTX 6000D](rtx6000d.md)，不能据此推断与 B200/B300 的吞吐差距或性能排名。

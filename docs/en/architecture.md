@@ -25,6 +25,7 @@ These identities are independent:
 | endpoint.py | HTTP(S) API address validation and model readiness checks |
 | readiness.py | Port/HTTP health probes, startup waiting and explicit runtime-log readiness; status is read-only |
 | warmup.py | Explicit bounded real inference, cancellation, progress and start-time-bound markers; no implicit status generation |
+| benchmark.py | Explicit local streaming synthetic benchmark; separates warmup/timing, validates API token counts and saves conditions/results |
 | client.py | Private user state, local tools, config and full transcripts |
 | configuration.py | Read/write client defaults without installing or connecting |
 | paths.py / program.py | Relocatable roots and ordinary program-file selection |

@@ -43,6 +43,7 @@ Syntax: ./local-ai GROUP COMMAND OPTIONS. install, prepare, export, profiles and
 | server start | GPU001 | Validate resources, start and wait for API readiness; report result and log |
 | server status | GPU001 | Explicit READY/NOT READY result with reason, listener and log |
 | server warmup | GPU001 | Explicit bounded inference warmup on a healthy managed instance; logs progress |
+| server benchmark | GPU001 | Warm and benchmark a managed instance through its local API, saving a report |
 | server stop | GPU001 | Stop the named instance; retain weights and host logs |
 | image pull | Connected GPU preparation host | Pull the pinned image and record platform identity |
 | image export | Docker preparation host | Image archive and companion lock file |
@@ -191,20 +192,20 @@ before logging/resource operations. See [GB200 and Rubin](gb200-rubin.md) for CP
 
 | Option | Commands | Meaning and default |
 |---|---|---|
-| --data-dir | server plan/start/status/stop/warmup; image; model download | Data root: LOCAL_AI_DATA_DIR, otherwise the unpacked program directory. status actually looks up the instance by name. |
+| --data-dir | server plan/start/status/stop/warmup/benchmark; image; model download | Data root: LOCAL_AI_DATA_DIR, otherwise the unpacked program directory. status actually looks up the instance by name. |
 | --profile | plan/start; image; model download | Hardware/engine preset; required for image. plan/start/model default to the installed profile, otherwise b300-tp4 |
 | --gpus | plan/start | Required comma-separated server indices or full UUIDs; count must match the profile |
-| --name | plan/start/status/stop/warmup | Default a; lowercase letter followed by lowercase letters, digits or hyphens; at most 32 characters |
+| --name | plan/start/status/stop/warmup/benchmark | Default a; lowercase letter followed by lowercase letters, digits or hyphens; at most 32 characters |
 | --host | plan/start | IPv4 listen address, default 127.0.0.1; 0.0.0.0 for all IPv4 interfaces or a local IP; no hostnames or IPv6 |
 | --port | plan/start | Model API port, default 18000, range 1024–65535 |
 | --wait-timeout | start only | Positive seconds to wait for API readiness, default 600; timeout exits 1 and retains the container |
 | --warmup | start only | Opt in to real inference warmup after API readiness; disabled by default |
 | --warmup-timeout | start only | Separate positive warmup deadline, default 600 seconds; used with --warmup |
-| --timeout | warmup only | Positive total warmup deadline, default 600 seconds |
-| --input-tokens | warmup only | Comma-separated positive exact input lengths; default 1024,8192,32768 as context permits |
-| --concurrency | warmup only | Comma-separated positive request counts; default 1,2,4,8 capped at twice max-num-seqs |
-| --output-tokens | warmup only | Positive generated length, default 256; input plus output must fit context |
-| --repeats | warmup only | Positive passes per input/concurrency group, default 2 |
+| --timeout | warmup (benchmark below) | Positive total warmup deadline, default 600 seconds |
+| --input-tokens | warmup (benchmark below) | Comma-separated positive exact input lengths; default 1024,8192,32768 as context permits |
+| --concurrency | warmup (benchmark below) | Comma-separated positive request counts; default 1,2,4,8 capped at twice max-num-seqs |
+| --output-tokens | warmup (benchmark below) | Positive generated length, default 256; input plus output must fit context |
+| --repeats | warmup (benchmark below) | Positive passes per input/concurrency group, default 2 |
 | --inventory | plan only | JSON hardware fixture instead of discovery; start does not accept it |
 | --output | image export | Required destination archive path |
 | --archive; --lock | image import | Required image archive and matching .lock.json |
@@ -245,6 +246,59 @@ a matching running instance is not restarted. Status prints a human-readable res
 and JSON ready/listening/health/log fields to stdout. It probes the container and API, not old logs.
 
 Explicit server warmup --name a works only on a running, healthy instance owned by the selected data root, using its saved spec.json/args.json. It does not change the profile. start --warmup performs the same step after API readiness. A failure/timeout exits 1; interruption exits 130 and retains the container. Status reports warmup separately from API readiness; it never generates requests. Logs and bounded-coverage examples are in [DSpark and warmup](deployment.md#single-user-dspark-and-explicit-warmup).
+
+## Local performance benchmark
+
+`server benchmark` is new in the current development source; existing v1.3.7 release archives do not contain it.
+Run on GPU001, the model host, from /raid/local-ai with Docker access and instance-directory read/write permissions.
+Instance a must already be running with a healthy API. No BCM client or additional Python packages are required:
+
+```bash
+./local-ai server benchmark --help
+./local-ai server benchmark --name a
+# Four simultaneous requests per round at the same input/output shape
+./local-ai server benchmark --name a --input-tokens 1024 --output-tokens 256 --concurrency 4 --repeats 3
+```
+
+| Option | Meaning and default |
+|---|---|
+| --name | Instance name, default a; model, port, profile and engine arguments are read automatically |
+| --data-dir | Owning data root, following the same defaults as server start |
+| --input-tokens | Exact synthetic input length per request, default 1024, positive integer |
+| --output-tokens | Exact generated length per request, default 256, positive integer; input plus output must fit the instance context |
+| --concurrency | Requests submitted together per round, default 1, range 1–64; requests above the engine sequence limit queue |
+| --repeats | Measured rounds, default 3, positive integer; measured request count is repeats times concurrency |
+| --warmup-rounds | Unmeasured rounds with the same input/output shape and concurrency, default 1; 0 skips warmup |
+| --timeout | Shared deadline for tokenization, warmup and measured requests, default 600 positive seconds; excludes initial Docker/health checks |
+
+Instances listening on 0.0.0.0 or 127.0.0.1 use 127.0.0.1; specific local IPv4 bindings use that IP.
+Direct local HTTP bypasses BCM, OpenCode, environment HTTP proxies and external forwarding, without restarting the service.
+Only consistent managed instances belonging to the selected data root are accepted. Benchmarks and warmups share an instance lock.
+This generates actual GPU inference traffic: use an allocated instance. Regular business traffic is not blocked; avoid other traffic when comparing results.
+
+Metric definitions:
+
+- `first_chunk_seconds`: request start to first nonempty text chunk, an approximation to TTFT. Chunks may contain multiple tokens; this is neither exact first-token timing nor time to a final answer.
+- `request_seconds`: complete streaming request duration, including local HTTP, queueing, prefill and generation.
+- `request_output_tokens_per_second`: each request's actual output tokens divided by its complete duration, summarized as mean, median and nearest-rank P95; not pure decode throughput.
+- `aggregate_output_tokens_per_second`: measured output token total divided by summed measured-round wall time. Concurrent request durations are not added; tokenization, warmup and checks between rounds are excluded.
+
+Latencies also report mean, median and nearest-rank P95. The default three measured samples cannot establish a production P95 SLA.
+The tool gets token IDs from vLLM `/tokenize` and sends fixed-length synthetic text completions to `/v1/completions`,
+rather than complete chat/tool tasks. EOS is ignored and special tokens retained; output counts include special/reasoning tokens and do not assess answer quality.
+Fresh random prefixes reduce prefix-cache reuse, without clearing caches or guaranteeing zero hits; very short inputs may overlap.
+Success requires a complete stream ending at the length limit and API usage exactly matching both requested token counts; no character-based estimates are used.
+
+Progress and a brief summary go to stderr; successful stdout is complete JSON, also saved to
+`DATA_DIR/instances/a/benchmark-RANDOM.json`, a separate file per run with permissions 0600.
+It records program version, execution host, model, complete instance spec/fingerprint, container image ID/start time, warmup and individual request results.
+This JSON is the persistent record: the command does not write install.log or change warmup.json, and status does not infer warmup completion from it.
+Success exits 0; failure/timeout exits 1; Ctrl+C exits 130, leaving the service running. Failures/cancellation after testing begins save a partial
+record without a successful summary, with its path on stderr. Initial configuration/health failures do not produce reports. A stopped/restarted container invalidates the run.
+
+Warmup covers only this shape and cannot guarantee elimination of all JIT. Weight loading is excluded from the summary, but swap/runtime disk reads can still affect results.
+Match model/revision, image, input/output lengths, concurrency and other load before comparing. Results measure the deployment, not an independent GPU ranking.
+Without a local model only tool logic can be checked; see [validation](validation.md) for GPU acceptance limits.
 
 ## Client parameters
 

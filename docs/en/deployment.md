@@ -172,6 +172,15 @@ The DSpark recipe places TileLang and CUDA compilation caches inside persisted i
 
 LOCAL_AI_CATALOG or installation config/catalog.json fully replaces the built-in catalog and does not automatically acquire new recipes. Merge and validate the desired recipe using the [development guide](development.md#model-and-client-compatibility).
 
+## Local performance check
+
+Current development source adds `server benchmark --name a` (absent from existing v1.3.7 release archives), generating a small warmup and measured workload on a ready instance on GPU001.
+It uses 127.0.0.1 by default, or the specific local IP if that is the only bound address. No BCM is needed; environment proxies and cross-host networking are bypassed.
+It consumes the existing service's GPUs. Avoid business traffic and match model, input/output lengths and concurrency for comparisons.
+See [local performance benchmark](commands.md#local-performance-benchmark) for commands, options, metrics and report locations.
+Warmup cannot guarantee elimination of every JIT. Model loading is excluded from summaries; swap, CPU offload and runtime disk reads may still affect results.
+Only mock-API logic is validated so far. Real GPU compatibility/performance remains untested, without changing any profile's support level.
+
 ## Two instances and multiple users
 
 Only this section introduces another service: on eight B300 GPUs, a uses GPUs 0–3/port 18000 and b uses GPUs 4–7/port 18001. Confirm spare devices and port availability, then run on GPU001:

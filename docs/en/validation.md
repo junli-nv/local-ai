@@ -1,5 +1,32 @@
 # Validation record
 
+## Local benchmark tool logic: 2026-11-16
+
+Current development source adds `server benchmark --name a`, without changing the program version or existing v1.3.7 tag.
+No model is deployed locally. Validation used macOS ARM64, Python 3.14 and a temporary stdlib HTTP server only.
+No real GPU service was started or contacted; no model performance numbers or expanded hardware support are claimed.
+
+Twelve new tests cover empty stream chunks versus first output, real HTTP streaming timing, exact API token counts,
+warmup/tokenization exclusion, concurrency and round-wall-time throughput, mean/median/nearest-rank P95, separate JSON/0600 permissions,
+actual CLI metadata loading and JSON stdout, zero warmup, HTTP errors/disconnects/early termination/missing usage,
+timeouts during tokenization/streaming, cancellation records, stopped/unhealthy/missing-identity rejection, restart invalidation,
+option bounds and the shared benchmark/warmup lock. Timing assertions concern mock pacing, not engine speed.
+
+The full suite ran 219 tests: 214 passed, four environment-related errors and one optional-FFmpeg skip.
+The pre-change HEAD suite ran 207 tests with the same four errors and one skip under matching conditions:
+two client tests lack permission to write ~/.local/bin, macOS cannot bind 127.0.0.2, and an AMD64 offline server fixture
+does not match this ARM64 host. No existing tests were changed, deleted or skipped. Runs used TMPDIR=/private/tmp and
+separate temporary XDG_STATE_HOME directories to isolate connection state. Ruff checks, formatting for 57 files, Git whitespace
+checks and bilingual documentation command/option coverage, CLI examples, Bash syntax and local-link checks passed.
+Linux CI and native OpenCode acceptance were not run; this feature does not change the client.
+
+Reviewed Chinese/English README, commands, deployment, offline, architecture, development, performance, update and historical validation limits.
+The new command is explicitly development-source-only; old tagged downloads remain v1.3.7. Corrected the English offline guide's outdated
+version statement to match its actual download commands. Reports remain in ignored instance directories and are excluded from export.
+GPU acceptance must separately check API compatibility, actual token counts, warmup/summaries and cancellation on an allocated ready instance,
+with default single concurrency and explicit concurrency. Record model/revision, image, hardware and other load. Synthetic request rates,
+small-sample P95 and cross-profile comparisons do not establish independent GPU rankings or production SLAs.
+
 [中文（默认）](../validation.md)
 
 Dates: 2026-10-31 through 2026-11-01. Infrastructure hostnames, IPs, GPU UUIDs, credentials and raw

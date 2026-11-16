@@ -151,7 +151,9 @@ def run(spec, inspect, timeout=600, inputs=None, concurrency=None, output_tokens
         try:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError as error:
-            raise RuntimeError("Another warmup is already running for this instance") from error
+            raise RuntimeError(
+                "Another warmup or benchmark is already running for this instance"
+            ) from error
         return _run(spec, inspect, timeout, shapes, path)
 
 

@@ -218,6 +218,9 @@ GPU 启动前若缺少 UUID 别名，先完成[CDI 配置](deployment.zh-CN.md#c
 
 编译缓存和预热记录随实例状态一并排除。目标机安装、API 启动后按需执行[显式预热](deployment.zh-CN.md#单用户-dspark-与显式预热)；联网准备阶段不运行推理。
 
+包含 benchmark 功能的源码可在离线目标 GPU 上按[本机性能测试](commands.md#本机性能测试)测量已启动实例，
+无需联网或额外依赖。benchmark JSON 与其他实例状态一样不随导出迁移，目标机需重新测量；v1.3.7 发布包不含此命令。
+
 ## 可选文档转换依赖
 
 从包含富文档功能的版本导出时，包内携带文档 MCP 工具源码，但不携带宿主机 Poppler/LibreOffice 或可选 FFmpeg。网页和侧挂字幕仅用标准库；视频抽帧需另行准备目标 BCM 的 FFmpeg 系统包。使用 PDF、旧版 Office 或版面渲染前，须在目标 BCM 通过匹配的离线系统软件包准备依赖，见[文档离线要求](documents.md#离线环境)。

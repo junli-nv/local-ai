@@ -88,6 +88,11 @@ this section records design reasons.
    resources without affecting production. Report change/reason/checks/limits/
    activation; disclose pending CI or CPU-only validation.
 
+Additional decision (2026-11-16): provide `server benchmark --name a` on the GPU server, using its local API
+and managed instance settings to measure deployment performance after a small warmup. Validate logic with a CPU mock API;
+real GPU acceptance is separate. Deployment results do not rank GPUs independently, first chunks are not exact first-token
+timestamps, and request output rates are not pure decode throughput.
+
 ## Scope of development rules
 
 These conventions apply when changing this repository, not to ordinary operations
@@ -234,6 +239,19 @@ Keep optimization rationale, tested engine settings, failed approaches and follo
 Keep model-specific speculation and graph sizes in the profile, not global engine defaults. warmup.py runs only after explicit server warmup or start --warmup. Imports, plan, status and install must never trigger synthetic inference. Status reads warmup.json and verifies spec fingerprint and container StartedAt.
 
 Changes must cover partial failure, deadline/cancellation, duplicate warmup rejection, wrong deployment metadata, exact API token counts, and stale records after restart. On allocated GPUs compare identical streaming payloads in separate processes/caches, with and without explicit warmup. Measure first requests as well as warmed requests, preserve production, and record cache reuse separately from in-memory graph reuse. Do not describe finite coverage as eliminating all JIT. See [validation](validation.md) for evidence.
+
+## Local benchmark development boundary
+
+`benchmark.py` runs only through explicit `server benchmark`, never through import, plan, status, install or start.
+After validating managed metadata, it uses local `/tokenize` and streaming `/v1/completions` with fresh prefixes to reduce cache reuse.
+It neither clears caches nor changes recipes or starts/stops containers. It shares the instance warmup lock, without isolating business traffic.
+Defaults are concurrency 1, 1024/256 tokens, one warmup round and three measured rounds. Reports bind to the spec fingerprint and container start;
+a restart fails the run. Tokenization/warmup are excluded from measured summaries; API usage must match exactly, including special/reasoning output tokens.
+Separate JSON records use permissions 0600 under the instance directory, excluded from Git/exports. They do not change warmup.json or status claims.
+
+Use a temporary stdlib HTTP server to test streaming timing, concurrent wall-time denominators, partial failure records, timeout/cancellation cleanup and restarts.
+CPU mocks establish tool logic only. Real API compatibility/performance requires allocated GPUs as described in [validation](validation.md).
+See [local performance benchmark](commands.md#local-performance-benchmark) for metric definitions, defaults, exit codes and execution location.
 
 ## Testing and review rules
 

@@ -10,6 +10,7 @@ from pathlib import Path
 from . import (
     __version__,
     artifacts,
+    benchmark,
     bundle,
     client,
     completion,
@@ -211,21 +212,22 @@ def parser():
     )
     gpu = groups.add_parser(
         "server",
-        help="GPU001: inspect, plan, start, query or stop inference instances",
-        description="GPU001: inspect, plan, start, query or stop inference instances",
+        help="GPU001: inspect, plan, start, benchmark, query or stop inference instances",
+        description="GPU001: inspect, plan, start, benchmark, query or stop inference instances",
     ).add_subparsers(dest="action", required=True)
     gpu.add_parser(
         "inventory",
         help="Show this server CPU architecture and GPU inventory",
         description="Run on GPU001. Read hardware inventory without starting a service.",
     )
-    for action in ["plan", "start", "status", "stop", "warmup"]:
+    for action in ["plan", "start", "status", "stop", "warmup", "benchmark"]:
         details = {
             "plan": "GPU001: print a plan without starting a container; frameworks return deployable=false and command=null",
             "start": "GPU001: validate resources, start an instance and wait for API readiness",
             "status": "GPU001: report whether the named service API is ready",
             "stop": "GPU001: stop the named instance and preserve host data",
             "warmup": "GPU001: explicitly generate bounded synthetic requests to warm inference kernels",
+            "benchmark": "GPU001: benchmark a ready managed instance over local HTTP; generates synthetic inference traffic",
         }[action]
         b = gpu.add_parser(action, help=details, description=details)
         b.add_argument(
@@ -237,6 +239,20 @@ def parser():
         b.add_argument(
             "--name", default="a", help="Instance identifier (for example a or b), not a hostname"
         )
+        if action == "benchmark":
+            for flag, default, description in [
+                ("input-tokens", 1024, "Exact synthetic input tokens per request"),
+                (
+                    "output-tokens",
+                    256,
+                    "Exact generated tokens per request, including special tokens",
+                ),
+                ("concurrency", 1, "Simultaneous requests per round"),
+                ("repeats", 3, "Measured rounds; total measured requests = repeats * concurrency"),
+                ("warmup-rounds", 1, "Unmeasured warmup rounds at the same shape; 0 skips warmup"),
+                ("timeout", 600, "Overall seconds for tokenization, warmup and measured requests"),
+            ]:
+                b.add_argument("--" + flag, type=int, default=default, help=description)
         if action == "warmup":
             b.add_argument(
                 "--timeout",
@@ -519,6 +535,17 @@ def dispatch(q):
             return value
         if q.action == "stop":
             return server.stop(q.data_dir, q.name)
+        if q.action == "benchmark":
+            return benchmark.run(
+                server.managed_spec(q.data_dir, q.name),
+                server.inspect_container,
+                input_tokens=q.input_tokens,
+                output_tokens=q.output_tokens,
+                concurrency=q.concurrency,
+                repeats=q.repeats,
+                warmup_rounds=q.warmup_rounds,
+                timeout=q.timeout,
+            )
         if q.action == "warmup":
             spec = server.managed_spec(q.data_dir, q.name)
             result = warmup.run(

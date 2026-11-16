@@ -49,6 +49,11 @@ cd /raid/local-ai
 
 Both should report ready=true. Program updates do not change running profiles, ports or launch arguments. Enable DSpark separately through [instance replacement and warmup](deployment.md#single-user-dspark-and-explicit-warmup). If a later version selects different weights/images, prepare those resources separately; the updater never downloads them.
 
+The new development-source `server benchmark` is absent from existing v1.3.7 release archives; updating to that tag again will not add it.
+After deploying source containing the feature, run the [local performance benchmark](commands.md#local-performance-benchmark) on GPU001 only;
+no BCM update or model/image download is needed. Updating does not run a benchmark. Historical benchmark JSON under instances/ is retained;
+measure again after changes to program/image or other test conditions.
+
 ## Preserved state and backups
 
 - models/, images/, clients/, instances/, dist/ and config/ are not replaced. Private histories and the installed OpenCode release remain unchanged.

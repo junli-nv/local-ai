@@ -164,6 +164,21 @@ start 默认等待 600 秒，加载和编译期间显示 NOT READY 及日志位�
 
 偏向单用户生成速度时，可选 b300-tp4-dspark，并显式使用 --warmup 提前触发部分首次编译，操作见[部署指南](docs/deployment.zh-CN.md#单用户-dspark-与显式预热)。READY 只表示 API 健康，WARMUP COMPLETE 表示有限推理预热完成；已有实例更换配方须显式重建。
 
+### 可选：在服务端测试性能（开发源码新增）
+
+当前开发源码新增 `server benchmark`，既有 v1.3.7 发布包不含此命令。
+使用包含该功能的源码，在 GPU001 的 /raid/local-ai、实例 a 就绪且有 GPU 使用权时执行：
+
+```bash
+./local-ai server benchmark --name a
+```
+
+默认本机 API、单并发、1024 个输入/256 个输出 token，先预热一轮，再测三轮。
+报告首段输出延迟、完整请求耗时、每请求输出速度和总吞吐；速度包含排队与预填充，不是纯解码指标。
+进度和摘要写 stderr，完整 JSON 自动保存到 instances/a/benchmark-随机标识.json。
+无需 BCM 或额外依赖；比较时避免其他业务流量。参数、统计口径及失败处理见[本机性能测试](docs/commands.md#本机性能测试)。
+当前只完成本地模拟 API 逻辑验证，未取得真实 GPU 性能结果。
+
 ## 2. 在 BCM 安装并使用
 
 在 bcm-headnode 以 alice 登录，下载到 BCM 自己的空目录：
