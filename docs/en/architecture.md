@@ -1,5 +1,15 @@
 # Architecture and design decisions
 
+## v1.4.0 client task path
+
+client.py retains history keys and recovery context for the actual endpoint. telemetry.py owns a temporary loopback
+observer forwarding to one fixed API, without SSH tunnels. observer.mjs uses native tool events and compaction hooks,
+persisting status/timing metadata only. tasks.py atomically records launches and supervises local process groups;
+it does not control submitted remote jobs. native_cache.py copies matching SDK dependencies/locks, not old connection
+configuration; per-launch configs remain isolated. workflows.py invokes models/tools only for explicit client workflow,
+in a separate directory. Read-only inspection generates no acceptance load.
+See [metric semantics](commands.md#task-diagnostics-and-workflow-acceptance-v140).
+
 Client preparation resolves personal AGENTS.md before isolating XDG_CONFIG_HOME, then explicitly references it after operations.md. Templates are opt-in and never overwrite personal files. See [persistent instruction setup](../../templates/opencode/en/agent-instructions.md).
 
 [中文（默认）](../architecture.md)

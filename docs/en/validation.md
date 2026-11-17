@@ -1,5 +1,26 @@
 # Validation record
 
+Additional release checks: 238 CPU cases, native reasoning/Ctrl+T, native observer under the offline flag, plugin inclusion in the wheel and v1.3.7 source upgrade/rollback passed. Model/client/instance sentinel contents and inodes, endpoint settings and permissions were preserved. One local mock startup measured about 5.7 seconds with reused dependencies versus 5.1 without the plugin and 12.6 for unseeded plugin initialization; this is not GPU or task-speed acceptance.
+
+## v1.4.0 client acceptance: 2026-11-17
+
+Validated on Linux AMD64 with OpenCode 1.19.5, still NPM latest when checked; no binary upgrade.
+CPU mocks cover byte-preserving forwarding, actual usage, unknown cache counts, HTTP errors without proxy retries,
+truncated streams, unresolved tools, PID reuse and deadline cleanup. Native tools/resume/compaction with a mock API
+verify two tool writes, same-session resumption, cache usage, summary preservation requirements and exactly-once append.
+Interactive acceptance verifies restored history, disabled mouse capture, bracketed paste and normal exit.
+
+A real DeepSeek-V4.1-Flash API passed isolated edit-test, diagnose and resume cases: unchanged tests pass after repair,
+diagnosis JSON is correct, and resuming the same conversation appends once, with actual tools observed.
+All four launches recorded native events and left no unresolved tools. The API omitted per-request cached-token
+details, correctly reported as unknown. Raw prompts/events/session IDs/infrastructure paths remain private.
+
+Direct plugin loading exposed repeated SDK initialization in fresh config directories. Reuse genuine matching
+dependencies/locks while preserving per-launch configs; cold initialization is not model TTFT.
+Remaining native regression and CI gate the release. These small cases do not establish perfect long-context memory,
+task speedups, sustained concurrency or new GPU support. Real-GPU server benchmark acceptance remains separate.
+See [release notes](release-1.4.0.md).
+
 ## KV cache offloading assessment: 2026-11-17
 
 Read-only assistant metadata, /metrics, startup arguments and logs; no conversation bodies, cache resets, synthetic inference or restarts. Sanitized aggregates only.

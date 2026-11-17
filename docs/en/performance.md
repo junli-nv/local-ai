@@ -1,5 +1,7 @@
 # Inference optimization and engine exploration
 
+v1.4.0 adds client phase diagnostics and small workflow acceptance. See [metrics](commands.md#task-diagnostics-and-workflow-acceptance-v140) and [validation](validation.md); initialization, tools and user waits are not pure inference latency.
+
 This records the 2026-11-01 reasoning, parameter choices, failed approaches and follow-up work for developers. Operational commands belong in [deployment](deployment.md#single-user-dspark-and-explicit-warmup); measurements, versions and acceptance limits belong in [validation](validation.md). SGLang remains an experiment, outside installation and instance management.
 
 ## Identify the slow phase

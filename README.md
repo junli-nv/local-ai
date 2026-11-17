@@ -1,5 +1,7 @@
 # local-ai
 
+v1.4.0 新增私有请求诊断、任务状态与批处理超时、压缩交接和真实工作流回归；包含本机 benchmark 与持久指令模板。使用入口见[任务诊断](docs/commands.md#任务诊断与工作流回归v140)，变更与边界见[发布说明](docs/release-1.4.0.md)。
+
 **local-ai 是一个面向本地集群的 AI 工作助手，帮助用户通过自然语言完成系统运维、代码开发和日常文件处理。**
 
 它将本地大模型服务与终端中的工具执行结合起来：用户描述任务，助手结合工作目录中的文件和实际命令结果进行分析，并在用户授权范围内调用工具完成工作。项目使用 vLLM 提供模型推理、OpenCode 提供交互与工具能力，负责将两者的安装、连接、配置和离线交付组织成一套可复用流程。
@@ -27,7 +29,7 @@
 
 ## 安装与使用
 
-当前版本为 v1.3.7，以下示例下载该标签的完整源码。./local-ai --version 应显示 1.3.7，实际验收范围与未覆盖平台见[验证记录](docs/validation.md)。
+当前版本为 v1.4.0，以下示例下载该标签的完整源码。./local-ai --version 应显示 1.4.0，实际验收范围与未覆盖平台见[验证记录](docs/validation.md)。
 
 ## 示例约定与文档入口
 
@@ -47,7 +49,7 @@
 | 本页 | 首次在线安装、启动、聊天、配置及迁移入口 |
 | [部署指南](docs/deployment.zh-CN.md) | CDI、存储故障、实例重建、DSpark/预热与双实例 |
 | [命令手册](docs/commands.md) | 参数、默认值、退出码、会话恢复与客户端版本 |
-| [持久工作指令](templates/opencode/agent-instructions.md) | 通用/BCM 模板、个人配置位置、合并与生效检查（开发源码新增） |
+| [持久工作指令](templates/opencode/agent-instructions.md) | 通用/BCM 模板、个人配置位置、合并与生效检查（v1.4.0） |
 | [离线部署](docs/offline.md) | 已安装环境迁移，或联网准备后离线安装 |
 | [架构](docs/architecture.md)、[开发指南](docs/development.md) | 模块设计、扩展和接手开发 |
 
@@ -95,7 +97,7 @@ BCM 架构独立选择。配置只使用同一 OS 可见的本地 GPU；GB300 TP
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.3.7.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.4.0.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ./local-ai --version
@@ -165,9 +167,9 @@ start 默认等待 600 秒，加载和编译期间显示 NOT READY 及日志位�
 
 偏向单用户生成速度时，可选 b300-tp4-dspark，并显式使用 --warmup 提前触发部分首次编译，操作见[部署指南](docs/deployment.zh-CN.md#单用户-dspark-与显式预热)。READY 只表示 API 健康，WARMUP COMPLETE 表示有限推理预热完成；已有实例更换配方须显式重建。
 
-### 可选：在服务端测试性能（开发源码新增）
+### 可选：在服务端测试性能（v1.4.0）
 
-当前开发源码新增 `server benchmark`，既有 v1.3.7 发布包不含此命令。
+v1.4.0 提供 `server benchmark`。
 使用包含该功能的源码，在 GPU001 的 /raid/local-ai、实例 a 就绪且有 GPU 使用权时执行：
 
 ```bash
@@ -186,7 +188,7 @@ start 默认等待 600 秒，加载和编译期间显示 NOT READY 及日志位�
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.3.7.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.4.0.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ```

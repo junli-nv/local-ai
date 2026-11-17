@@ -1,5 +1,9 @@
 # 导出、转移与离线安装
 
+严格离线首次启动可使用 `npm_config_offline=true ./local-ai chat --endpoint http://GPU001:18000/v1`，避免原生依赖初始化访问 registry；本地 observer 仅使用原生运行时内置模块。离线标志下的工具、恢复与压缩验收已通过。
+
+v1.4.0 的 observer.mjs 随 src/ 导出；原生依赖运行缓存、诊断和工作流结果不属于公共离线材料。
+
 当前开发源码的完整导出包含 templates/ 参考模板，不携带个人 AGENTS.md。用户规则另行安全迁移，并按 [持久工作指令配置](../templates/opencode/agent-instructions.md) 合并；不自动应用模板。
 
 本页统一维护完整迁移流程，与常规在线部署分开。场景一在旧 GPU 节点导出镜像和模型、在旧 BCM 导出客户端，再分别到目标端导入；场景二由联网准备机备齐两端材料。离线导入指校验、解压后执行 install --offline，没有另一个顶层 import 命令。

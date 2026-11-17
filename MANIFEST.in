@@ -6,3 +6,5 @@ recursive-include tests *.json
 recursive-include .github *.yml
 
 include install.sh
+
+recursive-include src *.mjs

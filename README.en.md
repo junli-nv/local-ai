@@ -1,5 +1,7 @@
 # local-ai
 
+v1.4.0 adds private request diagnostics, task status/deadlines, compaction handoffs and workflow acceptance, plus local benchmarks and instruction templates. See [usage](docs/en/commands.md#task-diagnostics-and-workflow-acceptance-v140) and [release notes](docs/en/release-1.4.0.md).
+
 [中文（默认）](README.md)
 
 **local-ai is an AI work assistant for local clusters, helping users perform system administration, software development and everyday file tasks through natural language.**
@@ -29,7 +31,7 @@ The managed server currently uses the NVIDIA toolchain. See the profile table be
 
 ## Installation and usage
 
-The current version is v1.3.7. Examples download complete source from this tag; ./local-ai --version should report 1.3.7. See [validation](docs/en/validation.md) for acceptance scope and unvalidated platforms.
+The current version is v1.4.0. Examples download complete source from this tag; ./local-ai --version should report 1.4.0. See [validation](docs/en/validation.md) for acceptance scope and unvalidated platforms.
 
 ## Example conventions and documentation
 
@@ -49,7 +51,7 @@ Use appropriate sudo/Docker permissions; root may omit sudo. Data defaults follo
 | This page | First online installation, startup, chat, configuration and migration links |
 | [Deployment](docs/en/deployment.md) | CDI, storage recovery, instance replacement, DSpark/warmup and multiple instances |
 | [Command manual](docs/en/commands.md) | Options, defaults, exit codes, session resume and client versions |
-| [Persistent instructions](templates/opencode/en/agent-instructions.md) | General/BCM templates, personal paths, merging and loading checks (development source) |
+| [Persistent instructions](templates/opencode/en/agent-instructions.md) | General/BCM templates, personal paths, merging and loading checks (v1.4.0) |
 | [Offline deployment](docs/en/offline.md) | Existing-installation migration or online preparation |
 | [Architecture](docs/en/architecture.md), [development](docs/en/development.md) | Design, extension and contributor handoff |
 
@@ -97,7 +99,7 @@ Download into an empty directory and check Docker, GPUs and CDI:
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.3.7.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.4.0.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ./local-ai --version
@@ -167,9 +169,9 @@ Add --wait-timeout 1200 for longer startup. Timeout exits 1; Ctrl+C returns 130;
 
 For single-user generation, optional b300-tp4-dspark and explicit --warmup are described in [deployment](docs/en/deployment.md#single-user-dspark-and-explicit-warmup). READY confirms API health; WARMUP COMPLETE confirms the bounded inference suite. Existing instances require explicit replacement to change recipes.
 
-### Optional: benchmark on the server (new in development source)
+### Optional: benchmark on the server (v1.4.0)
 
-The current development source adds `server benchmark`; existing v1.3.7 release archives do not contain it.
+v1.4.0 provides `server benchmark`.
 With source containing this feature, run on GPU001 from /raid/local-ai once instance a is ready and its GPU use is allocated:
 
 ```bash
@@ -188,7 +190,7 @@ Log in as alice on bcm-headnode and use BCM's own empty directory:
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.3.7.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.4.0.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ```

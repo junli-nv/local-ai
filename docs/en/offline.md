@@ -1,5 +1,9 @@
 # Export, transfer and offline installation
 
+For a strictly offline first launch use `npm_config_offline=true ./local-ai chat --endpoint http://GPU001:18000/v1` to prevent native dependency initialization from accessing the registry. The local observer imports built-in runtime modules only; tools, resume and compaction were validated with this offline flag.
+
+v1.4.0 exports observer.mjs with src/; native runtime dependency caches, diagnostics and workflow results are not public offline assets.
+
 Development-source complete exports carry templates/, not personal AGENTS.md. Transfer personal rules separately and securely; use [persistent instruction setup](../../templates/opencode/en/agent-instructions.md) to merge. Templates are not applied automatically.
 
 This guide is the single complete migration procedure, separate from normal online deployment. Scenario 1 exports images/models on the old GPU host and client assets on the old BCM host, then imports each on its target. Scenario 2 prepares both roles on an online host. Offline import means checksum verification, extraction and install --offline; there is no separate top-level import command.

@@ -174,7 +174,7 @@ LOCAL_AI_CATALOG or installation config/catalog.json fully replaces the built-in
 
 ## Local performance check
 
-Current development source adds `server benchmark --name a` (absent from existing v1.3.7 release archives), generating a small warmup and measured workload on a ready instance on GPU001.
+v1.4.0 adds `server benchmark --name a`, generating a small warmup and measured workload on a ready instance on GPU001.
 It uses 127.0.0.1 by default, or the specific local IP if that is the only bound address. No BCM is needed; environment proxies and cross-host networking are bypassed.
 It consumes the existing service's GPUs. Avoid business traffic and match model, input/output lengths and concurrency for comparisons.
 See [local performance benchmark](commands.md#local-performance-benchmark) for commands, options, metrics and report locations.

@@ -22,9 +22,12 @@ from . import (
     preparation,
     readiness,
     server,
+    tasks,
+    telemetry,
     video,
     warmup,
     webpage,
+    workflows,
 )
 from .common import arch, client_home
 from .paths import client_assets, data_root, root, settings
@@ -404,8 +407,8 @@ def parser():
     )
     clients = groups.add_parser(
         "client",
-        help="bcm-headnode: install or export the native OpenCode client",
-        description="bcm-headnode: install or export the native OpenCode client",
+        help="bcm-headnode: manage clients, inspect tasks and run workflow acceptance",
+        description="bcm-headnode: manage clients, inspect tasks and run workflow acceptance",
     ).add_subparsers(dest="action", required=True)
     for action in ["install", "export"]:
         details = {
@@ -443,6 +446,53 @@ def parser():
                 type=Path,
                 required=True,
                 help="Destination archive path; companion checksum/lock files are created",
+            )
+    b = clients.add_parser(
+        "workflow", help="Run explicit real model/tool acceptance in a new private directory"
+    )
+    b.add_argument(
+        "--endpoint",
+        default=settings().get("endpoint"),
+        help="Reachable model API; uses actual inference",
+    )
+    b.add_argument(
+        "--model",
+        default=settings().get("model") or catalog()["model"]["served_name"],
+        help="Served model ID",
+    )
+    b.add_argument(
+        "--client-dir", type=Path, default=client_assets(arch()), help="Native client assets"
+    )
+    b.add_argument(
+        "--output",
+        type=Path,
+        required=True,
+        help="New private results/workspace directory; must not exist",
+    )
+    b.add_argument(
+        "--case", choices=workflows.CASES, required=True, help="Workflow acceptance case"
+    )
+    b.add_argument(
+        "--timeout",
+        type=float,
+        default=90,
+        help="Per-turn batch deadline in seconds (0-3600 exclusive of zero)",
+    )
+    for action in ("tasks", "report"):
+        b = clients.add_parser(
+            action, help="Inspect private launch status and diagnostics without inference"
+        )
+        if action == "tasks":
+            b.add_argument(
+                "--state-dir", type=Path, default=client_home(), help="Private client state root"
+            )
+            b.add_argument("--limit", type=int, default=20, help="Maximum recent launches (1-1000)")
+        else:
+            b.add_argument(
+                "--run-dir",
+                type=Path,
+                required=True,
+                help="Launch log directory containing run.json",
             )
     b = groups.add_parser(
         "chat",
@@ -482,6 +532,23 @@ def parser():
         "--check", action="store_true", help="Check model API connectivity without chatting"
     )
     b.add_argument("--run", help="One prompt; stream JSON events, save full logs, then exit")
+    b.add_argument(
+        "--run-timeout",
+        type=float,
+        default=0,
+        help="Batch --run deadline in seconds; zero disables; timeout exits 124",
+    )
+    b.add_argument(
+        "--heartbeat",
+        type=float,
+        default=15,
+        help="Batch progress interval in seconds; zero disables",
+    )
+    b.add_argument(
+        "--direct-api",
+        action="store_true",
+        help="Bypass local request observer; retain native event and task records",
+    )
     resume = b.add_mutually_exclusive_group()
     resume.add_argument(
         "-s", "--session", help="Resume this OpenCode session in the endpoint's private history"
@@ -604,6 +671,16 @@ def dispatch(q):
     if q.group == "model":
         return images.download_model(q.data_dir, profile(q.profile), force=q.force)
     if q.group == "client":
+        if q.action == "workflow":
+            if not q.endpoint:
+                raise ValueError("Set --endpoint or configure the default")
+            result = workflows.run(q)
+            print(json.dumps(result, indent=2))
+            return 0 if result["state"] == "passed" else 1
+        if q.action == "tasks":
+            return tasks.list_runs(q.state_dir, q.limit)
+        if q.action == "report":
+            return telemetry.report(q.run_dir)
         if q.action == "install":
             value = artifacts.install(q.client_dir, q.binary, q.seed_cache, q.version, q.sha256)
             if q.client_dir.resolve() == client_assets(arch()):

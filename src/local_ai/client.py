@@ -1,15 +1,16 @@
 """Headnode client. Every tool executes with the headnode user's permissions."""
 
+import contextlib
 import fcntl
 import json
+import math
 import os
-import shlex
 import shutil
-import subprocess
 import sys
 import time
 from pathlib import Path
 
+from . import __version__, native_cache, tasks, telemetry
 from .artifacts import validate
 from .common import atomic_json, fingerprint, private_dir
 from .endpoint import endpoint_url, wait_endpoint
@@ -58,11 +59,23 @@ def prepare(state, assets, session, base, model, project):
     for name in ["data", "state"]:
         (state / name).mkdir(exist_ok=True, mode=0o700)
     (session / "config").mkdir(exist_ok=True, mode=0o700)
+    reused_dependencies = native_cache.prime(state, assets, session)
     file = session / "opencode.json"
     instructions = session / "operations.md"
     instructions.write_text(GUIDANCE, encoding="utf-8")
     instructions.chmod(0o600)
     cfg = config(base, model)
+    cfg["plugin"] = [Path(__file__).with_name("observer.mjs").resolve().as_uri()]
+    cfg["compaction"] = {"auto": True, "prune": True}
+    cfg["command"] = {
+        "handoff": {
+            "description": "Summarize objective, constraints, evidence and pending work for safe resumption",
+            "template": "Create a concise handoff in the conversation: objective; explicit constraints; "
+            "completed actions with evidence and file/job IDs; decisions; pending work and unresolved "
+            "tool calls; next verification steps. Do not execute new work or repeat writes. "
+            "Do not treat a handoff as approval for new actions.",
+        }
+    }
     cfg["instructions"] = [str(instructions)]
     # Resolve personal rules before replacing XDG_CONFIG_HOME with session isolation.
     user_config = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config")
@@ -83,6 +96,8 @@ def prepare(state, assets, session, base, model, project):
     atomic_json(file, cfg)
     env = os.environ.copy()
     env.update(
+        LOCAL_AI_RUN_DIR=str(session),
+        LOCAL_AI_DEPENDENCIES_REUSED=str(reused_dependencies).lower(),
         OPENCODE_TUI_CONFIG=str(tui),
         OPENCODE_CONFIG=str(file),
         OPENCODE_CONFIG_CONTENT=json.dumps(cfg),
@@ -105,38 +120,16 @@ def prepare(state, assets, session, base, model, project):
 
 
 def execute(command, project, env, logfile, prompt):
-    if prompt is None:
-        return subprocess.call(
-            ["script", "-q", "-e", "-f", str(logfile), "-c", shlex.join(command)],
-            cwd=project,
-            env=env,
-        )
-    with logfile.open("wb") as log:
-        child = subprocess.Popen(
-            command, cwd=project, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
-        )
-        try:
-            while True:
-                chunk = child.stdout.read1(8192)
-                if not chunk:
-                    break
-                log.write(chunk)
-                log.flush()
-                sys.stdout.buffer.write(chunk)
-                sys.stdout.buffer.flush()
-            return child.wait()
-        finally:
-            if child.poll() is None:
-                child.terminate()
-                try:
-                    child.wait(timeout=3)
-                except subprocess.TimeoutExpired:
-                    child.kill()
-                    child.wait()
-            child.stdout.close()
+    return tasks.execute(command, project, env, logfile, prompt)
 
 
 def chat(options):
+    timeout = getattr(options, "run_timeout", 0)
+    heartbeat = getattr(options, "heartbeat", 15)
+    if not all(math.isfinite(v) and v >= 0 for v in (timeout, heartbeat)):
+        raise ValueError("Timeout and heartbeat must be nonnegative")
+    if timeout and options.run is None:
+        raise ValueError("--run-timeout requires --run")
     base = endpoint_url(options.endpoint)
     os.umask(0o077)
     assets = Path(options.client_dir).expanduser().resolve()
@@ -188,4 +181,34 @@ def chat(options):
         },
     )
     print("Log: " + str(session / "terminal.log"), file=sys.stderr)
-    return execute(command, project, env, session / "terminal.log", options.run)
+    env["LOCAL_AI_CONTEXT"] = json.dumps(
+        {
+            "endpoint": base,
+            "model": options.model,
+            "project": str(project),
+            "client_dir": str(assets),
+            "state_dir": str(state_root),
+            "requested_session": getattr(options, "session", None),
+            "client_version": manifest.get("version"),
+            "local_ai_version": __version__,
+            "request_observer_enabled": not getattr(options, "direct_api", False),
+            "launcher": str(Path(__file__).resolve().parents[2] / "local-ai")
+            if (Path(__file__).resolve().parents[2] / "local-ai").is_file()
+            else "local-ai",
+            "context_limit": client_options(options.model).get("limit", {}).get("context"),
+        }
+    )
+    env["LOCAL_AI_RUN_TIMEOUT"] = str(timeout)
+    env["LOCAL_AI_HEARTBEAT"] = str(heartbeat)
+    observer = (
+        contextlib.nullcontext(base)
+        if getattr(options, "direct_api", False)
+        else telemetry.proxy(base, session)
+    )
+    with observer as observed_base:
+        if observed_base != base:
+            cfg = json.loads(env["OPENCODE_CONFIG_CONTENT"])
+            cfg["provider"]["local-deepseek"]["options"]["baseURL"] = observed_base
+            atomic_json(Path(env["OPENCODE_CONFIG"]), cfg)
+            env["OPENCODE_CONFIG_CONTENT"] = json.dumps(cfg)
+        return execute(command, project, env, session / "terminal.log", options.run)

@@ -1,5 +1,59 @@
 # User manual and command reference
 
+## Task diagnostics and workflow acceptance (v1.4.0)
+
+Run v1.4.0 on BCM from /raid/local-ai; older archives lack these features.
+Ordinary chat records private run.json, events.jsonl and requests.jsonl under the printed launch directory.
+Old launches are not backfilled.
+
+```bash
+./local-ai client tasks --limit 20
+./local-ai client report --run-dir /home/alice/.local/state/local-ai/services/SERVICE/logs/RUN
+./local-ai chat --project /home/alice/project --run-timeout 300 --heartbeat 15 --run 'Run project tests and report results'
+```
+
+client tasks: --state-dir defaults to private client state; --limit defaults to 20 (1–1000).
+client report: --run-dir is required and contains run.json. Both are read-only and invoke no model.
+Reports include original endpoint/model, status, resume argv, tools and unresolved calls.
+Verify files, jobs and external effects before resuming; calls are never automatically replayed.
+Process exit does not establish completion of external jobs.
+
+chat --run-timeout defaults to 0 (unlimited), applies only to --run, in seconds.
+Timeout cleans the local client process group and exits 124; Ctrl+C exits 130 and SIGTERM exits 143 after cleanup.
+Neither undoes files or remote actions. --heartbeat defaults to 15 seconds; 0 disables batch stderr progress.
+--direct-api bypasses the temporary API observer while retaining native event/task records.
+Observation defaults on, binds only a random 127.0.0.1 port and closes at exit.
+History and saved connections remain keyed by the original endpoint.
+Native SDK dependencies and locks are reused by client identity into isolated config directories. Cold starts may initialize dependencies; later launches reuse existing materials without copying old connection configs or personal rules.
+
+Request usage is taken from the API; absent cached_tokens is null, never inferred from global cache hits.
+first_content_seconds measures the first nonempty text, reasoning or tool-call chunk, not an exact token timestamp.
+API/tool times are separate sums and may overlap; adding them does not yield task wall time.
+Network, queue and prefill cannot be separated here. latest_input_tokens/context_fraction require known API usage and model limits.
+Native automatic compaction/pruning remains enabled. The plugin adds objective, constraints, evidence,
+decisions and pending operations to summary requirements. Interactive /handoff requests a summary in native history,
+without new execution. Model summaries still need verification; no unlimited-context guarantee is made.
+observer_ready=false, malformed_records or incomplete streams indicate observation gaps, not zero work.
+New metadata excludes prompts, answers, tool arguments and results; existing terminal.log/native history may contain task content.
+Private records are not uploaded, exported or committed.
+
+client workflow explicitly invokes the real model/tools in a new isolated --output directory:
+
+```bash
+./local-ai client workflow --endpoint http://GPU001:18000/v1 --client-dir /raid/local-ai/clients/amd64 --case edit-test --output /home/alice/workflow-edit
+./local-ai client workflow --endpoint http://GPU001:18000/v1 --case diagnose --output /home/alice/workflow-diagnose
+./local-ai client workflow --endpoint http://GPU001:18000/v1 --case resume --output /home/alice/workflow-resume
+```
+
+--endpoint uses saved settings if omitted; --model uses the configured/catalog default.
+--client-dir defaults to this host's native assets. Required --case is edit-test, diagnose or resume.
+Required --output must not exist. --timeout defaults to 90 seconds per turn, greater than zero and at most 3600;
+API readiness checks are separate. Checks cover passing unchanged tests, correct diagnosis JSON,
+same-session resumption with exactly one append, and observed tools.
+result.json records correctness and per-turn wall time; full JSON events and stderr remain in that private output.
+Exit codes: success 0, failure 1, interrupt 130. This small suite is not a complex-task quality rating or SLA.
+Fix model/recipe/load and repeat in separate output directories when comparing client versions.
+
 Development source loads client-user personal instructions; see [persistent instruction setup](../../templates/opencode/en/agent-instructions.md) for paths, template composition and checks. No new CLI option or automatic personal-file writes.
 
 Global `./local-ai --version` prints the project version and exits. It differs from `client install --version`, which selects the native client release.
@@ -251,7 +305,7 @@ Explicit server warmup --name a works only on a running, healthy instance owned 
 
 ## Local performance benchmark
 
-`server benchmark` is new in the current development source; existing v1.3.7 release archives do not contain it.
+`server benchmark` is available since v1.4.0.
 Run on GPU001, the model host, from /raid/local-ai with Docker access and instance-directory read/write permissions.
 Instance a must already be running with a healthy API. No BCM client or additional Python packages are required:
 

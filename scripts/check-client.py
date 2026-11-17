@@ -38,13 +38,15 @@ class Models(BaseHTTPRequestHandler):
         pass
 
 
-def request(url, data=None):
+def request(url, data=None, timeout=2):
     req = urllib.request.Request(
         url,
         data=None if data is None else json.dumps(data).encode(),
         headers={"Content-Type": "application/json"},
     )
-    with urllib.request.urlopen(req, timeout=2) as response:
+    with urllib.request.build_opener(urllib.request.ProxyHandler({})).open(
+        req, timeout=timeout
+    ) as response:
         return json.load(response)
 
 
@@ -100,6 +102,7 @@ def check(assets):
                 created = request(
                     backend_url + "/session?directory=" + urllib.parse.quote(str(project)),
                     {"title": "local-ai compatibility session"},
+                    timeout=25,
                 )
                 session_id = created["id"]
             finally:

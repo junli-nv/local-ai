@@ -119,10 +119,10 @@ class EndpointTests(unittest.TestCase):
             with (
                 patch("local_ai.client.validate", return_value={"arch": "amd64"}),
                 patch(
-                    "local_ai.client.subprocess.Popen", side_effect=AssertionError("no subprocess")
+                    "local_ai.tasks.subprocess.Popen", side_effect=AssertionError("no subprocess")
                 ),
                 patch(
-                    "local_ai.client.subprocess.call", side_effect=AssertionError("no subprocess")
+                    "local_ai.tasks.subprocess.call", side_effect=AssertionError("no subprocess")
                 ),
                 contextlib.redirect_stdout(output),
             ):
@@ -172,7 +172,7 @@ class EndpointTests(unittest.TestCase):
             with (
                 patch("local_ai.client.validate", return_value={"arch": "amd64"}),
                 patch("local_ai.client.execute", return_value=0) as execute,
-                patch("local_ai.client.subprocess.Popen", side_effect=AssertionError("no SSH")),
+                patch("local_ai.tasks.subprocess.Popen", side_effect=AssertionError("no SSH")),
                 contextlib.redirect_stderr(io.StringIO()),
             ):
                 self.assertEqual(client.chat(args), 0)
@@ -181,7 +181,12 @@ class EndpointTests(unittest.TestCase):
             self.assertEqual(command[0], str(assets / "bin/opencode"))
             self.assertEqual(prompt, "hostname")
             config = json.loads(env["OPENCODE_CONFIG_CONTENT"])
-            self.assertEqual(config["provider"]["local-deepseek"]["options"]["baseURL"], base)
+            self.assertTrue(
+                config["provider"]["local-deepseek"]["options"]["baseURL"].startswith(
+                    "http://127.0.0.1:"
+                )
+            )
+            self.assertEqual(json.loads(env["LOCAL_AI_CONTEXT"])["endpoint"], base)
             invocation = json.loads((logfile.parent / "invocation.json").read_text())
             self.assertEqual(invocation["endpoint"], base)
             self.assertNotIn("ssh_command", invocation)
@@ -231,7 +236,12 @@ class EndpointTests(unittest.TestCase):
                 environments, (base_a, base_b, base_a), ("model-a", "model-b", "model-a")
             ):
                 cfg = json.loads(env["OPENCODE_CONFIG_CONTENT"])
-                self.assertEqual(cfg["provider"]["local-deepseek"]["options"]["baseURL"], base)
+                self.assertTrue(
+                    cfg["provider"]["local-deepseek"]["options"]["baseURL"].startswith(
+                        "http://127.0.0.1:"
+                    )
+                )
+                self.assertEqual(json.loads(env["LOCAL_AI_CONTEXT"])["endpoint"], base)
                 self.assertEqual(cfg["model"], "local-deepseek/" + model)
             for variable in ("XDG_DATA_HOME", "XDG_STATE_HOME", "XDG_CACHE_HOME"):
                 self.assertEqual(environments[0][variable], environments[2][variable])

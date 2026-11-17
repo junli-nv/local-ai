@@ -1,6 +1,56 @@
 # 使用手册与命令参考
 
-当前开发源码支持加载客户端用户的个人工作指令；位置、模板组合及检查方法见 [持久工作指令配置](../templates/opencode/agent-instructions.md)。不新增 CLI 参数，不自动写入个人规则。
+## 任务诊断与工作流回归（v1.4.0）
+
+在 BCM 的 /raid/local-ai 使用 v1.4.0；较旧归档不含这些新增功能。
+普通 chat 自动保存私有 run.json、events.jsonl 和 requests.jsonl；
+终端会提示本次日志目录。历史部署的旧记录不回填。
+
+```bash
+./local-ai client tasks --limit 20
+./local-ai client report --run-dir /home/alice/.local/state/local-ai/services/SERVICE/logs/RUN
+./local-ai chat --project /home/alice/project --run-timeout 300 --heartbeat 15 --run '检查项目测试并报告结果'
+```
+
+`client tasks` 的 --state-dir 默认个人状态根，--limit 默认 20、范围 1–1000。
+`client report` 的 --run-dir 必填，指向包含 run.json 的本次日志目录；两者只读，不请求模型。
+报告包含原 endpoint、模型、状态、恢复命令数组、工具调用和未完成调用。
+恢复前核实文件、作业和外部写操作是否已完成，不自动重放调用；进程退出不等于外部作业结束。
+
+chat 的 --run-timeout 默认 0（无限制），仅适用 --run，单位秒；超时清理本地客户端进程组并退出 124。
+Ctrl+C 清理该组并退出 130，SIGTERM 清理后退出 143，不撤销已发生的文件或远端操作。--heartbeat 默认 15 秒，0 关闭，仅批处理打印到 stderr。
+--direct-api 绕过临时本机 API 观测转发器，保留原生事件和任务记录，适合诊断兼容性；默认启用观测。
+转发器仅监听 127.0.0.1 随机端口，退出即关闭；原连接与历史仍按实际 endpoint 隔离。
+原生 SDK 依赖和锁文件按客户端身份复用到独立配置目录；冷启动可能初始化依赖，后续会话复用已有材料。不会复制旧会话的连接配置或个人规则。
+
+请求报告直接读取 API usage；cached_tokens 缺失为 null（未知），不从服务端全局命中率推断单次请求缓存。
+first_content_seconds 是首个非空文本、reasoning 或工具调用片段的延迟，不是精确 token 时刻。
+API 与工具耗时分别累计，可能重叠，不能相加当作任务墙钟时间；无法分离的网络、排队和 prefill 不伪造细分。
+latest_input_tokens/context_fraction 仅在 API usage 与模型窗口均已知时可用，不是实时逐 token 测量。
+
+原生自动压缩与 prune 保留；插件为摘要补充目标、约束、证据、决定及未完成操作的交接要求。
+交互输入 /handoff 请求只做交接摘要，保留在原生会话历史；不会自动执行后续任务。
+摘要仍由模型生成，需要核对事实；不承诺无限上下文或完全不遗忘。
+observer_ready=false、malformed_records 或未完成流表示观测缺失，不能将缺失当作零耗时/零调用。
+新增诊断元数据不保存提示词、回答正文、工具参数或结果；已有 terminal.log 和原生历史仍可能包含任务内容。
+记录仅保存在私有状态，权限受当前账户控制，不上传、导出或提交 Git。
+
+显式执行 `client workflow` 会调用真实模型和本地工具，在全新的 --output 目录中创建隔离项目与历史：
+
+```bash
+./local-ai client workflow --endpoint http://GPU001:18000/v1 --client-dir /raid/local-ai/clients/amd64 --case edit-test --output /home/alice/workflow-edit
+./local-ai client workflow --endpoint http://GPU001:18000/v1 --case diagnose --output /home/alice/workflow-diagnose
+./local-ai client workflow --endpoint http://GPU001:18000/v1 --case resume --output /home/alice/workflow-resume
+```
+
+--endpoint 可取安装默认值，--model 取已配置模型或配方默认；--client-dir 按本机架构取默认。
+--case 必填，可选 edit-test、diagnose、resume；--output 必填且不得已存在，避免覆盖数据。
+--timeout 默认 90 秒，为每轮批处理期限，须大于 0 且不超过 3600；API 就绪检查另计。
+检查修复后测试通过且测试未被修改、诊断 JSON 正确、同一会话恢复后文件仅追加一次，并要求观察到工具调用。
+result.json 保存正确性与逐轮墙钟耗时，完整事件和 stderr 保留在输出目录；成功退出 0，失败 1，中断 130。
+只是一组小型验收，不代表复杂任务质量或生产 SLA。比较版本时固定模型、配方、负载并重复测试，分别保留输出目录。
+
+v1.4.0 支持加载客户端用户的个人工作指令；位置、模板组合及检查方法见 [持久工作指令配置](../templates/opencode/agent-instructions.md)。不新增 CLI 参数，不自动写入个人规则。
 
 全局 `./local-ai --version` 输出项目版本后退出；与 `client install --version` 的客户端版本选择参数不同。
 
@@ -245,7 +295,7 @@ server warmup --name a 只处理所选数据根目录中运行且健康的受管
 
 ## 本机性能测试
 
-`server benchmark` 为当前开发源码新增功能，既有 v1.3.7 发布包不含此命令。
+`server benchmark` 自 v1.4.0 提供。
 在运行模型的 GPU001 上，以有 Docker 和实例目录读写权限的账户，从 /raid/local-ai 执行。
 前提是实例 a 已启动且 API 健康，不需要安装 BCM 客户端或额外 Python 包：
 
@@ -435,7 +485,7 @@ docker rm local-ai-a
 服务端完整日志在 `数据目录/instances/实例名/server.log`，安装与准备过程集中在 `数据目录/install.log`。
 客户端完整会话日志在私有 `services/服务ID/logs/session-.../`。镜像、模型权重和用户状态需要分别规划备份。
 
-多数管理命令输出 JSON；chat 的退出码沿用客户端，单次运行输出 JSON 事件。
+多数管理命令输出 JSON；chat 单次运行输出 JSON 事件，通常沿用客户端退出码；超时 124、Ctrl+C 130、SIGTERM 143。
 参数错误或执行失败返回非零退出码。需要调用栈时，使用 `./local-ai --debug 命令组 子命令 ...`。
 
 本项目没有自动负载均衡、用户配额、开机自启、跨主机 TP 或自动 GPU 调度；启动前确认设备可用并取得使用权；项目不依赖集群调度系统。

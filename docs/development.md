@@ -1,5 +1,14 @@
 # 开发与扩展流程
 
+## v1.4.0 客户端回归入口
+
+修改诊断、监督或上下文接入时，除 unittest/Ruff 外，使用原生客户端运行 scripts/check-client.py、
+scripts/check-reasoning.py、scripts/check-instructions.py 和 scripts/check-observer.py，参数均为 --client-dir DIR。
+后者以模拟 API 验证真实工具、同会话恢复、实际 usage 与压缩钩子；不得据此宣称模型质量改善。
+真实模型验收显式运行 client workflow 三个场景，保存私有结果，提交脱敏范围。
+保留缺失值、未完成流、未完成工具、并发计时重叠、信号清理及版本隔离测试。
+observer.mjs 必须随源码、wheel 和程序更新携带；不能引入独立 Node.js 运行要求。
+
 补充决定（2026-11-17）：在 templates/opencode/ 同目录维护通用、BCM 模板与实际客户端配置说明，英文放 en/。模板随程序更新/导出，不自动安装。client.prepare 在隔离配置前解析个人规则路径并显式加载；用户文件不写入仓库或离线包。维护步骤见 [持久工作指令配置](../templates/opencode/agent-instructions.md)。
 
 ## 接手开发：产品决策与工作顺序
@@ -51,7 +60,7 @@ GPU 服务端负责推理；BCM 客户端用当前用户权限执行文件、She
 | 模型会更新，也可能换模型 | 仓库/revision、目录、服务名、引擎参数和客户端能力按配方配置；独立模型锁；新配方不继承实机验收，不套用 DeepSeek 专用参数 |
 | 目录式安装与迁移 | 解压目录即安装根，普通 src/ 保存源码；install 就地准备角色资源，export 默认生成 dist/ 完整离线包；排除 dist/、实例状态、个人历史和凭据；换目录后重新安装并配置本机资源 |
 | 一个 BCM 连接多个模型服务 | 初始默认 endpoint 可选；后续用 config 或编辑文件修改配置，不用重新安装；chat --endpoint/--model 本次覆盖不改写默认值；各 endpoint 历史与缓存隔离，恢复时找回原连接，不静默回退到默认节点 |
-| 源码脚本如何发布 | 开发跟进 main 与具体提交；v1.3.7 标记本次验收版本，后续 tag 仍须用户明确要求和质量评估 |
+| 源码脚本如何发布 | 开发跟进 main 与具体提交；v1.4.0 标记本次验收版本，后续 tag 仍须用户明确要求和质量评估 |
 | 单用户速度与首次编译尖峰 | 保留原配方，显式选择 DSpark 与有限推理预热；API READY 不等于 WARMUP COMPLETE，编译缓存按配方持久化，重启使完成记录失效；记录实际覆盖范围与并发取舍 |
 | 约 400 ms TTFT 是否过高 | 记录方法、输入规模、缓存/负载及端到端/首 token 耗时再判断；不混淆启动编译、生成前延迟与思考内容，不凭单个数值给结论 |
 
@@ -104,7 +113,7 @@ GPU 服务端负责推理；BCM 客户端用当前用户权限执行文件、She
 | 配置节 | 本项目的用途 |
 |---|---|
 | `build-system` | 使用 setuptools>=68 构建安装包 |
-| `project` | 包名 cluster-local-ai、版本 1.3.7、Python>=3.10；运行时第三方依赖为空 |
+| `project` | 包名 cluster-local-ai、版本 1.4.0、Python>=3.10；运行时第三方依赖为空 |
 | `project.scripts` | 安装后的 local-ai 命令调用 local_ai.cli:main |
 | `tool.setuptools` | 从 src 查找模块，并将 profiles.json 包含到安装包 |
 | `project.optional-dependencies` | dev 组包含 Ruff 0.14.2，仅开发时安装 |
@@ -292,7 +301,7 @@ PYTHONPATH=src .venv/bin/python scripts/check-client.py --client-dir /home/alice
 
 ## 交付与版本标记
 
-v1.3.7 标记本次验收版本；按用户要求仅保留此标签，其余标签删除，历史验收记录仍保留。此前撤下的版本标签不复用。开发继续跟进 main 与确切提交，支持范围以验证记录为准。完成测试与 CI 是基本条件；后续标签仍须用户明确要求，不自动创建 GitHub Release。
+v1.4.0 标记本次验收版本；按本次用户要求新增 tag 与 Release，保留历史 v1.3.7 标签及验收记录。此前撤下的版本标签不复用。开发继续跟进 main 与确切提交，支持范围以验证记录为准。完成测试与 CI 是基本条件；后续标签仍须用户明确要求，不自动创建 GitHub Release。
 
 日常交付：检查实现与全部文档，完成适当验证，提交并推送，核对远端提交和 CI。用户明确要求新版本时，评估完整安装路径、文档一致性、兼容性及已知问题；同步版本号、验收记录，并在确切通过 CI 的提交上创建附注标签。保留具体提交可用于复现与回退。
 
