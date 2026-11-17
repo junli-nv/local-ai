@@ -6,6 +6,8 @@ They are separate from repository development instructions and are not automatic
 ## Files and host
 
 Combine the [general template](AGENTS.general.md) with the [BCM template](AGENTS.bcm.md) when appropriate.
+The general template covers response language and user-source attribution without imposing a default language.
+The template's own language does not determine the response language.
 Adapt cluster paths, especially /cm and /cm/images. Use either language, not both copies.
 [中文](../agent-instructions.md).
 

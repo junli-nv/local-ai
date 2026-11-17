@@ -1,5 +1,13 @@
 # Validation record
 
+## Response-language and user-attribution template revision: 2026-11-17
+
+Both general templates now prioritize explicit language requests, otherwise following the user's latest direct request. Logs, quotations, tool output and summaries do not trigger a language switch. When unclear, retain the user's previous direct-conversation language, or ask if none is available; impose no default language. User quotations or paraphrases require original-message evidence, and indirect records must be identified. Update setup guidance and developer decisions. Templates remain opt-in; no personal files, plugins or runtime behavior were changed.
+
+The local macOS ARM64/Python 3.14 suite with a canonical temporary path ran 241 cases: 238 passed, one optional FFmpeg skip and two known platform errors (127.0.0.2 binding and an AMD64 server fixture on ARM64). Ruff lint/format and whitespace checks passed. Initial /var versus /private/var alias assertion differences disappeared with the canonical temporary path; tests were not modified. No new live-model language-compliance test was performed; wording is not an enforcement guarantee.
+
+At the user's request, commit and push, then recreate the annotated v1.4.1 tag on the exact CI-passed commit. The previous tag object is fe2ae72e80d2245152336263cf1ba51584655831, pointing to 2a77608c988bc595c3e7986e5350aa36f0d14461. Protect the remote update by checking that old object. Do not create a GitHub Release, build a wheel or upload release assets.
+
 ## B200/GB300 four-GPU hardware status confirmation: 2026-11-17
 
 The user explicitly confirmed successful physical-hardware validation of `b200-tp4-cpu`, `b200-tp4` and `gb300-tp4`. Keep the existing detailed B200 methods/results in the 2026-11-08 record. GB300 TP4 status is based on this user confirmation; no additional environment, workload, performance or raw logs were supplied, so those details are not invented. Align README, deployment/offline guidance and profiles metadata. Retain `gb300-tp2` as unvalidated at the user's request. This does not expand acceptance to GB300 use of B300 DSpark, full-context boundaries, sustained stability or unspecified scenarios. Earlier statements that GB300 was unvalidated describe their historical scope; this section is the current four-GPU status.

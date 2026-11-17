@@ -16,7 +16,7 @@ usage and compaction hooks, not model quality. Explicitly run the three client w
 keeping private outputs out of Git. Preserve unknown values, incomplete streams/tools, overlapping spans, signal cleanup
 and version-isolation coverage. Include observer.mjs in source, wheels and program updates without requiring standalone Node.js.
 
-Additional decision (2026-11-17): keep general/BCM templates and setup guidance together in templates/opencode/, with English under en/. Carry them in updates/exports without applying them. client.prepare resolves personal rules before config isolation and explicitly loads them; personal files stay outside Git and bundles. See [persistent instruction setup](../../templates/opencode/en/agent-instructions.md).
+Additional decision (2026-11-17): keep general/BCM templates and setup guidance together in templates/opencode/, with English under en/. Carry them in updates/exports without applying them. client.prepare resolves personal rules before config isolation and explicitly loads them; personal files stay outside Git and bundles. See [persistent instruction setup](../../templates/opencode/en/agent-instructions.md). The general template follows direct user requests without imposing a default response language; user attribution requires original-message evidence, with summaries or indirect records identified as such.
 
 [中文（默认）](../development.md)
 
