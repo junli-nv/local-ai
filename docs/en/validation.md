@@ -16,6 +16,13 @@ Ruff lint/format and patch whitespace checks passed. Context delivery does not g
 and no hardware acceptance is expanded.
 
 
+
+All 220 tests passed on Linux AMD64/Python 3.12. Native OpenCode 1.19.5 with a local mock API confirmed
+personal/project/built-in instructions in actual requests, unchanged personal files and continued session isolation.
+An initial live-model fixture exposed find -not -path filtering results while still traversing mock images.
+Templates now require component selection and provide a pruning example, explicitly rejecting output filters as traversal exclusions.
+No real image tree was involved; revised behavioral acceptance is checked separately.
+
 ## Local benchmark tool logic: 2026-11-16
 
 Current development source adds `server benchmark --name a`, without changing the program version or existing v1.3.7 tag.
