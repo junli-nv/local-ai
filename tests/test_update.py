@@ -51,6 +51,7 @@ class UpdateTests(unittest.TestCase):
             "package/src/local_ai/cli.py": b"new cli",
             "package/src/local_ai/profiles.json": b"{}",
             "package/docs/update.md": b"new documentation",
+            "package/templates/opencode/AGENTS.general.md": b"new rules template",
         }
         with tarfile.open(self.archive, "w:gz") as archive:
             for name, value in files.items():
@@ -91,6 +92,9 @@ class UpdateTests(unittest.TestCase):
         self.assertFalse((self.root / "bundle.json").exists())
         self.assertFalse((self.root / "src/local_ai/removed.py").exists())
         self.assertTrue((self.root / "scripts/update.py").is_file())
+        self.assertEqual(
+            (self.root / "templates/opencode/AGENTS.general.md").read_bytes(), b"new rules template"
+        )
         backup = Path(result["backup"])
         self.assertTrue((backup / "program/src/local_ai/removed.py").is_file())
         self.assertEqual((backup / "metadata/bundle.json").read_text(), "old bundle")
@@ -107,6 +111,7 @@ class UpdateTests(unittest.TestCase):
         self.assertEqual(json.loads((self.root / "installation.json").read_text()), self.settings)
         self.assertEqual((self.root / "bundle.json").read_text(), "old bundle")
         self.assertFalse((self.root / "docs").exists())
+        self.assertFalse((self.root / "templates").exists())
         self.assertTrue((self.root / "src/local_ai/removed.py").exists())
         self.assert_assets_untouched()
 

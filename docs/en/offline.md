@@ -1,5 +1,7 @@
 # Export, transfer and offline installation
 
+Development-source complete exports carry templates/, not personal AGENTS.md. Transfer personal rules separately and securely; use [persistent instruction setup](../../templates/opencode/en/agent-instructions.md) to merge. Templates are not applied automatically.
+
 This guide is the single complete migration procedure, separate from normal online deployment. Scenario 1 exports images/models on the old GPU host and client assets on the old BCM host, then imports each on its target. Scenario 2 prepares both roles on an online host. Offline import means checksum verification, extraction and install --offline; there is no separate top-level import command.
 
 If resources are already installed and only program files need updating, use [offline program updates](update.md#offline-program-update). Transfer only the helper and small source archive; a complete model/image export is unnecessary.

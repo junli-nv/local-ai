@@ -1,10 +1,12 @@
 import base64
 import hashlib
 import json
+import os
 import tarfile
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from local_ai.artifacts import extract_binary, seed_cache, verify_integrity
 from local_ai.client import prepare, service_key
@@ -76,8 +78,9 @@ class ClientTests(unittest.TestCase):
             two = state / "two"
             one.mkdir()
             two.mkdir()
-            env1 = prepare(state, assets, one, "http://127.0.0.1:28000/v1", "model", root)
-            env2 = prepare(state, assets, two, "http://127.0.0.1:28001/v1", "model", root)
+            with patch.dict(os.environ, {"XDG_CONFIG_HOME": str(root / "user-config")}):
+                env1 = prepare(state, assets, one, "http://127.0.0.1:28000/v1", "model", root)
+                env2 = prepare(state, assets, two, "http://127.0.0.1:28001/v1", "model", root)
             self.assertEqual(env1["XDG_DATA_HOME"], env2["XDG_DATA_HOME"])
             self.assertNotEqual(env1["OPENCODE_CONFIG"], env2["OPENCODE_CONFIG"])
             self.assertIn("28000", Path(env1["OPENCODE_CONFIG"]).read_text())
@@ -98,3 +101,38 @@ class ClientTests(unittest.TestCase):
                 self.assertEqual(guidance.stat().st_mode & 0o777, 0o600)
                 instruction_paths.append(guidance)
             self.assertNotEqual(*instruction_paths)
+
+    def test_personal_rules_survive_session_config_isolation_without_importing_other_settings(self):
+        for location in ("default", "xdg"):
+            with self.subTest(location=location), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                home = root / "home"
+                config_root = home / ".config" if location == "default" else root / "custom config"
+                rules = config_root / "opencode/AGENTS.md"
+                rules.parent.mkdir(parents=True)
+                rules.write_text("personal marker")
+                rules.chmod(0o600)
+                before = rules.stat()
+                rules.with_name("opencode.json").write_text('{"model":"unwanted/model"}')
+                state = root / "state"
+                state.mkdir()
+                assets = root / "assets"
+                (assets / "seed-cache").mkdir(parents=True)
+                session = root / "session"
+                session.mkdir()
+                env = {
+                    "HOME": str(home),
+                    "XDG_CONFIG_HOME": "" if location == "default" else str(config_root),
+                }
+                with patch.dict(os.environ, env):
+                    prepared = prepare(
+                        state, assets, session, "http://localhost:18000/v1", "model", root
+                    )
+                cfg = json.loads(prepared["OPENCODE_CONFIG_CONTENT"])
+                self.assertEqual(cfg["instructions"][1:], [str(rules.resolve())])
+                self.assertEqual(Path(prepared["XDG_CONFIG_HOME"]), session / "config")
+                self.assertEqual(cfg["model"], "local-deepseek/model")
+                self.assertEqual(cfg, json.loads(Path(prepared["OPENCODE_CONFIG"]).read_text()))
+                self.assertEqual(rules.read_text(), "personal marker")
+                self.assertEqual(rules.stat().st_ino, before.st_ino)
+                self.assertEqual(rules.stat().st_mode & 0o777, 0o600)

@@ -81,6 +81,8 @@ class PortableTests(unittest.TestCase):
             names = tar.getnames()
             self.assertIn("local-ai/src/local_ai/cli.py", names)
             self.assertIn("local-ai/install.sh", names)
+            self.assertIn("local-ai/templates/opencode/agent-instructions.md", names)
+            self.assertIn("local-ai/templates/opencode/AGENTS.bcm.md", names)
             self.assertFalse(any(member.issym() for member in tar.getmembers()))
             tar.extractall(target, filter="data")
         renamed = target / "another-name"

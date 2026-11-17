@@ -1,5 +1,7 @@
 # 使用手册与命令参考
 
+当前开发源码支持加载客户端用户的个人工作指令；位置、模板组合及检查方法见 [持久工作指令配置](../templates/opencode/agent-instructions.md)。不新增 CLI 参数，不自动写入个人规则。
+
 全局 `./local-ai --version` 输出项目版本后退出；与 `client install --version` 的客户端版本选择参数不同。
 
 ## 从哪里开始

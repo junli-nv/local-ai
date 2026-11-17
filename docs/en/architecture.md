@@ -1,5 +1,7 @@
 # Architecture and design decisions
 
+Client preparation resolves personal AGENTS.md before isolating XDG_CONFIG_HOME, then explicitly references it after operations.md. Templates are opt-in and never overwrite personal files. See [persistent instruction setup](../../templates/opencode/en/agent-instructions.md).
+
 [中文（默认）](../architecture.md)
 
 ## Roles are independent

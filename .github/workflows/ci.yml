@@ -47,3 +47,4 @@ jobs:
           fi
       - run: python scripts/check-client.py --client-dir /tmp/local-ai-client
       - run: python scripts/check-reasoning.py --client-dir /tmp/local-ai-client
+      - run: python scripts/check-instructions.py --client-dir /tmp/local-ai-client

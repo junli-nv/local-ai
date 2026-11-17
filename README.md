@@ -47,6 +47,7 @@
 | 本页 | 首次在线安装、启动、聊天、配置及迁移入口 |
 | [部署指南](docs/deployment.zh-CN.md) | CDI、存储故障、实例重建、DSpark/预热与双实例 |
 | [命令手册](docs/commands.md) | 参数、默认值、退出码、会话恢复与客户端版本 |
+| [持久工作指令](templates/opencode/agent-instructions.md) | 通用/BCM 模板、个人配置位置、合并与生效检查（开发源码新增） |
 | [离线部署](docs/offline.md) | 已安装环境迁移，或联网准备后离线安装 |
 | [架构](docs/architecture.md)、[开发指南](docs/development.md) | 模块设计、扩展和接手开发 |
 

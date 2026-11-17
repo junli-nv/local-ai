@@ -1,5 +1,7 @@
 # Update an existing installation
 
+Development-source updates include templates/ as replaceable program files. Personal AGENTS.md lives in the user configuration directory and is not overwritten. If the old updater lacks templates in its allowlist, obtain the newer scripts/update.py from the same target archive first. See [persistent instruction setup](../../templates/opencode/en/agent-instructions.md).
+
 Use this for program-only upgrades of an installed local-ai directory. See [README](../../README.en.md) for first installation and [offline deployment](offline.md) for complete resource migration. The updater downloads a small source archive and invokes no install, Docker, model download or OpenCode installation commands.
 
 Update the GPU001 and bcm-headnode program directories separately. Examples use /raid/local-ai; replace --root if the actual program lives elsewhere. It must contain local-ai and src/, not just model data. Python 3.10+ and write permission on the installation and its parent are required; online script retrieval needs curl.

@@ -64,6 +64,11 @@ def prepare(state, assets, session, base, model, project):
     instructions.chmod(0o600)
     cfg = config(base, model)
     cfg["instructions"] = [str(instructions)]
+    # Resolve personal rules before replacing XDG_CONFIG_HOME with session isolation.
+    user_config = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config")
+    personal_rules = (user_config.expanduser() / "opencode/AGENTS.md").resolve()
+    if personal_rules.is_file():
+        cfg["instructions"].append(str(personal_rules))
     cfg["mcp"] = {
         "documents": {
             "type": "local",

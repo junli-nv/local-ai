@@ -367,6 +367,7 @@ class DocumentationContractTests(unittest.TestCase):
             root / "README.en.md",
             root / "AGENTS.md",
             *sorted((root / "docs").rglob("*.md")),
+            *sorted((root / "templates").rglob("*.md")),
         ]
         for path in files:
             text = path.read_text()

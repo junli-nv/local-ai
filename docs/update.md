@@ -1,5 +1,7 @@
 # 更新已有安装
 
+当前开发源码更新包含 templates/，它属于可替换程序文件；个人 AGENTS.md 位于用户配置目录，不被更新器覆盖。旧更新器没有 templates 白名单时，先从同一目标源码包取得新版 scripts/update.py。配置与人工合并见 [持久工作指令配置](../templates/opencode/agent-instructions.md)。
+
 本页适用于已经安装、只需更新 local-ai 程序的机器。首次安装见 [README](../README.md)，整套资源迁移见[离线指南](offline.md)。更新脚本只下载小型源码包，不执行 install、Docker、模型下载或 OpenCode 安装。
 
 GPU001 与 bcm-headnode 分别更新各自的程序目录。以下沿用 /raid/local-ai；若旧安装在其他位置，将 --root 改成实际包含 local-ai 和 src/ 的目录，不能填写只有模型的数据目录。更新需要该目录及其父目录写权限、Python 3.10+；在线下载脚本时需要 curl。

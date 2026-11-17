@@ -1,5 +1,7 @@
 # User manual and command reference
 
+Development source loads client-user personal instructions; see [persistent instruction setup](../../templates/opencode/en/agent-instructions.md) for paths, template composition and checks. No new CLI option or automatic personal-file writes.
+
 Global `./local-ai --version` prints the project version and exits. It differs from `client install --version`, which selects the native client release.
 
 [中文（默认）](../commands.md)

@@ -1,5 +1,21 @@
 # Validation record
 
+## Persistent instruction templates and loading: 2026-11-17
+
+Development source adds Chinese/English general and BCM references with colocated setup instructions.
+Both follow the question language unless explicitly overridden. Templates are opt-in and never replace personal files.
+Personal AGENTS.md is now explicitly referenced using the pre-isolation XDG_CONFIG_HOME or ~/.config,
+while model/session configuration stays isolated. Regressions cover default/custom paths including spaces,
+unchanged personal contents/inode/permissions, no import of other personal configuration, and template export/update/rollback.
+Documentation contracts now include template links, Bash syntax and CLI examples. A native local-mock context check
+is included in client CI; actual Linux results are recorded separately.
+
+The macOS ARM64/Python 3.14 suite ran 220 tests: 217 passed, two known platform errors and one optional FFmpeg skip.
+Errors concern unavailable 127.0.0.2 binding and an AMD64 server fixture on ARM64; existing cases remain intact.
+Ruff lint/format and patch whitespace checks passed. Context delivery does not guarantee model compliance,
+and no hardware acceptance is expanded.
+
+
 ## Local benchmark tool logic: 2026-11-16
 
 Current development source adds `server benchmark --name a`, without changing the program version or existing v1.3.7 tag.

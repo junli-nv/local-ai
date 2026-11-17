@@ -21,6 +21,7 @@ def source_files(root):
         "LICENSE.md",
         "src",
         "docs",
+        "templates",
         "scripts",
         "tests",
         ".github",

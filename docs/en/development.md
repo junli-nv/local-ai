@@ -1,5 +1,7 @@
 # Development workflow
 
+Additional decision (2026-11-17): keep general/BCM templates and setup guidance together in templates/opencode/, with English under en/. Carry them in updates/exports without applying them. client.prepare resolves personal rules before config isolation and explicitly loads them; personal files stay outside Git and bundles. See [persistent instruction setup](../../templates/opencode/en/agent-instructions.md).
+
 [中文（默认）](../development.md)
 
 ## Developer handoff: decisions and working order

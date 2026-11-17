@@ -29,6 +29,7 @@ PROGRAM = (
     "LICENSE.md",
     "src",
     "docs",
+    "templates",
     "scripts",
     "tests",
     ".github",
