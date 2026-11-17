@@ -1,5 +1,15 @@
 # BCM scenario instructions
 
+## Check scope before every file tool
+
+- These constraints apply to every tool, including glob, grep, read and shell, not only find.
+- Initially inspect only /cm top-level and next-level directory names, then select one component. Do not run broad fallback searches in parallel.
+- Never use recursive glob patterns such as **/* or **/script-name on /cm or an ancestor.
+  If glob cannot exclude images, restrict its path to a confirmed non-image component first.
+- Never search everything and filter images afterward. Do not read candidates under /cm/images even if another tool accidentally returns them.
+- Before each file tool call, check path, pattern and exclusion method; use a component-level path when exclusion is uncertain.
+
+
 Combine with the general template. Confirm these common paths on your cluster; they grant no additional permissions.
 
 - BCM scripts and documentation usually live under /cm on the head node; /home is a candidate for ordinary user scripts.

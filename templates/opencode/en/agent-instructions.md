@@ -80,6 +80,13 @@ then remove it and start another session. One correct response does not prove pe
 Use disposable fixtures and inspect actual tool arguments to validate search exclusions; never scan
 /cm/images as a test. For missing instructions, check user, environment, commit and generated configuration.
 
+Choose a small --project directory, not /cm, / or a parent containing all compute-node images.
+With mock images inside the project, native OpenCode internal threads also read project files independently
+of model tool choices. Prompts cannot constrain that client behavior. Keep image fixtures outside the project
+and grant only the external-directory access needed for those disposable samples; do not label a noninteractive
+automatic denial as a user rejection. Prompts are not mandatory file isolation; enforced access boundaries
+require separate account permissions or execution-layer controls.
+
 ## Maintenance and distribution
 
 Installation, updates and export carry templates without applying them. Compare changes, back up and merge personal rules manually.

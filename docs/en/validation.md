@@ -21,7 +21,15 @@ All 220 tests passed on Linux AMD64/Python 3.12. Native OpenCode 1.19.5 with a l
 personal/project/built-in instructions in actual requests, unchanged personal files and continued session isolation.
 An initial live-model fixture exposed find -not -path filtering results while still traversing mock images.
 Templates now require component selection and provide a pruning example, explicitly rejecting output filters as traversal exclusions.
-No real image tree was involved; revised behavioral acceptance is checked separately.
+No real image tree was involved. A subsequent native glob bypassed shell exclusions; templates now cover
+all file tools and prohibit broad parallel fallbacks. Native internal threads also read files when mock images
+were inside the project, so setup guidance requires small projects and discloses the absence of enforced isolation.
+With fixtures outside the project and narrowly allowed disposable external access, two live-model cross-language
+cases (Chinese template/English question and English template/Chinese question) found and read the intended script
+without executing it. strace recorded zero mock-image opens/traversals in each case; final replies followed the
+question language. Some progress prose remained English with the English template. These two small samples do not
+prove reliable compliance in all contexts. Raw traces remain in temporary host storage outside Git; no real
+compute-node image tree was scanned.
 
 ## Local benchmark tool logic: 2026-11-16
 
