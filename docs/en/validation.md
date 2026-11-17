@@ -1,5 +1,19 @@
 # Validation record
 
+## KV cache offloading assessment: 2026-11-17
+
+Read-only assistant metadata, /metrics, startup arguments and logs; no conversation bodies, cache resets, synthetic inference or restarts. Sanitized aggregates only.
+
+- Client: 2026-11-01 01:22 to 11-17 01:52 UTC; 29 conversations, 4,111 model calls with input tokens and completion times, not user questions. Input median 62,772, P95 95,876, maximum 119,240 tokens.
+- Deployment: DeepSeek-V4.1-Flash, B300 TP4, FP8 KV, GPU Engram, 131072 context, four active sequences, memory fraction 0.80, FLASHINFER_MLA_SPARSE_DSV41; no KV offloading.
+- Server: all traffic since instance start on 2026-11-08; 2,855 TTFT samples, 174,118,517 prefix-query tokens, 167,013,120 hit tokens (95.9%), zero preemptions.
+- TTFT mean 0.300 seconds; 90.3% at most 0.25 seconds, 96.9% at most 1 second. Cumulative prefill 770.361 seconds, decode 9,148.168, end-to-end 10,004.498.
+- Startup: 84.15 GiB available KV memory, 20,545,504 logical GPU KV tokens; model/backend-specific, not guaranteed concurrency for arbitrary workloads.
+
+Zero client cache reads conflict with server hits and cannot establish recomputation. Client/server populations differ. Client durations are not pure inference latency; server phase times are not task durations; first tokens may be reasoning.
+
+Conclusion: low-priority backlog, with no clear KV capacity bottleneck. No offloading A/B test or pinned-image compatibility validation. New content also misses; the remaining 4.1% is not all eviction loss. See [exploration](performance.md#kv-cache-offloading-low-priority-backlog-2026-11-17).
+
 ## Persistent instruction templates and loading: 2026-11-17
 
 Development source adds Chinese/English general and BCM references with colocated setup instructions.

@@ -79,6 +79,28 @@ SGLang showed competitive short-input/eight-concurrency throughput; those result
 
 vLLM better fit this measured workload, so the project retains one production engine plus an optional DSpark recipe. Dynamo routing/disaggregated prefill-decode and comprehensive SGLang tuning were not tested. No universal ranking across SGLang, Dynamo or other models follows.
 
+## KV cache offloading: low-priority backlog (2026-11-17)
+
+Defer development: neither integrated nor validated; excluded from current defaults.
+Retain reusable KV in CPU memory when GPU prefix-cache capacity is insufficient to reduce repeated prefill.
+FP8 KV quantization and CPU Engram table offload are separate mechanisms.
+See [observations](validation.md#kv-cache-offloading-assessment-2026-11-17).
+
+Revisit when:
+
+- Increased concurrency makes returning to older conversations noticeably slower.
+- Sustained lower hit rates coincide with higher prefill or first-token latency.
+- KV capacity causes preemption, or deployment moves to a smaller GPU KV budget.
+
+These trigger investigation, not automatic enablement. New content also misses; not all misses imply eviction.
+Zero client cache-read counters do not establish absent server reuse.
+Verify compatibility of the pinned engine, attention backend and offloading implementation.
+Compare on/off with identical multi-step tool and conversation-switching workloads and cold/warm GPU caches.
+Record hits, prefill, first-token latency distributions, task duration, errors and CPU memory.
+Only demonstrated benefits justify an experimental server startup option: select backend/capacity at startup,
+let the engine manage transfers at runtime and retain ordinary client API calls.
+Hot toggling, larger active contexts, disk persistence and restart reuse need separate validation.
+
 ## How to continue the investigation
 
 - Record source commit, image digest, package versions, model revision/config hashes and complete engine arguments. Allocate GPUs and separate instances, ports and caches while preserving production. Keep raw infrastructure logs out of Git.

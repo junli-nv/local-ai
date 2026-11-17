@@ -64,6 +64,10 @@ Chinese is primary; maintain English separately and synchronize both entry paths
 Use the [manual](commands.md) and [deployment guide](deployment.md) for operations;
 this section records design reasons.
 
+### Low-priority backlog: KV cache offloading
+
+Decision on 2026-11-17: defer integration. See [exploration](performance.md#kv-cache-offloading-low-priority-backlog-2026-11-17) for review triggers and validation steps.
+
 ### Working order for each request
 
 1. **Understand result and host.** Read this section, AGENTS, README, relevant
