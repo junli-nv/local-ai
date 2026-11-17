@@ -2,7 +2,7 @@
 
 ## 任务诊断与工作流回归（v1.4.0）
 
-在 BCM 的 /raid/local-ai 使用 v1.4.0；较旧归档不含这些新增功能。
+在 BCM 的 /raid/local-ai 使用 v1.4.1；这些功能自 v1.4.0 提供，更早归档不包含。
 普通 chat 自动保存私有 run.json、events.jsonl 和 requests.jsonl；
 终端会提示本次日志目录。历史部署的旧记录不回填。
 
@@ -154,9 +154,9 @@ prepare 在任意 CPU 架构的联网准备机上下载目标 profile 的镜像�
 复用完整模型，支持断点续传。规划框架和同目录不同模型 revision 会在准备前拒绝。
 
 ```bash
-./local-ai prepare --profile gb200-tp4
-./local-ai prepare --profile b300-tp4 --profile gb200-tp4
-./local-ai export --profile b300-tp4 --profile gb200-tp4
+./local-ai prepare --profile gb300-tp4
+./local-ai prepare --profile b300-tp4 --profile gb300-tp4
+./local-ai export --profile b300-tp4 --profile gb300-tp4
 ```
 
 export 显式选择已准备的配方。install --role server/both 仍检查本机 CPU，
@@ -254,7 +254,7 @@ v1.3.4 另含 gb200-tp4 候选和 rubin-tp2-framework；两者都没有实机验
 | `--output` | image export | 必填，导出镜像的归档路径 |
 | `--archive`、`--lock` | image import | 均必填，镜像归档及其配套 .lock.json 路径 |
 
-B200 四卡可选 b200-tp4-cpu（CPU Engram）或 b200-tp4（GPU Engram），均为实验性；保护值和操作见[部署指南](deployment.zh-CN.md#b200-四卡实验性)。
+B200 四卡可选 b200-tp4-cpu（CPU Engram）或 b200-tp4（GPU Engram），两者均已实机验证；保护值、覆盖范围和操作见[部署指南](deployment.zh-CN.md#b200-四卡已实机验证)。
 
 RTX 6000D 使用独立 `rtx6000d-tp8`：八卡、CPU Engram、32K、单序列、仅文本；BCM 显式指定 `--model DeepSeek-V4.1-Flash-SM120`。资源保护值、完整部署命令和有限验收范围见 [RTX 6000D](rtx6000d.md)。
 

@@ -1,5 +1,21 @@
 # Validation record
 
+## B200/GB300 four-GPU hardware status confirmation: 2026-11-17
+
+The user explicitly confirmed successful physical-hardware validation of `b200-tp4-cpu`, `b200-tp4` and `gb300-tp4`. Keep the existing detailed B200 methods/results in the 2026-11-08 record. GB300 TP4 status is based on this user confirmation; no additional environment, workload, performance or raw logs were supplied, so those details are not invented. Align README, deployment/offline guidance and profiles metadata. Retain `gb300-tp2` as unvalidated at the user's request. This does not expand acceptance to GB300 use of B300 DSpark, full-context boundaries, sustained stability or unspecified scenarios. Earlier statements that GB300 was unvalidated describe their historical scope; this section is the current four-GPU status.
+
+## v1.4.1 version label: 2026-11-17
+
+At the user's request, align program metadata and current download/update examples, commit and push, then create a new annotated `v1.4.1` tag on the exact CI-passed commit. Keep the original `v1.4.0` tag and do not recreate its withdrawn GitHub Release. This version includes the offline documentation corrections below and hardware-status updates. Inference parameters, models, images and installation behavior are unchanged. Users still configure npm offline mode explicitly; system startup files are not written automatically.
+
+The complete local macOS ARM64/Python 3.14 suite ran 241 cases: 238 passed, one optional FFmpeg skip and two known platform errors (127.0.0.2 binding and an AMD64 server fixture). Ruff lint/format, whitespace, version references across 38 documents and existing documentation contracts passed. Catalog comparison confirmed only GB300 TP4 validation metadata changed; TP2 and all inference settings remain intact. Baseline hash checks explicitly verify the new metadata before restoring its historical value for the original hashes, preserving checks on all other content.
+
+## Air-gapped client startup report and documentation correction: 2026-11-17
+
+User-reported result: the server API worked while OpenCode waited at startup. With `npm_config_offline=true`, a complete chat returned `LOCAL_AI_OK` in about nine seconds with exit code 0; the user confirmed it worked. Update the bilingual offline procedures, README and command examples around B300/GB300, plus advance preparation of Docker packages and dependencies for the target Ubuntu release and architecture (no packages downloaded or installed). No remote test was rerun for this documentation change, and it adds no GB300 hardware acceptance. `install --offline` and the chat npm environment variable control different stages. Document system-wide `/etc/profile.d/local-ai.sh` setup for dedicated air-gapped nodes and the personal `~/.profile` alternative, including PATH, interactive Bash completion, current-shell loading, checks, resumption and login/non-login Bash behavior. The npm offline variable is offline/air-gapped only; PATH and completion work online too. No actual system or user startup files were changed.
+
+Local macOS ARM64/Python 3.14 checks with isolated temporary/state directories: 241 unittest cases, 238 passed, one optional FFmpeg skip and two environment errors (unavailable 127.0.0.2 binding and an AMD64 server fixture on ARM64). Eight documentation checks, version references across 36 documents, Ruff lint/format and git diff --check passed. Newly prefixed offline CLI examples in both languages were parsed separately.
+
 ## v1.4.0 documentation correction and release withdrawal: 2026-11-17
 
 The initial v1.4.0 release used commit 83b9366a55984e0d9e1676802deb3bb7d8f418cd. Correct bilingual offline downloads, document-upgrade guidance, release status and historical wording; add a version-reference contract and a developer release checklist. The user subsequently requested removing the GitHub Release and download assets, then committing and pushing the corrections only. Preserve the original tag and commit history without retagging or repacking. Runtime implementation and version remain unchanged. The original v1.4.0 tag archive does not contain these documentation corrections; use a source commit containing this change.

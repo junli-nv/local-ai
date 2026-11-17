@@ -2,7 +2,7 @@
 
 ## Task diagnostics and workflow acceptance (v1.4.0)
 
-Run v1.4.0 on BCM from /raid/local-ai; older archives lack these features.
+Run v1.4.1 on BCM from /raid/local-ai; these features are available since v1.4.0, and earlier archives lack them.
 Ordinary chat records private run.json, events.jsonl and requests.jsonl under the printed launch directory.
 Old launches are not backfilled.
 
@@ -166,9 +166,9 @@ transfers. Planning-only profiles and conflicting revisions in one model directo
 rejected before preparation.
 
 ```bash
-./local-ai prepare --profile gb200-tp4
-./local-ai prepare --profile b300-tp4 --profile gb200-tp4
-./local-ai export --profile b300-tp4 --profile gb200-tp4
+./local-ai prepare --profile gb300-tp4
+./local-ai prepare --profile b300-tp4 --profile gb300-tp4
+./local-ai export --profile b300-tp4 --profile gb300-tp4
 ```
 
 Select prepared profiles explicitly at export. install --role server/both still checks
@@ -266,7 +266,7 @@ before logging/resource operations. See [GB200 and Rubin](gb200-rubin.md) for CP
 | --output | image export | Required destination archive path |
 | --archive; --lock | image import | Required image archive and matching .lock.json |
 
-Experimental B200 TP4 profiles are b200-tp4-cpu (CPU Engram) and b200-tp4 (GPU Engram). See [deployment](deployment.md#b200-four-gpu-experimental) for guards and usage.
+Hardware-validated B200 TP4 profiles are b200-tp4-cpu (CPU Engram) and b200-tp4 (GPU Engram). See [deployment](deployment.md#b200-four-gpu-hardware-validated) for guards, coverage and usage.
 
 RTX 6000D uses independent `rtx6000d-tp8`: eight GPUs, CPU Engram, 32K, one sequence and text only. On BCM explicitly pass `--model DeepSeek-V4.1-Flash-SM120`. See [RTX 6000D](rtx6000d.md) for guards, complete deployment commands and bounded acceptance.
 

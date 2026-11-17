@@ -1,6 +1,6 @@
 # local-ai
 
-v1.4.0 新增私有请求诊断、任务状态与批处理超时、压缩交接和真实工作流回归；包含本机 benchmark 与持久指令模板。使用入口见[任务诊断](docs/commands.md#任务诊断与工作流回归v140)，变更与边界见[发布说明](docs/release-1.4.0.md)。
+v1.4.1 完善 airgap 客户端启动、系统级离线设置及 Docker 软件包准备说明，更新 B200/GB300 四卡实机验证状态。包含 v1.4.0 的客户端诊断与工作流功能；本次变更与边界见[发布说明](docs/release-1.4.1.md)。
 
 **local-ai 是一个面向本地集群的 AI 工作助手，帮助用户通过自然语言完成系统运维、代码开发和日常文件处理。**
 
@@ -29,7 +29,7 @@ v1.4.0 新增私有请求诊断、任务状态与批处理超时、压缩交接�
 
 ## 安装与使用
 
-当前版本为 v1.4.0，以下示例下载该标签的完整源码。./local-ai --version 应显示 1.4.0，实际验收范围与未覆盖平台见[验证记录](docs/validation.md)。
+当前版本为 v1.4.1，以下示例下载该标签的完整源码。./local-ai --version 应显示 1.4.1，实际验收范围与未覆盖平台见[验证记录](docs/validation.md)。
 
 ## 示例约定与文档入口
 
@@ -71,15 +71,15 @@ BCM 需 Linux AMD64 或 ARM64、Python 3.10+、Bash、curl、tar、Git、rg 和 
 |---|---|---|---|---|
 | b300-tp4 | AMD64 / linux/amd64 | 4 张 B300 | GPU | 已实机验证 |
 | b300-tp4-dspark | AMD64 / linux/amd64 | 4 张 B300 | GPU | 可选单用户配方，范围见验证记录 |
-| b200-tp4-cpu | AMD64 / linux/amd64 | 4 张 B200 | CPU | 四卡 API 冒烟通过，范围见验证记录 |
-| b200-tp4 | AMD64 / linux/amd64 | 4 张 B200 | GPU | 四卡 API 冒烟通过，范围见验证记录 |
+| b200-tp4-cpu | AMD64 / linux/amd64 | 4 张 B200 | CPU | 已实机验证，范围见验证记录 |
+| b200-tp4 | AMD64 / linux/amd64 | 4 张 B200 | GPU | 已实机验证，范围见验证记录 |
 | rtx6000d-tp8 | AMD64 / linux/amd64 | 8 张 RTX 6000D | CPU | 实验性：八卡 API 冒烟与原生客户端工具往返通过 |
-| gb300-tp4 | ARM64 / linux/arm64 | 4 张 GB300/B300 | GPU | 未实机验证 |
+| gb300-tp4 | ARM64 / linux/arm64 | 4 张 GB300/B300 | GPU | 已实机验证，用户确认 |
 | gb200-tp4 | ARM64 / linux/arm64 | 4 张 GB200/B200 | GPU | 实验候选，未实机验证 |
 | rubin-tp2-framework | ARM64 / linux/arm64 | 2 张 Rubin/VR200（规划） | CPU（规划） | 仅规划框架，禁止部署 |
 | gb300-tp2 | ARM64 / linux/arm64 | 2 张 GB300/B300 | CPU | 上游配方，未实机验证 |
 
-B200 部署及同条件 CPU/GPU Engram 对照见[部署指南](docs/deployment.zh-CN.md#b200-四卡实验性)。两套配置有独立的有限验收记录，不继承 B300 性能结论。v1.3.2 已包含两套 B200 配方，可用 ./local-ai profiles 核对。
+B200 部署及同条件 CPU/GPU Engram 对照见[部署指南](docs/deployment.zh-CN.md#b200-四卡已实机验证)。两套配置均已实机验证，具体覆盖范围见独立验收记录，不继承 B300 性能结论。v1.3.2 已包含两套 B200 配方，可用 ./local-ai profiles 核对。
 
 RTX 6000D 从 v1.3.2 起提供独立 `rtx6000d-tp8` 配方：每卡至少 85000 MiB、主存可用至少 256 GiB，32K 上下文、单序列、纯文本，使用独立固定的 SM120 镜像，不启用 DSpark 或 CUDA Graph。安装、八卡启动及 BCM 连接命令见 [RTX 6000D 部署](docs/rtx6000d.md)；服务模型名为 `DeepSeek-V4.1-Flash-SM120`，客户端必须显式选择该模型。完整 32K 边界、并发及长期稳定性仍未验收。下方主流程继续使用 B300 四卡；RTX 6000D 请按专项指南选择八卡配方。
 
@@ -97,7 +97,7 @@ BCM 架构独立选择。配置只使用同一 OS 可见的本地 GPU；GB300 TP
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.4.0.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.4.1.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ./local-ai --version
@@ -188,7 +188,7 @@ v1.4.0 提供 `server benchmark`。
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.4.0.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.4.1.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ```
@@ -289,6 +289,8 @@ chat --endpoint 不改写 installation.json，也不要求重新安装。--check
 联网准备可在任意 CPU 架构上执行 prepare --profile 目标配方；主要准备目标平台镜像和固定 revision 模型，不执行目标镜像。混合架构步骤见[离线指南](docs/offline.md#场景二从联网环境下载并准备)。当前版本已包含此能力。
 
 这是独立的迁移场景：服务端镜像和模型在**源 GPU 节点**导出，在**新 GPU 节点**校验、解压并执行 install --offline。BCM 导出通常只有客户端材料，不能替代 GPU 服务端部署包。
+
+airgap 环境启动聊天使用 `npm_config_offline=true ./local-ai chat`，避免 OpenCode 初始化等待外部 npm 仓库；也可按[持久设置](docs/offline.md#持久设置-npm-离线模式)在专用 airgap 节点配置 `/etc/profile.d/local-ai.sh`（或个人 `~/.profile`），后续直接聊天；其中 npm 离线设置仅用于 offline/airgap 环境，PATH 与 Bash 补全在线、离线均可用。`install --offline` 不会持久设置此环境变量。
 
 完整命令统一维护在[离线安装指南](docs/offline.md)，按起点选择：
 

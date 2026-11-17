@@ -102,7 +102,7 @@ Startup checks permit TCP TIME_WAIT reuse after a stopped HTTP service, while re
 
 v1.3.2 adds independent `rtx6000d-tp8`: AMD64, eight GPUs with at least 85000 MiB each, and 256 GiB available host RAM. It uses 32K, one sequence, CPU Engram and text input, without DSpark/CUDA graphs. Complete [software prerequisites](prerequisites.md) and CDI checks, then follow the [RTX 6000D guide](rtx6000d.md) to install, start and select `DeepSeek-V4.1-Flash-SM120` on BCM. Eight-GPU API smoke and native tool round trips passed; full 32K, concurrency and sustained stability remain unvalidated.
 
-## B200 four-GPU (experimental)
+## B200 four-GPU (hardware validated)
 
 `b200-tp4-cpu` stores Engram tables in host memory; `b200-tp4` retains GPU Engram.
 Both require AMD64, four B200 GPUs and at least 180000 MiB HBM per GPU.
@@ -110,8 +110,9 @@ The CPU profile additionally checks 256 GiB MemAvailable. These are conservative
 guards, not measured minimum requirements. Both retain the fixed model revision,
 AMD64 image digest and B300 baseline engine settings: 131072 context, four active
 sequences, 8192 batched tokens and a 0.80 memory budget, without DSpark.
-Both passed bounded four-GPU API smoke checks in the recorded environment;
-full-context boundaries and long-running loads remain unvalidated.
+Both are hardware validated, reconfirmed by the user on 2026-11-17. Existing detailed
+records cover four-GPU API smoke and CPU/GPU Engram comparisons; full-context and
+sustained-load acceptance are not expanded by this confirmation.
 These profiles are included since v1.3.2; obtain current tagged source through README
 and check ./local-ai profiles. Freed weight memory may be reused for KV cache,
 so nvidia-smi total usage need not fall. API READY does not eliminate first-shape JIT.
@@ -139,7 +140,7 @@ Reasoning can be switched with Ctrl+T in the BCM chat UI; see [dynamic reasoning
 
 ## Single-user DSpark and explicit warmup
 
-The default b300-tp4 keeps its existing settings. Optional b300-tp4-dspark favors single-user generation speed, with a possible concurrency throughput cost. DSpark uses speculative decoding with target-model verification to improve the decode phase; lower TTFT is not guaranteed. It uses the same image and weights. See [validation](validation.md) for measurements and limits. This recipe is not validated on GB300.
+The default b300-tp4 keeps its existing settings. Optional b300-tp4-dspark favors single-user generation speed, with a possible concurrency throughput cost. DSpark uses speculative decoding with target-model verification to improve the decode phase; lower TTFT is not guaranteed. It uses the same image and weights. See [validation](validation.md) for measurements and limits. GB300 TP4 is hardware validated; this B300 DSpark recipe has no GB300 acceptance.
 
 Run on GPU001 from /raid/local-ai with free GPUs and port. If a already exists, first confirm and follow [instance replacement](#replace-an-instance) to stop and remove its container.
 

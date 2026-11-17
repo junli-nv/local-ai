@@ -1,10 +1,10 @@
 # Export, transfer and offline installation
 
-For a strictly offline first launch use `npm_config_offline=true ./local-ai chat --endpoint http://GPU001:18000/v1` to prevent native dependency initialization from accessing the registry. The local observer imports built-in runtime modules only; tools, resume and compaction were validated with this offline flag.
+In an air-gapped environment, use `npm_config_offline=true ./local-ai chat` when launching; add `--endpoint http://GPU001:18000/v1` if no default address is saved. `install --offline` controls installation only; it does not persist npm offline mode for subsequent OpenCode launches. This environment variable prevents native dependency initialization from waiting on the external npm registry; the model API remains accessible over the internal network. For a one-time setup that removes the need to type the prefix, see [persistent npm offline mode](#persistent-npm-offline-mode). The local observer imports built-in runtime modules only; tools, resume and compaction were validated with this offline flag.
 
-v1.4.0 exports observer.mjs with src/; native runtime dependency caches, diagnostics and workflow results are not public offline assets.
+v1.4.1 exports observer.mjs with src/; native runtime dependency caches, diagnostics and workflow results are not public offline assets.
 
-v1.4.0 complete exports carry templates/, not personal AGENTS.md. Transfer personal rules separately and securely; use [persistent instruction setup](../../templates/opencode/en/agent-instructions.md) to merge. Templates are not applied automatically.
+v1.4.1 complete exports carry templates/, not personal AGENTS.md. Transfer personal rules separately and securely; use [persistent instruction setup](../../templates/opencode/en/agent-instructions.md) to merge. Templates are not applied automatically.
 
 This guide is the single complete migration procedure, separate from normal online deployment. Scenario 1 exports images/models on the old GPU host and client assets on the old BCM host, then imports each on its target. Scenario 2 prepares both roles on an online host. Offline import means checksum verification, extraction and install --offline; there is no separate top-level import command.
 
@@ -16,7 +16,52 @@ Prerequisites: Python 3.10+, Bash, curl, tar, sha256sum (required for transfer v
 
 Archives contain top-level local-ai/ and bundle.json checksums. They exclude dist/, instance state, logs, temporary caches, Git metadata, private histories and credentials. Docker active databases and drivers remain host-managed.
 
-Both routes below are complete and independent; follow one route from start to finish. gpu-old/bcm-old are the existing source hosts; prep-host downloads assets without starting GPUs. New targets use GPU001/bcm-headnode as in README. Source downloads pin v1.4.0; record an exact commit when using main for development.
+Both routes below are complete and independent; follow one route from start to finish. gpu-old/bcm-old are the existing source hosts; prep-host downloads assets without starting GPUs. New targets use GPU001/bcm-headnode as in README. Source downloads pin v1.4.1; record an exact commit when using main for development.
+
+## Prepare Docker before entering the air-gapped environment
+
+A target GPU node may have NVIDIA drivers but no Docker. A local-ai export does not include Docker Engine, containerd or host system dependencies; prepare and install them separately before importing server images. A BCM running only the client needs no Docker.
+
+For Ubuntu, follow Docker's official [package installation instructions](https://docs.docker.com/engine/install/ubuntu/#install-from-a-package). Download `.deb` files online for the **target Ubuntu release/codename and CPU architecture**, then transfer them on media. The B300 example uses `amd64`; the GB300 example uses `arm64`. Do not select packages by the preparation host architecture. Prepare matching `docker-ce`, `docker-ce-cli` and `containerd.io` packages; the full official procedure also lists `docker-buildx-plugin` and `docker-compose-plugin`. Include any missing OS dependencies or provide a reachable internal APT mirror; copying repository configuration alone does not make an external repository reachable offline.
+
+After installation on the target GPU node, start Docker. Run `docker version` and `docker info` as the local-ai user to verify daemon access and **Server API >=1.49**. See [software prerequisites](prerequisites.md) for version requirements and package conflicts. Drivers alone do not establish NVIDIA Container Toolkit/CDI readiness; verify [CDI setup](deployment.md#cdi-setup) and prepare any missing system packages in advance. The official `docker run hello-world` check downloads its image if absent locally; carry that image separately for a strict offline check. An external image-download failure does not establish a failed Docker installation.
+
+## Persistent npm offline mode
+
+Set `npm_config_offline=true` **only for offline/air-gapped environments** to prevent OpenCode dependency initialization from waiting on the external npm registry. Omit this line online. The PATH and Bash completion settings work both online and offline. This variable is not an `opencode.json` field, and `install --offline` does not persist it automatically.
+
+For a dedicated air-gapped client node where all users share `/raid/local-ai`, an administrator should configure `/etc/profile.d/local-ai.sh`. Configure the **node that actually runs chat**: bcm-headnode here, or the GPU node if chat runs there directly. Create or edit the file, preserving existing required contents, and add:
+
+```bash
+# Offline/air-gapped environments only; remove this line online.
+export npm_config_offline=true
+
+# PATH and Bash completion work both online and offline.
+export PATH="/raid/local-ai:$PATH"
+
+# Other shells may read /etc/profile.d/; load completion only in interactive Bash.
+if [ -n "${BASH_VERSION:-}" ]; then
+    if [[ $- == *i* ]] && command -v local-ai >/dev/null 2>&1; then
+        eval "$(local-ai completion bash)"
+    fi
+fi
+```
+
+Keep the file root-managed and readable by all users (typically mode 0644; executable permission is unnecessary). Adjust PATH for the actual installation. This system-wide setting affects every user loading it on this node; other npm operations inheriting the variable also use offline mode.
+
+Ubuntu's `/etc/profile` normally sources `/etc/profile.d/*.sh`, so a new Bash login loads the settings. In an existing Bash terminal, run as the **chat user** (alice here):
+
+```bash
+source /etc/profile.d/local-ai.sh
+printenv npm_config_offline
+command -v local-ai
+```
+
+In the offline/air-gapped environment, expect `true` and `/raid/local-ai/local-ai`. Then run `local-ai chat` from any task directory. Resume with `opencode -s ID`, replacing ID with the actual session identifier shown on exit. If no endpoint is saved, still add `--endpoint http://GPU001:18000/v1` to chat.
+
+Non-login Bash does not automatically read `/etc/profile`; inherit the environment from a configured parent process or source the file manually. To load completion automatically in interactive non-login Bash, optionally source the file from the user's `~/.bashrc`.
+
+For personal configuration without administrator access, or when the setting should not affect all users, add `export npm_config_offline=true` to the chat user's `~/.profile` (again, offline/air-gapped environments only), then run `source ~/.profile`. Login Bash reads the first existing file among `~/.bash_profile`, `~/.bash_login` and `~/.profile`; if either earlier file exists, ensure it sources `~/.profile`. Settings do not automatically transfer to other nodes or accounts. When returning a node to online use, remove the npm offline setting from the relevant startup file and run `unset npm_config_offline` in existing terminals.
 
 ## Scenario 1: export an installed environment
 
@@ -74,8 +119,8 @@ sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
 tar -xf local-ai.tar --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ./local-ai install --role client --offline --endpoint http://GPU001:18000/v1
-./local-ai chat --check
-./local-ai chat
+npm_config_offline=true ./local-ai chat --check
+npm_config_offline=true ./local-ai chat
 ```
 
 Success: chat --check returns ready=true; execute hostname through chat and verify the new BCM host.
@@ -89,25 +134,26 @@ of the target vLLM image and pinned model files, plus source and checksums. Mode
 and Python source are independent of AMD64/ARM64; container images follow the target
 profile. Pulling and saving an image does not execute it.
 
-This example uses an **AMD64 preparation host, AMD64 BCM and ARM64 GB200 server**,
-so the target is gb200-tp4. It remains an unvalidated candidate requiring four GPUs
-visible to one OS; see [GB200 and Rubin](gb200-rubin.md). Substitute another complete
+This example uses an **AMD64 preparation host, AMD64 BCM and ARM64 GB300 server**,
+so the target is gb300-tp4, requiring four GB300/B300 GPUs visible to one OS and at least
+250000 MiB per GPU. The user confirmed hardware validation of this profile; GB300 TP2
+remains unvalidated. See the independent [validation scope](validation.md#b200gb300-four-gpu-hardware-status-confirmation-2026-11-17); B300 performance conclusions do not apply. Substitute another complete
 target profile as needed. The preparation host needs Python 3.10+, tar, sha256sum, Docker API
 1.49+ and access to GitHub, the registry and public Hugging Face models. It needs no
 GPU, NVIDIA driver, CDI, ARM emulation or QEMU.
 
-v1.4.0 includes prepare. Download the complete tagged source; the unpacked directory
+v1.4.1 includes prepare. Download the complete tagged source; the unpacked directory
 remains the installation root:
 
 ```bash
-local_ai_source=/tmp/local-ai-v1.4.0-source.tar.gz
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.4.0.tar.gz -o "$local_ai_source"
+local_ai_source=/tmp/local-ai-v1.4.1-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.4.1.tar.gz -o "$local_ai_source"
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
 tar -xzf "$local_ai_source" --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ./local-ai --version
 ./local-ai prepare --help
-./local-ai prepare --profile gb200-tp4
+./local-ai prepare --profile gb300-tp4
 ```
 
 Success: prepared=true, started=false; models/ contains complete weights and a revision
@@ -133,7 +179,7 @@ Do not substitute install --role server/both for cross-platform prepare.
 
 ```bash
 cd /raid/local-ai
-./local-ai export --profile gb200-tp4
+./local-ai export --profile gb300-tp4
 mkdir -p /media/local-ai/both
 cp dist/local-ai.tar dist/local-ai.tar.sha256 /media/local-ai/both/
 ```
@@ -144,8 +190,8 @@ Prepare multiple target platforms together; complete models with the same repo/r
 are reused. prepare does not write host installation settings, so export lists profiles explicitly:
 
 ```bash
-./local-ai prepare --profile b300-tp4 --profile gb200-tp4
-./local-ai export --profile b300-tp4 --profile gb200-tp4 --output dist/local-ai-multi.tar
+./local-ai prepare --profile b300-tp4 --profile gb300-tp4
+./local-ai export --profile b300-tp4 --profile gb300-tp4 --output dist/local-ai-multi.tar
 ```
 
 Use separate resource directories when one model_directory maps to different repo/revisions.
@@ -158,7 +204,7 @@ sha256sum -c local-ai.tar.sha256
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
 tar -xf local-ai.tar --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
-./local-ai install --role server --profile gb200-tp4 --offline
+./local-ai install --role server --profile gb300-tp4 --offline
 ./local-ai server inventory
 nvidia-ctk cdi list
 ./local-ai server start --host 0.0.0.0 --gpus 0,1,2,3 --name a --port 18000
@@ -176,8 +222,8 @@ sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
 tar -xf local-ai.tar --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ./local-ai install --role client --offline --endpoint http://GPU001:18000/v1
-./local-ai chat --check
-./local-ai chat
+npm_config_offline=true ./local-ai chat --check
+npm_config_offline=true ./local-ai chat
 ```
 
 Success: chat --check returns ready=true; execute hostname through chat to confirm tool location.
@@ -199,7 +245,7 @@ Preserve custom source edits first. Obtain the complete program from GitHub and 
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.4.0.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.4.1.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ./local-ai --version
@@ -232,7 +278,7 @@ Compilation caches and warmup records are excluded with instance state. After ta
 
 Source containing the benchmark feature can run the [local performance benchmark](commands.md#local-performance-benchmark)
 against a ready instance on the offline target GPU without internet or extra dependencies. Benchmark JSON files are excluded
-with instance state; measure again on the target. v1.4.0 includes this command.
+with instance state; measure again on the target. v1.4.1 includes this command.
 
 ## Optional document converters
 
@@ -241,5 +287,13 @@ Portable source includes the document MCP tool when exported from a version cont
 ## Logs and failures
 
 Installation/export: INSTALL_ROOT/install.log. Startup: instances/a/server.log. READY requires a health check, not merely a running container. Clients print their private session Log path. Offline missing-file/checksum errors stop without download fallback. Resolve CDI, network, architecture or resource errors before continuing.
+
+If the server is READY and `chat --check` returns ready=true but OpenCode keeps waiting at startup, first check that `printenv npm_config_offline` outputs `true`, or prefix the launch command with `npm_config_offline=true`. `--check` verifies the model connection, not native client startup. Run a complete chat smoke test from /raid/local-ai on BCM:
+
+```bash
+npm_config_offline=true ./local-ai chat --run 'Reply with exactly LOCAL_AI_OK. Do not use any tools.' --run-timeout 40 --heartbeat 10
+```
+
+Success: an actual `LOCAL_AI_OK` response and exit code 0. The user reported completion in about nine seconds in an air-gapped environment; this single chat check does not establish that every dependency is available. If dependencies are still missing, prepare dependencies matching the client online and export again; the flag cannot supply missing files. For ongoing use, configure [persistent npm offline mode](#persistent-npm-offline-mode) to avoid typing the prefix each time.
 
 See [deployment](deployment.md), [commands](commands.md) and [validation](validation.md).

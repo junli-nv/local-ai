@@ -241,7 +241,7 @@
         "GB300",
         "B300"
       ],
-      "validation": "experimental-no-local-hardware",
+      "validation": "hardware-validated-user-confirmed",
       "platform_digest": "sha256:b1bea6490db94268e68577929ae4b800a662b91a3cd4a1fcba81cfb3946ddcff",
       "model": "deepseek-v4.1-flash"
     },

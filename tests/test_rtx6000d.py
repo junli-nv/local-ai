@@ -14,6 +14,11 @@ class RTX6000DTests(unittest.TestCase):
     def test_original_catalog_is_unchanged(self):
         value = copy.deepcopy(catalog())
         value.pop("model", None)
+        # v1.4.1 changes only user-confirmed validation metadata for this baseline recipe.
+        self.assertEqual(
+            value["profiles"]["gb300-tp4"]["validation"], "hardware-validated-user-confirmed"
+        )
+        value["profiles"]["gb300-tp4"]["validation"] = "experimental-no-local-hardware"
         # New platform recipes have separate tests; preserve the original baseline hash.
         value["profiles"].pop("gb200-tp4")
         value["profiles"].pop("rubin-tp2-framework")

@@ -1,6 +1,6 @@
 # local-ai
 
-v1.4.0 adds private request diagnostics, task status/deadlines, compaction handoffs and workflow acceptance, plus local benchmarks and instruction templates. See [usage](docs/en/commands.md#task-diagnostics-and-workflow-acceptance-v140) and [release notes](docs/en/release-1.4.0.md).
+v1.4.1 clarifies air-gapped client startup, system-wide offline settings and Docker package preparation, and updates B200/GB300 four-GPU hardware validation status. It includes the v1.4.0 client diagnostics and workflow features; see [release notes](docs/en/release-1.4.1.md) for this update and its limits.
 
 [中文（默认）](README.md)
 
@@ -31,7 +31,7 @@ The managed server currently uses the NVIDIA toolchain. See the profile table be
 
 ## Installation and usage
 
-The current version is v1.4.0. Examples download complete source from this tag; ./local-ai --version should report 1.4.0. See [validation](docs/en/validation.md) for acceptance scope and unvalidated platforms.
+The current version is v1.4.1. Examples download complete source from this tag; ./local-ai --version should report 1.4.1. See [validation](docs/en/validation.md) for acceptance scope and unvalidated platforms.
 
 ## Example conventions and documentation
 
@@ -73,15 +73,15 @@ BCM: Linux AMD64/ARM64, Python 3.10+, Bash, curl, tar, Git, rg, util-linux scrip
 |---|---|---|---|---|
 | b300-tp4 | AMD64 / linux/amd64 | 4 B300 | GPU | Hardware validated |
 | b300-tp4-dspark | AMD64 / linux/amd64 | 4 B300 | GPU | Optional single-user recipe; see validation |
-| b200-tp4-cpu | AMD64 / linux/amd64 | 4 B200 | CPU | Four-GPU API smoke passed; see validation |
-| b200-tp4 | AMD64 / linux/amd64 | 4 B200 | GPU | Four-GPU API smoke passed; see validation |
+| b200-tp4-cpu | AMD64 / linux/amd64 | 4 B200 | CPU | Hardware validated; see validation |
+| b200-tp4 | AMD64 / linux/amd64 | 4 B200 | GPU | Hardware validated; see validation |
 | rtx6000d-tp8 | AMD64 / linux/amd64 | 8 RTX 6000D | CPU | Experimental: eight-GPU API smoke and native-client tool round trip passed |
-| gb300-tp4 | ARM64 / linux/arm64 | 4 GB300/B300 | GPU | Not hardware validated |
+| gb300-tp4 | ARM64 / linux/arm64 | 4 GB300/B300 | GPU | Hardware validated, user confirmed |
 | gb200-tp4 | ARM64 / linux/arm64 | 4 GB200/B200 | GPU | Experimental candidate, no hardware validation |
 | rubin-tp2-framework | ARM64 / linux/arm64 | 2 Rubin/VR200 (planned) | CPU (planned) | Planning-only framework, deployment blocked |
 | gb300-tp2 | ARM64 / linux/arm64 | 2 GB300/B300 | CPU | Upstream recipe, unvalidated |
 
-See [B200 deployment](docs/en/deployment.md#b200-four-gpu-experimental) for CPU/GPU Engram comparison. Both have separate bounded acceptance and do not inherit B300 performance results. v1.3.2 includes both B200 recipes; confirm them with ./local-ai profiles.
+See [B200 deployment](docs/en/deployment.md#b200-four-gpu-hardware-validated) for CPU/GPU Engram comparison. Both are hardware validated with separately recorded coverage and do not inherit B300 performance results. v1.3.2 includes both B200 recipes; confirm them with ./local-ai profiles.
 
 Starting with v1.3.2, the independent `rtx6000d-tp8` profile requires at least 85000 MiB per GPU and 256 GiB available host RAM. It uses a separately pinned SM120 image, 32K context, one sequence and text input, without DSpark or CUDA graphs. See [RTX 6000D deployment](docs/en/rtx6000d.md) for installation, eight-GPU startup and BCM commands. Explicitly select served model `DeepSeek-V4.1-Flash-SM120` on the client. Full 32K boundaries, concurrency and sustained stability remain unvalidated. The main workflow below continues to use four B300 GPUs; follow the dedicated guide for RTX 6000D.
 
@@ -99,7 +99,7 @@ Download into an empty directory and check Docker, GPUs and CDI:
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.4.0.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.4.1.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ./local-ai --version
@@ -190,7 +190,7 @@ Log in as alice on bcm-headnode and use BCM's own empty directory:
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.4.0.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.4.1.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ```
@@ -291,6 +291,8 @@ Use the [program update guide](docs/en/update.md) to update GPU and BCM installa
 Online preparation can use any CPU architecture: prepare --profile selects target images and pinned models without executing the target image. See the [mixed-architecture procedure](docs/en/offline.md#scenario-2-download-on-an-online-preparation-host). This functionality is included in the current release.
 
 This is a separate migration scenario. Export server images/models on the **source GPU host**, then verify/extract and run install --offline on the **new GPU host**. A BCM export normally carries client assets and cannot replace the GPU server bundle.
+
+For air-gapped chat, use `npm_config_offline=true ./local-ai chat` to avoid waiting on the external npm registry during OpenCode initialization. Alternatively, follow [persistent setup](docs/en/offline.md#persistent-npm-offline-mode) using `/etc/profile.d/local-ai.sh` on a dedicated air-gapped node (or a personal `~/.profile`). The npm offline setting is for offline/air-gapped use only; PATH and Bash completion work online too. `install --offline` does not persist this environment variable.
 
 Complete commands are maintained only in the [offline guide](docs/en/offline.md). Choose a route:
 

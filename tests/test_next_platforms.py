@@ -25,6 +25,11 @@ class NextPlatformTests(unittest.TestCase):
     def test_v133_catalog_entries_remain_identical(self):
         original = copy.deepcopy(catalog())
         original.pop("model", None)
+        # v1.4.1 changes only user-confirmed validation metadata for this baseline recipe.
+        self.assertEqual(
+            original["profiles"]["gb300-tp4"]["validation"], "hardware-validated-user-confirmed"
+        )
+        original["profiles"]["gb300-tp4"]["validation"] = "experimental-no-local-hardware"
         for name in ("gb200-tp4", "rubin-tp2-framework"):
             original["profiles"].pop(name)
         digest = hashlib.sha256(json.dumps(original, sort_keys=True).encode()).hexdigest()

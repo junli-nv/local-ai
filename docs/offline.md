@@ -1,10 +1,10 @@
 # 导出、转移与离线安装
 
-严格离线首次启动可使用 `npm_config_offline=true ./local-ai chat --endpoint http://GPU001:18000/v1`，避免原生依赖初始化访问 registry；本地 observer 仅使用原生运行时内置模块。离线标志下的工具、恢复与压缩验收已通过。
+在 airgap 环境中，启动聊天时使用 `npm_config_offline=true ./local-ai chat`；尚未保存默认地址时加 `--endpoint http://GPU001:18000/v1`。`install --offline` 只控制安装阶段，不会为后续 OpenCode 启动持久设置 npm 离线模式。该环境变量避免原生依赖初始化等待外部 npm registry；模型 API 仍通过内网访问。不想每次输入前缀时，按下方[持久设置 npm 离线模式](#持久设置-npm-离线模式)配置一次。本地 observer 仅使用原生运行时内置模块；离线标志下的工具、恢复与压缩验收已通过。
 
-v1.4.0 的 observer.mjs 随 src/ 导出；原生依赖运行缓存、诊断和工作流结果不属于公共离线材料。
+v1.4.1 的 observer.mjs 随 src/ 导出；原生依赖运行缓存、诊断和工作流结果不属于公共离线材料。
 
-v1.4.0 的完整导出包含 templates/ 参考模板，不携带个人 AGENTS.md。用户规则另行安全迁移，并按 [持久工作指令配置](../templates/opencode/agent-instructions.md) 合并；不自动应用模板。
+v1.4.1 的完整导出包含 templates/ 参考模板，不携带个人 AGENTS.md。用户规则另行安全迁移，并按 [持久工作指令配置](../templates/opencode/agent-instructions.md) 合并；不自动应用模板。
 
 本页统一维护完整迁移流程，与常规在线部署分开。场景一在旧 GPU 节点导出镜像和模型、在旧 BCM 导出客户端，再分别到目标端导入；场景二由联网准备机备齐两端材料。离线导入指校验、解压后执行 install --offline，没有另一个顶层 import 命令。
 
@@ -16,7 +16,52 @@ v1.4.0 的完整导出包含 templates/ 参考模板，不携带个人 AGENTS.md
 
 包内含顶层 local-ai/ 和 bundle.json 校验清单。排除 dist/、实例状态、日志、临时缓存、Git 元数据、个人历史和凭据。Docker 活动数据库及驱动由宿主机管理。
 
-下面两条路线各自完整，选择一条从头执行。gpu-old/bcm-old 是原有来源主机；prep-host 只联网准备，不启动 GPU。新目标沿用 README 的 GPU001/bcm-headnode。源码下载固定 v1.4.0；开发测试使用 main 时另行记录确切提交。
+下面两条路线各自完整，选择一条从头执行。gpu-old/bcm-old 是原有来源主机；prep-host 只联网准备，不启动 GPU。新目标沿用 README 的 GPU001/bcm-headnode。源码下载固定 v1.4.1；开发测试使用 main 时另行记录确切提交。
+
+## 进入 airgap 环境前准备 Docker
+
+目标 GPU 节点即使已有 NVIDIA 驱动，也可能没有 Docker。local-ai 的导出包不包含 Docker Engine、containerd 或宿主机系统依赖；须在导入服务端镜像前单独准备并安装。BCM 只运行客户端时不需要 Docker。
+
+Ubuntu 可参考 Docker 官方的[通过软件包安装](https://docs.docker.com/engine/install/ubuntu/#install-from-a-package)：在联网环境按**目标节点的 Ubuntu 版本/代号及 CPU 架构**下载 `.deb`，随介质带入。B300 示例使用 `amd64`，GB300 示例使用 `arm64`，不能按准备机架构选包。准备配套版本的 `docker-ce`、`docker-ce-cli`、`containerd.io`；官方完整安装流程另列 `docker-buildx-plugin` 和 `docker-compose-plugin`。同时备齐目标系统尚缺的依赖包，或提供可访问的内网 APT 镜像；只复制软件源配置不能让断网节点访问外部仓库。
+
+目标 GPU 节点安装后启动 Docker，以运行 local-ai 的账户执行 `docker version` 和 `docker info`，确认能连接守护进程，且 **Server API 至少为 1.49**。版本要求及软件包冲突处理见[软件前提](prerequisites.md)。已有 GPU 驱动不代表 NVIDIA Container Toolkit/CDI 已配置，仍须按[CDI 配置](deployment.zh-CN.md#cdi-配置)核实；缺少的系统包同样提前备齐。官方步骤中的 `docker run hello-world` 会尝试下载本地没有的测试镜像；严格离线时须预先携带该镜像，不能将外网下载失败当作 Docker 安装失败。
+
+## 持久设置 npm 离线模式
+
+`npm_config_offline=true` **仅用于 offline/airgap 环境**，让 OpenCode 初始化依赖时不等待外部 npm 仓库；在线环境不要设置这一行。`PATH` 和 Bash 补全设置在线、离线均可使用。此变量不是 `opencode.json` 的配置字段，`install --offline` 也不会自动持久设置它。
+
+对于所有用户共用 `/raid/local-ai` 的专用 airgap 客户端节点，建议由管理员统一配置 `/etc/profile.d/local-ai.sh`。在**实际运行聊天的节点**设置：本例为 bcm-headnode；若直接在 GPU 节点聊天，则配置该 GPU 节点。管理员创建或编辑此文件，保留已有需要的内容，加入：
+
+```bash
+# 仅 offline/airgap 环境设置；在线环境删除此行。
+export npm_config_offline=true
+
+# 以下 PATH 与 Bash 补全设置在线、离线均可使用。
+export PATH="/raid/local-ai:$PATH"
+
+# /etc/profile.d/ 也可能被其他 shell 读取，仅在交互式 Bash 中加载补全。
+if [ -n "${BASH_VERSION:-}" ]; then
+    if [[ $- == *i* ]] && command -v local-ai >/dev/null 2>&1; then
+        eval "$(local-ai completion bash)"
+    fi
+fi
+```
+
+文件由 root 管理，所有用户可读（通常权限为 0644，无需可执行）；按实际安装目录调整 PATH。此系统级设置作用于该节点所有加载它的用户，npm 离线设置也会影响继承此变量的其他 npm 操作。
+
+Ubuntu 的 `/etc/profile` 通常会加载 `/etc/profile.d/*.sh`，因此重新登录 Bash 后生效。当前已打开的 Bash 终端，以**运行聊天的用户**（本例 alice）执行：
+
+```bash
+source /etc/profile.d/local-ai.sh
+printenv npm_config_offline
+command -v local-ai
+```
+
+在 offline/airgap 环境中应分别输出 `true` 和 `/raid/local-ai/local-ai`。之后从任意任务目录直接执行 `local-ai chat`；恢复会话执行 `opencode -s ID`，将 ID 换成退出时显示的实际标识。尚未保存 endpoint 时，仍须在 chat 后加 `--endpoint http://GPU001:18000/v1`。
+
+非登录 Bash 不会自动读取 `/etc/profile`，应从已加载设置的父进程继承环境，或在该终端手动 source 上述文件。交互式非登录 Bash 如需自动加载补全，可在个人 `~/.bashrc` 中按需 source 该文件。
+
+仅为个人配置、没有管理员权限或不希望影响全体用户时，可在聊天用户的 `~/.profile` 中添加 `export npm_config_offline=true`（仍仅限 offline/airgap 环境），再执行 `source ~/.profile`。Bash 登录时优先读取 `~/.bash_profile`、`~/.bash_login`、`~/.profile` 中第一个存在的文件；若前两者存在，须确保它会加载 `~/.profile`。这些设置不自动迁移到其他节点或账号。将节点改回在线用途时，移除相应启动文件中的 npm 离线设置，并在现有终端执行 `unset npm_config_offline`。
 
 ## 场景一：从已安装环境导出并迁移
 
@@ -74,8 +119,8 @@ sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
 tar -xf local-ai.tar --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ./local-ai install --role client --offline --endpoint http://GPU001:18000/v1
-./local-ai chat --check
-./local-ai chat
+npm_config_offline=true ./local-ai chat --check
+npm_config_offline=true ./local-ai chat
 ```
 
 成功标志：chat --check 返回 ready=true；聊天中实际执行 hostname，应返回新 BCM 主机名。
@@ -88,23 +133,24 @@ cd /raid/local-ai
 镜像、固定 revision 的模型文件，以及源码和校验清单；模型与 Python 源码不区分
 AMD64/ARM64，镜像必须按目标 profile 选择。下载和保存镜像不执行镜像。
 
-本节改用 **AMD64 准备机、AMD64 BCM、ARM64 GB200 服务端**，因此目标配方为
-gb200-tp4；它仍是未实机验收的候选，要求同一 OS 可见四张卡，见
-[GB200 与 Rubin](gb200-rubin.md)。其他平台用自己的完整配方替换，不以准备机架构选配方。
+本节改用 **AMD64 准备机、AMD64 BCM、ARM64 GB300 服务端**，因此目标配方为
+gb300-tp4，要求同一 OS 可见四张 GB300/B300，每卡至少 250000 MiB 显存。
+该配方已由用户确认实体机验证通过；GB300 TP2 仍未验证。具体[验证范围](validation.md#b200gb300-四卡实机状态确认2026-11-17)独立记录，不套用 B300 性能结论。
+其他平台用自己的完整配方替换，不以准备机架构选配方。
 准备机需 Python 3.10+、tar、sha256sum、Docker API 1.49+，可访问 GitHub、镜像仓库和公开的
 Hugging Face 模型；准备阶段无需 GPU、驱动、CDI、ARM 仿真或 QEMU。
 
-v1.4.0 已包含 prepare。下载固定标签的完整源码；解压目录仍是安装根：
+v1.4.1 已包含 prepare。下载固定标签的完整源码；解压目录仍是安装根：
 
 ```bash
-local_ai_source=/tmp/local-ai-v1.4.0-source.tar.gz
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.4.0.tar.gz -o "$local_ai_source"
+local_ai_source=/tmp/local-ai-v1.4.1-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.4.1.tar.gz -o "$local_ai_source"
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
 tar -xzf "$local_ai_source" --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ./local-ai --version
 ./local-ai prepare --help
-./local-ai prepare --profile gb200-tp4
+./local-ai prepare --profile gb300-tp4
 ```
 
 成功标志：prepared=true、started=false；models/ 中有完整模型和 revision 锁，
@@ -127,7 +173,7 @@ cd /raid/local-ai
 
 ```bash
 cd /raid/local-ai
-./local-ai export --profile gb200-tp4
+./local-ai export --profile gb300-tp4
 mkdir -p /media/local-ai/both
 cp dist/local-ai.tar dist/local-ai.tar.sha256 /media/local-ai/both/
 ```
@@ -138,8 +184,8 @@ cp dist/local-ai.tar dist/local-ai.tar.sha256 /media/local-ai/both/
 prepare 不写本机安装记录，因此 export 也须显式列出配方：
 
 ```bash
-./local-ai prepare --profile b300-tp4 --profile gb200-tp4
-./local-ai export --profile b300-tp4 --profile gb200-tp4 --output dist/local-ai-multi.tar
+./local-ai prepare --profile b300-tp4 --profile gb300-tp4
+./local-ai export --profile b300-tp4 --profile gb300-tp4 --output dist/local-ai-multi.tar
 ```
 
 同一 model_directory 对应不同 repo/revision 时应分开准备目录，不能混装。
@@ -152,7 +198,7 @@ sha256sum -c local-ai.tar.sha256
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
 tar -xf local-ai.tar --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
-./local-ai install --role server --profile gb200-tp4 --offline
+./local-ai install --role server --profile gb300-tp4 --offline
 ./local-ai server inventory
 nvidia-ctk cdi list
 ./local-ai server start --host 0.0.0.0 --gpus 0,1,2,3 --name a --port 18000
@@ -170,8 +216,8 @@ sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
 tar -xf local-ai.tar --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ./local-ai install --role client --offline --endpoint http://GPU001:18000/v1
-./local-ai chat --check
-./local-ai chat
+npm_config_offline=true ./local-ai chat --check
+npm_config_offline=true ./local-ai chat
 ```
 
 成功标志：chat --check 返回 ready=true；聊天中实际执行 hostname 验证工具运行位置。
@@ -193,7 +239,7 @@ cd /raid/ai-prod
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.4.0.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.4.1.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ./local-ai --version
@@ -225,7 +271,7 @@ GPU 启动前若缺少 UUID 别名，先完成[CDI 配置](deployment.zh-CN.md#c
 编译缓存和预热记录随实例状态一并排除。目标机安装、API 启动后按需执行[显式预热](deployment.zh-CN.md#单用户-dspark-与显式预热)；联网准备阶段不运行推理。
 
 包含 benchmark 功能的源码可在离线目标 GPU 上按[本机性能测试](commands.md#本机性能测试)测量已启动实例，
-无需联网或额外依赖。benchmark JSON 与其他实例状态一样不随导出迁移，目标机需重新测量。v1.4.0 已包含此命令。
+无需联网或额外依赖。benchmark JSON 与其他实例状态一样不随导出迁移，目标机需重新测量。v1.4.1 已包含此命令。
 
 ## 可选文档转换依赖
 
@@ -234,6 +280,14 @@ GPU 启动前若缺少 UUID 别名，先完成[CDI 配置](deployment.zh-CN.md#c
 ## 日志与失败处理
 
 安装/导出看安装根目录的 install.log；启动看 instances/a/server.log。READY 由健康检查确认，容器存在不代表就绪。客户端输出私有会话 Log 路径。离线缺文件或校验失败会停止，不自动联网补下载。解决 CDI、网络、架构或资源错误后再继续。
+
+若服务端已 READY、`chat --check` 返回 ready=true，但 OpenCode 启动一直等待，先用 `printenv npm_config_offline` 确认输出为 `true`，或在启动命令前加 `npm_config_offline=true`。`--check` 只检查模型连接，不能证明原生客户端已正常启动。可在 BCM 的 /raid/local-ai 下执行完整聊天冒烟：
+
+```bash
+npm_config_offline=true ./local-ai chat --run 'Reply with exactly LOCAL_AI_OK. Do not use any tools.' --run-timeout 40 --heartbeat 10
+```
+
+成功标志：实际返回 `LOCAL_AI_OK` 且退出码为 0。用户反馈该方式在 airgap 环境约 9 秒完成；这是单次聊天验证，不代表所有依赖都已齐备。若仍提示缺少依赖，需在联网环境准备匹配客户端的依赖后重新导出，离线标志不会补齐缺失文件。长期使用按[持久设置 npm 离线模式](#持久设置-npm-离线模式)配置，避免每次手动输入前缀。
 
 详见[部署指南](deployment.zh-CN.md)、[命令手册](commands.md)和[验证记录](validation.md)。
 
