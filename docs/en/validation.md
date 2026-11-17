@@ -1,5 +1,9 @@
 # Validation record
 
+## v1.4.0 documentation correction and release withdrawal: 2026-11-17
+
+The initial v1.4.0 release used commit 83b9366a55984e0d9e1676802deb3bb7d8f418cd. Correct bilingual offline downloads, document-upgrade guidance, release status and historical wording; add a version-reference contract and a developer release checklist. The user subsequently requested removing the GitHub Release and download assets, then committing and pushing the corrections only. Preserve the original tag and commit history without retagging or repacking. Runtime implementation and version remain unchanged. The original v1.4.0 tag archive does not contain these documentation corrections; use a source commit containing this change.
+
 Additional release checks: 238 CPU cases, native reasoning/Ctrl+T, native observer under the offline flag, plugin inclusion in the wheel and v1.3.7 source upgrade/rollback passed. Model/client/instance sentinel contents and inodes, endpoint settings and permissions were preserved. One local mock startup measured about 5.7 seconds with reused dependencies versus 5.1 without the plugin and 12.6 for unseeded plugin initialization; this is not GPU or task-speed acceptance.
 
 ## v1.4.0 client acceptance: 2026-11-17
@@ -37,7 +41,7 @@ Conclusion: low-priority backlog, with no clear KV capacity bottleneck. No offlo
 
 ## Persistent instruction templates and loading: 2026-11-17
 
-Development source adds Chinese/English general and BCM references with colocated setup instructions.
+This pre-v1.4.0 check covered Chinese/English general and BCM references with colocated setup instructions.
 Both follow the question language unless explicitly overridden. Templates are opt-in and never replace personal files.
 Personal AGENTS.md is now explicitly referenced using the pre-isolation XDG_CONFIG_HOME or ~/.config,
 while model/session configuration stays isolated. Regressions cover default/custom paths including spaces,
@@ -68,7 +72,7 @@ compute-node image tree was scanned.
 
 ## Local benchmark tool logic: 2026-11-16
 
-Current development source adds `server benchmark --name a`, without changing the program version or existing v1.3.7 tag.
+This preserves the 2026-11-16 pre-release check: development source then added `server benchmark --name a` without changing the then-current version or v1.3.7 tag. It is now released in v1.4.0.
 No model is deployed locally. Validation used macOS ARM64, Python 3.14 and a temporary stdlib HTTP server only.
 No real GPU service was started or contacted; no model performance numbers or expanded hardware support are claimed.
 
@@ -87,7 +91,7 @@ checks and bilingual documentation command/option coverage, CLI examples, Bash s
 Linux CI and native OpenCode acceptance were not run; this feature does not change the client.
 
 Reviewed Chinese/English README, commands, deployment, offline, architecture, development, performance, update and historical validation limits.
-The new command is explicitly development-source-only; old tagged downloads remain v1.3.7. Corrected the English offline guide's outdated
+At that historical check the command was development-source-only and old tagged downloads were v1.3.7. Corrected the English offline guide's outdated
 version statement to match its actual download commands. Reports remain in ignored instance directories and are excluded from export.
 GPU acceptance must separately check API compatibility, actual token counts, warmup/summaries and cancellation on an allocated ready instance,
 with default single concurrency and explicit concurrency. Record model/revision, image, hardware and other load. Synthetic request rates,
@@ -100,7 +104,7 @@ user logs are intentionally omitted from this public record.
 
 The 2026-10-31 integration records below describe the previous client. Tunnel entries are historical; the current client uses API endpoints without built-in forwarding or a separate environment-doctor command. New local HTTP regressions cover direct connections, model checks, retry and no SSH subprocess. They do not constitute new GPU acceptance.
 
-Version labels 1.0.0/1.1.0 below identify historical candidate checks whose tags were withdrawn. The current version is v1.3.7; each acceptance record retains its original date, method and limits. Tagging does not expand support.
+Version labels 1.0.0/1.1.0 below identify historical candidate checks whose tags were withdrawn. The program version at that historical check was v1.3.7; templates and instruction forwarding are now released in v1.4.0; each acceptance record retains its original date, method and limits. Tagging does not expand support.
 
 ## GB200 candidate and Rubin framework: 2026-11-09
 

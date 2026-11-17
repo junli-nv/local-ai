@@ -4,7 +4,7 @@
 
 v1.4.0 的 observer.mjs 随 src/ 导出；原生依赖运行缓存、诊断和工作流结果不属于公共离线材料。
 
-当前开发源码的完整导出包含 templates/ 参考模板，不携带个人 AGENTS.md。用户规则另行安全迁移，并按 [持久工作指令配置](../templates/opencode/agent-instructions.md) 合并；不自动应用模板。
+v1.4.0 的完整导出包含 templates/ 参考模板，不携带个人 AGENTS.md。用户规则另行安全迁移，并按 [持久工作指令配置](../templates/opencode/agent-instructions.md) 合并；不自动应用模板。
 
 本页统一维护完整迁移流程，与常规在线部署分开。场景一在旧 GPU 节点导出镜像和模型、在旧 BCM 导出客户端，再分别到目标端导入；场景二由联网准备机备齐两端材料。离线导入指校验、解压后执行 install --offline，没有另一个顶层 import 命令。
 
@@ -16,7 +16,7 @@ v1.4.0 的 observer.mjs 随 src/ 导出；原生依赖运行缓存、诊断和�
 
 包内含顶层 local-ai/ 和 bundle.json 校验清单。排除 dist/、实例状态、日志、临时缓存、Git 元数据、个人历史和凭据。Docker 活动数据库及驱动由宿主机管理。
 
-下面两条路线各自完整，选择一条从头执行。gpu-old/bcm-old 是原有来源主机；prep-host 只联网准备，不启动 GPU。新目标沿用 README 的 GPU001/bcm-headnode。源码下载固定 v1.3.4；开发测试使用 main 时另行记录确切提交。
+下面两条路线各自完整，选择一条从头执行。gpu-old/bcm-old 是原有来源主机；prep-host 只联网准备，不启动 GPU。新目标沿用 README 的 GPU001/bcm-headnode。源码下载固定 v1.4.0；开发测试使用 main 时另行记录确切提交。
 
 ## 场景一：从已安装环境导出并迁移
 
@@ -94,11 +94,11 @@ gb200-tp4；它仍是未实机验收的候选，要求同一 OS 可见四张卡�
 准备机需 Python 3.10+、tar、sha256sum、Docker API 1.49+，可访问 GitHub、镜像仓库和公开的
 Hugging Face 模型；准备阶段无需 GPU、驱动、CDI、ARM 仿真或 QEMU。
 
-v1.3.7 已包含 prepare。下载固定标签的完整源码；解压目录仍是安装根：
+v1.4.0 已包含 prepare。下载固定标签的完整源码；解压目录仍是安装根：
 
 ```bash
-local_ai_source=/tmp/local-ai-v1.3.7-source.tar.gz
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.3.7.tar.gz -o "$local_ai_source"
+local_ai_source=/tmp/local-ai-v1.4.0-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.4.0.tar.gz -o "$local_ai_source"
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
 tar -xzf "$local_ai_source" --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
@@ -193,7 +193,7 @@ cd /raid/ai-prod
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.3.7.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.4.0.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ./local-ai --version
@@ -214,7 +214,7 @@ cd /raid/local-ai
 
 ## 导入后的配置与检查
 
-v1.3.4 可携带 GB200/Rubin 配方定义与模拟清单；完整资源 export 不能选择
+当前版本可携带 GB200/Rubin 配方定义与模拟清单；完整资源 export 不能选择
 rubin-tp2-framework，因为镜像和显存门槛尚未核实。来源机未准备好的资源不会因导出
 而变为可用，验收与候选镜像边界见[GB200 与 Rubin](gb200-rubin.md)。
 
@@ -225,7 +225,7 @@ GPU 启动前若缺少 UUID 别名，先完成[CDI 配置](deployment.zh-CN.md#c
 编译缓存和预热记录随实例状态一并排除。目标机安装、API 启动后按需执行[显式预热](deployment.zh-CN.md#单用户-dspark-与显式预热)；联网准备阶段不运行推理。
 
 包含 benchmark 功能的源码可在离线目标 GPU 上按[本机性能测试](commands.md#本机性能测试)测量已启动实例，
-无需联网或额外依赖。benchmark JSON 与其他实例状态一样不随导出迁移，目标机需重新测量；v1.3.7 发布包不含此命令。
+无需联网或额外依赖。benchmark JSON 与其他实例状态一样不随导出迁移，目标机需重新测量。v1.4.0 已包含此命令。
 
 ## 可选文档转换依赖
 

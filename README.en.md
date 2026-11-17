@@ -288,7 +288,7 @@ Use the [program update guide](docs/en/update.md) to update GPU and BCM installa
 
 ## Export and offline installation
 
-Online preparation can use any CPU architecture: prepare --profile selects target images and pinned models without executing the target image. See the [mixed-architecture procedure](docs/en/offline.md#scenario-2-download-on-an-online-preparation-host). This functionality is included in v1.3.7.
+Online preparation can use any CPU architecture: prepare --profile selects target images and pinned models without executing the target image. See the [mixed-architecture procedure](docs/en/offline.md#scenario-2-download-on-an-online-preparation-host). This functionality is included in the current release.
 
 This is a separate migration scenario. Export server images/models on the **source GPU host**, then verify/extract and run install --offline on the **new GPU host**. A BCM export normally carries client assets and cannot replace the GPU server bundle.
 

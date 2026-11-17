@@ -17,7 +17,7 @@ Earlier work changed TP8/eager/CPU Engram into a combined GPU Engram/CUDA Graph 
 
 ## Built-in lightweight benchmark metrics
 
-Current development source provides `server benchmark --name a`; existing v1.3.7 release archives do not include it.
+v1.4.0 provides `server benchmark --name a`.
 It contacts the local API on the GPU server and measures fixed-length synthetic requests after a small same-shape warmup.
 See the [manual](commands.md#local-performance-benchmark) for operation, defaults and JSON fields.
 First nonempty text chunks approximate TTFT and output counts include special/reasoning tokens. Per-request rates use complete request time, not pure decode time.

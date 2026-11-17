@@ -4,7 +4,7 @@ For a strictly offline first launch use `npm_config_offline=true ./local-ai chat
 
 v1.4.0 exports observer.mjs with src/; native runtime dependency caches, diagnostics and workflow results are not public offline assets.
 
-Development-source complete exports carry templates/, not personal AGENTS.md. Transfer personal rules separately and securely; use [persistent instruction setup](../../templates/opencode/en/agent-instructions.md) to merge. Templates are not applied automatically.
+v1.4.0 complete exports carry templates/, not personal AGENTS.md. Transfer personal rules separately and securely; use [persistent instruction setup](../../templates/opencode/en/agent-instructions.md) to merge. Templates are not applied automatically.
 
 This guide is the single complete migration procedure, separate from normal online deployment. Scenario 1 exports images/models on the old GPU host and client assets on the old BCM host, then imports each on its target. Scenario 2 prepares both roles on an online host. Offline import means checksum verification, extraction and install --offline; there is no separate top-level import command.
 
@@ -16,7 +16,7 @@ Prerequisites: Python 3.10+, Bash, curl, tar, sha256sum (required for transfer v
 
 Archives contain top-level local-ai/ and bundle.json checksums. They exclude dist/, instance state, logs, temporary caches, Git metadata, private histories and credentials. Docker active databases and drivers remain host-managed.
 
-Both routes below are complete and independent; follow one route from start to finish. gpu-old/bcm-old are the existing source hosts; prep-host downloads assets without starting GPUs. New targets use GPU001/bcm-headnode as in README. Source downloads pin v1.3.7; record an exact commit when using main for development.
+Both routes below are complete and independent; follow one route from start to finish. gpu-old/bcm-old are the existing source hosts; prep-host downloads assets without starting GPUs. New targets use GPU001/bcm-headnode as in README. Source downloads pin v1.4.0; record an exact commit when using main for development.
 
 ## Scenario 1: export an installed environment
 
@@ -96,12 +96,12 @@ target profile as needed. The preparation host needs Python 3.10+, tar, sha256su
 1.49+ and access to GitHub, the registry and public Hugging Face models. It needs no
 GPU, NVIDIA driver, CDI, ARM emulation or QEMU.
 
-v1.3.7 includes prepare. Download the complete tagged source; the unpacked directory
+v1.4.0 includes prepare. Download the complete tagged source; the unpacked directory
 remains the installation root:
 
 ```bash
-local_ai_source=/tmp/local-ai-v1.3.7-source.tar.gz
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.3.7.tar.gz -o "$local_ai_source"
+local_ai_source=/tmp/local-ai-v1.4.0-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.4.0.tar.gz -o "$local_ai_source"
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
 tar -xzf "$local_ai_source" --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
@@ -199,7 +199,7 @@ Preserve custom source edits first. Obtain the complete program from GitHub and 
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.3.7.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.4.0.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ./local-ai --version
@@ -220,7 +220,7 @@ For legacy BCM client assets outside the installation, include the actual asset 
 
 ## Configuration after import
 
-v1.3.4 may carry GB200/Rubin definitions and synthetic fixtures. Complete resource
+The current version carries GB200/Rubin definitions and synthetic fixtures. Complete resource
 export cannot select rubin-tp2-framework because its image and memory guard are unresolved.
 Export does not make unprepared source resources usable. See [GB200 and Rubin](gb200-rubin.md).
 
@@ -232,7 +232,7 @@ Compilation caches and warmup records are excluded with instance state. After ta
 
 Source containing the benchmark feature can run the [local performance benchmark](commands.md#local-performance-benchmark)
 against a ready instance on the offline target GPU without internet or extra dependencies. Benchmark JSON files are excluded
-with instance state; measure again on the target. Existing v1.3.7 release archives do not include this command.
+with instance state; measure again on the target. v1.4.0 includes this command.
 
 ## Optional document converters
 

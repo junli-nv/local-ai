@@ -15,11 +15,11 @@ The personal file defaults to ~/.config/opencode/AGENTS.md; for root it is /root
 When XDG_CONFIG_HOME is set before local-ai starts, use $XDG_CONFIG_HOME/opencode/AGENTS.md.
 Changing the user/HOME through sudo changes the personal location; check the actual launch environment.
 
-Current development source resolves that personal path before isolating OpenCode's session configuration.
+v1.4.0 resolves that personal path before isolating OpenCode's session configuration.
 An existing personal file is explicitly appended to instructions after built-in operations.md.
 Other personal model/plugin/connection settings are not imported; personal rules are never rewritten.
 The native client still discovers project AGENTS.md. Instructions are combined: resolve conflicts explicitly
-rather than relying on order. Original v1.3.7 source lacks this loading bridge; check the commit, not only the version.
+rather than relying on order. Original v1.3.7 source lacks this loading bridge; use v1.4.0 or later, and record the commit for development branches.
 
 ## Configure or merge
 

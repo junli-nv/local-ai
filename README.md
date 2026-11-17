@@ -286,7 +286,7 @@ chat --endpoint 不改写 installation.json，也不要求重新安装。--check
 
 ## 导出与离线安装
 
-联网准备可在任意 CPU 架构上执行 prepare --profile 目标配方；主要准备目标平台镜像和固定 revision 模型，不执行目标镜像。混合架构步骤见[离线指南](docs/offline.md#场景二从联网环境下载并准备)。v1.3.7 已包含此能力。
+联网准备可在任意 CPU 架构上执行 prepare --profile 目标配方；主要准备目标平台镜像和固定 revision 模型，不执行目标镜像。混合架构步骤见[离线指南](docs/offline.md#场景二从联网环境下载并准备)。当前版本已包含此能力。
 
 这是独立的迁移场景：服务端镜像和模型在**源 GPU 节点**导出，在**新 GPU 节点**校验、解压并执行 install --offline。BCM 导出通常只有客户端材料，不能替代 GPU 服务端部署包。
 

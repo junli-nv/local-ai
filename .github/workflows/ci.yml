@@ -26,6 +26,10 @@ jobs:
       - run: ruff check src tests scripts
       - run: ruff format --check src tests scripts
       - run: git diff --check
+      - name: Check packaged documentation
+        run: |
+          git archive --format=tar --prefix=local-ai/ --output=/tmp/local-ai-source-docs.tar HEAD
+          python scripts/check_release_docs.py --archive /tmp/local-ai-source-docs.tar
 
   client-contract:
     runs-on: ubuntu-latest

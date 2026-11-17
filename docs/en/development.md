@@ -1,5 +1,13 @@
 # Development workflow
 
+## Required version and artifact checks for every release
+
+1. Confirm the target in src/local_ai/__init__.py and pyproject.toml. Review both languages of README, commands, deployment, offline, rich documents, architecture, development, performance, updates, templates and validation.
+2. Align current source URLs, --version arguments, archive filenames and prose; updating README alone is insufficient. Preserve dates/versions in historical acceptance, explicitly saying "at that time". Released features must not remain described as development-only.
+3. Run tests/test_doc_versions.py, scripts/check_release_docs.py --archive SOURCE_ARCHIVE and existing documentation contracts for CLI examples, Bash syntax, links, anchors and bilingual workflows, CI builds a source archive from HEAD and verifies its manuals; follow with manual review.
+4. After commit and successful CI, build source/wheel artifacts from that exact commit. Inspect packaged documentation and observer.mjs, not just the checkout. Verify tag targets, Release assets and SHA256SUMS; download assets and check hashes.
+5. Match installed documentation to the release commit. Only when the user explicitly requests revising an existing release, record old/new commits, revalidate and synchronize tag, source assets, checksums and notes. Retagging requires authorization and concurrency protection against the old tag object; never replace it silently.
+
 ## v1.4.0 client regression entry points
 
 Beyond unittest/Ruff, run scripts/check-client.py, check-reasoning.py, check-instructions.py and check-observer.py

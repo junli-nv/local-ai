@@ -1,6 +1,6 @@
 # 更新已有安装
 
-当前开发源码更新包含 templates/，它属于可替换程序文件；个人 AGENTS.md 位于用户配置目录，不被更新器覆盖。旧更新器没有 templates 白名单时，先从同一目标源码包取得新版 scripts/update.py。配置与人工合并见 [持久工作指令配置](../templates/opencode/agent-instructions.md)。
+v1.4.0 更新包含 templates/，它属于可替换程序文件；个人 AGENTS.md 位于用户配置目录，不被更新器覆盖。旧更新器没有 templates 白名单时，先从同一目标源码包取得新版 scripts/update.py。配置与人工合并见 [持久工作指令配置](../templates/opencode/agent-instructions.md)。
 
 本页适用于已经安装、只需更新 local-ai 程序的机器。首次安装见 [README](../README.md)，整套资源迁移见[离线指南](offline.md)。更新脚本只下载小型源码包，不执行 install、Docker、模型下载或 OpenCode 安装。
 
