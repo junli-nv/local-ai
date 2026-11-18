@@ -107,6 +107,10 @@ this section records design reasons.
 
 Decision on 2026-11-17: defer integration. See [exploration](performance.md#kv-cache-offloading-low-priority-backlog-2026-11-17) for review triggers and validation steps.
 
+### Low-priority backlog: faster tar offline imports
+
+On 2026-11-18, the user reported slow offline tar extraction and preferred retaining tar while improving import speed later, at low priority. The user clarified that expanding the outer archive into the target directory is the main delay. Prioritize that stage, measuring source reads, target writes and decompression CPU separately for uncompressed .tar and .tar.gz. Verification and Docker image load are comparison stages, excluded from extraction timing. Then consider reduced duplicate I/O or compatible improvements without skipping integrity/image-identity checks. Research SquashFS only as an option with explicit tooling, mount and read-only-layout costs; do not introduce third-party dependencies or change offline defaults. This records the request without modifying export/import code or benchmarking large resources.
+
 ### Working order for each request
 
 1. **Understand result and host.** Read this section, AGENTS, README, relevant

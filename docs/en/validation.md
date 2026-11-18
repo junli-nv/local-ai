@@ -10,6 +10,8 @@ Native Linux AMD64/OpenCode 1.19.5 measurements completed at 6020cdd after fixin
 
 Also clarify that Claude-derived changes are in commit 8855c7d's general templates: authorized continuity, Changes and verification, and outcome-first reporting. BCM templates are unchanged. These commits postdate the published v1.4.3 tag and are absent from its archive. Preserve the existing version/tag without repacking it.
 
+The user subsequently requested retaining tar and improving outer-archive extraction speed at low priority (the user clarified this is the main delay); recorded in the development backlog. Read-only review confirms bundle.py defaults to uncompressed tar with optional gzip, while offline workflows also verify archives/files and import images. No SquashFS format change, skipped verification or real-resource performance claim is introduced.
+
 ## Move prompt references into docs: 2026-11-18
 
 At the user's request, move both prompt-references.md files from templates/opencode/ to docs/ and docs/en/, updating setup/development entries and internal relative links. Preserve sources, pinned commits and adaptation mappings. Actual AGENTS templates and install/chat code are unchanged; reference documents are not loaded at runtime and trigger no network download. Synchronize remote main 8855c7d before editing.
