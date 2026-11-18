@@ -3,6 +3,7 @@ import io
 import json
 import socket
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -73,14 +74,28 @@ class ListenTests(unittest.TestCase):
             with self.subTest(host=host), self.assertRaisesRegex(ValueError, "Host must"):
                 self.value("/tmp/local-ai-listen", host)
 
-    def test_wildcard_check_detects_other_interface_port_conflict(self):
-        with socket.socket() as occupied:
-            occupied.bind(("127.0.0.2", 0))
-            occupied.listen()
-            port = occupied.getsockname()[1]
-            server.check_port("127.0.0.1", port)
-            with self.assertRaisesRegex(RuntimeError, "Cannot bind model API at 0.0.0.0"):
-                server.check_port("0.0.0.0", port)
+    def test_wildcard_check_detects_port_conflict(self):
+        cases = [("0.0.0.0", None)]
+        # Linux also rejects wildcard binds over a listener on another interface.
+        # macOS permits that bind with SO_REUSEADDR and has no default 127.0.0.2.
+        if sys.platform.startswith("linux"):
+            cases.append(("127.0.0.2", "127.0.0.1"))
+        for occupied_host, available_host in cases:
+            with self.subTest(host=occupied_host), socket.socket() as occupied:
+                occupied.bind((occupied_host, 0))
+                occupied.listen()
+                port = occupied.getsockname()[1]
+                if available_host:
+                    server.check_port(available_host, port)
+                with self.assertRaisesRegex(RuntimeError, "Cannot bind model API at 0.0.0.0"):
+                    server.check_port("0.0.0.0", port)
+
+    def test_port_check_binds_the_selected_interface(self):
+        for host in ["127.0.0.1", "0.0.0.0", "192.0.2.10"]:
+            with self.subTest(host=host), patch("local_ai.server.socket.socket") as factory:
+                sock = factory.return_value.__enter__.return_value
+                server.check_port(host, 18000)
+                sock.bind.assert_called_once_with((host, 18000))
 
     def test_stopped_http_listener_time_wait_does_not_block_restart(self):
         with socket.socket() as listener:

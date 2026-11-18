@@ -307,6 +307,7 @@ See [local performance benchmark](commands.md#local-performance-benchmark) for m
 - Keep inventory-based plan generation deterministic and free of subprocesses/writes.
 - Test rejected states and cleanup, not just a happy-path command.
 - Require image config/layer identity after import; a tag alone is insufficient.
+- CPU fixtures explicitly simulate the target recipe architecture. Port tests respect OS binding semantics: verify real conflicts across platforms and retain cross-interface conflict coverage on Linux.
 - Test two sessions keep stable history but separate endpoint connection configs.
 - Verify execution location with hostname, not merely a successful model reply.
 - Keep raw logs and customer infrastructure identifiers under ignored runtime

@@ -1,5 +1,11 @@
 # Validation record
 
+## Portable local test fixtures: 2026-11-18
+
+Synchronized remote main bcc35e4 and latest tag v1.4.4 before editing, then reproduced both existing failures. Port tests no longer require a configured 127.0.0.2 on macOS. Actual checks also showed macOS permits overlapping specific/wildcard binds with SO_REUSEADDR. All platforms now verify a real wildcard listener conflict; Linux retains the original cross-interface scenario. Add a check that the selected address reaches bind. The offline server migration test explicitly simulates its AMD64 fixture architecture, retaining assertions for renamed import paths, no downloads and no GPU startup. Production port checks and architecture validation are unchanged.
+
+Local macOS ARM64/Python 3.14 ran all 289 unittest cases: 288 passed, only the optional FFmpeg test skipped, and no errors or failures. Ruff lint/format, documentation versions and patch checks are separate delivery checks; CI after push verifies Linux branches. Manually reviewed bilingual development guidance and validation records. README, commands, defaults and installation/update/offline behavior are unchanged; no version or tag changes.
+
 ## v1.4.4 tag preparation: 2026-11-18
 
 The user explicitly requested a new tag and push. Synchronized remote main 97a8e25 and tags before editing; the latest existing tag was v1.4.3. Synchronize runtime/package versions, README, online/offline update examples, bilingual release notes and template-version guidance without moving historical tags. Scope includes earlier general-template adaptations, prompt sources under docs/ and the isolated responsiveness probe; neither immediate responsiveness nor faster tar extraction is implemented.

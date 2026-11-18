@@ -273,6 +273,7 @@ class PortableTests(unittest.TestCase):
         renamed = self.unpack(self.export(["b300-tp4"]))
         with patch.dict(os.environ, {"LOCAL_AI_ROOT": str(renamed)}):
             with (
+                patch("local_ai.deployment.arch", return_value=policy["arch"]),
                 patch("local_ai.images.inspect_image", return_value=None),
                 patch("local_ai.images.import_image", return_value={"imported": True}) as load,
                 patch("local_ai.images.pull", side_effect=AssertionError("no download")),
