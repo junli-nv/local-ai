@@ -3,10 +3,11 @@ import importlib.util
 import io
 import json
 import os
-import shutil
 import subprocess
+import sys
 import tarfile
 import tempfile
+import time
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -317,24 +318,34 @@ class UpdateTests(unittest.TestCase):
         self.assertEqual(updater.version(self.root), "1.1.0")
         self.assert_assets_untouched()
 
-    @unittest.skipUnless(
-        Path("/proc/self/exe").exists() and Path("/bin/sleep").exists(),
-        "requires Linux procfs and sleep fixture",
-    )
+    @unittest.skipUnless(Path("/proc/self/exe").exists(), "requires Linux procfs")
     def test_real_process_detected_without_stopping_it(self):
-        binary = self.root / "clients/amd64/bin/opencode"
-        binary.parent.mkdir(parents=True)
-        shutil.copy2("/bin/sleep", binary)
-        child = subprocess.Popen([str(binary), "60"])
+        # A renamed system utility can be a multicall binary (CI coreutils).
+        # Use a genuine Python launcher owned by this installation instead.
+        ready = self.root / "process-ready"
+        launcher = self.root / "local-ai"
+        launcher.write_text(
+            "from pathlib import Path\n"
+            + f"Path({str(ready)!r}).write_text('ready')\n"
+            + "import time\ntime.sleep(60)\n"
+        )
+        child = subprocess.Popen(
+            [sys.executable, str(launcher)], stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        )
         try:
+            deadline = time.monotonic() + 5
+            while not ready.exists() and child.poll() is None and time.monotonic() < deadline:
+                time.sleep(0.01)
+            self.assertTrue(ready.exists(), "fixture launcher did not become ready")
             report = updater.client_activity(self.root)
             self.assertIn(child.pid, [item["pid"] for item in report["processes"]])
             with self.assertRaisesRegex(RuntimeError, "Active client"):
                 self.update()
             self.assertIsNone(child.poll())
         finally:
-            child.terminate()
-            child.wait(timeout=5)
+            if child.poll() is None:
+                child.terminate()
+            child.communicate(timeout=5)
 
 
 class ActivityScanTests(unittest.TestCase):

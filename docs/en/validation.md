@@ -4,6 +4,8 @@
 
 All 298 local unit tests, Ruff lint/format and source-archive documentation checks pass. The 21 targeted updater tests pass, covering read-only checks, real Linux process detection/liveness, similar-path boundaries/environment privacy, clients starting during unpack, explicit continuation, active rollback refusal and standalone recovery with installed launcher/scripts removed. Resource contents/inodes are preserved; program backup is not called history backup.
 
+The initial CI fixture renamed system sleep to opencode; the runner's multicall coreutils binary exited under that name, failing detection. Replace it with an installation-owned Python launcher and readiness marker, retaining real process/liveness assertions rather than skipping the case. This was not a Python-version or product detection failure.
+
 Same-host OpenCode 1.19.5/1.19.6 API/TUI all measured after_tool: follow-ups reached the model about 5.08–5.11 seconds after submission, after the five-second tool completed. Retain the active version; upgrading alone did not solve delivery. See [candidate comparison](client-steering.md). This does not validate natural-language pause/stop, airgap operation or GPU behavior.
 
 ## Portable local test fixtures: 2026-11-18
