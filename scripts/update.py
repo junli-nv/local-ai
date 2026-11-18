@@ -9,6 +9,7 @@ import hashlib
 import json
 import os
 import re
+import shlex
 import shutil
 import sys
 import tarfile
@@ -46,6 +47,107 @@ PROTECTED = {
     "install.log",
 }
 VERSION = re.compile(r'__version__\s*=\s*["\']([^"\']+)["\']')
+
+
+def client_activity(root, proc=Path("/proc")):
+    """Best-effort Linux snapshot; never return prompts, environment or signals."""
+    result = {"supported": False, "processes": [], "unreadable": 0}
+    try:
+        entries = list(proc.iterdir())
+    except OSError:
+        return result
+    result["supported"] = True
+    root = root.resolve()
+    for entry in entries:
+        if not entry.name.isdigit() or int(entry.name) == os.getpid():
+            continue
+        try:
+            executable = Path(os.readlink(entry / "exe").removesuffix(" (deleted)"))
+            kind = None
+            if executable.name == "opencode" and executable.is_relative_to(root / "clients"):
+                kind = "opencode"
+            else:
+                with (entry / "cmdline").open("rb") as stream:
+                    args = stream.read(65536).decode(errors="replace").split("\0")
+                cwd = (entry / "cwd").resolve(strict=True)
+                interpreter = executable.name in {
+                    "bash",
+                    "sh",
+                    "dash",
+                } or executable.name.startswith("python")
+                for arg in args[:3] if interpreter else []:
+                    if arg and (cwd / arg).resolve() == root / "local-ai":
+                        kind = "launcher"
+                if any(args[i : i + 2] == ["-m", "local_ai.cli"] for i in range(len(args) - 1)):
+                    with (entry / "environ").open("rb") as stream:
+                        environment = stream.read(1 << 20).split(b"\0")
+                    pythonpath = next(
+                        (x.partition(b"=")[2] for x in environment if x.startswith(b"PYTHONPATH=")),
+                        b"",
+                    ).decode(errors="replace")
+                    if any(
+                        (cwd / x).resolve() == root / "src"
+                        for x in pythonpath.split(os.pathsep)
+                        if x
+                    ):
+                        kind = "launcher"
+            if kind:
+                result["processes"].append(
+                    {
+                        "pid": int(entry.name),
+                        "kind": kind,
+                        "executable": str(executable),
+                        "uid": entry.stat().st_uid,
+                    }
+                )
+        except PermissionError:
+            result["unreadable"] += 1
+        except (OSError, ValueError):
+            continue
+    result["processes"].sort(key=lambda item: item["pid"])
+    return result
+
+
+def check_activity(root, allow=False):
+    report = client_activity(root)
+    if not report["supported"] or report["unreadable"]:
+        print(
+            "WARNING: Client process visibility is incomplete; check other users, "
+            "external client directories and remote hosts manually.",
+            file=sys.stderr,
+        )
+    if report["processes"]:
+        pids = ", ".join(str(item["pid"]) for item in report["processes"])
+        if not allow:
+            raise RuntimeError(
+                "Active client processes for this installation: PID "
+                + pids
+                + ". Exit these clients first, or explicitly use --allow-active-clients "
+                "for a program-only update/rollback. No processes were stopped."
+            )
+        print(
+            "WARNING: Proceeding with active clients (PID "
+            + pids
+            + "); they are not stopped or restarted. Reopen them later to load changes.",
+            file=sys.stderr,
+        )
+    return report
+
+
+def recovery(root, backup):
+    return {
+        "rollback_command": [
+            sys.executable,
+            str(backup / "update.py"),
+            "--root",
+            str(root),
+            "--rollback",
+            str(backup),
+        ],
+        "backup_scope": "program-and-installation-metadata",
+        "history_backed_up": False,
+        "native_client_changed": False,
+    }
 
 
 def version(root):
@@ -192,6 +294,7 @@ def apply(root, stage, target_version, archive_sha):
     backup = Path(tempfile.mkdtemp(prefix="local-ai-backup-", dir=root.parent))
     (backup / "program").mkdir()
     (backup / "metadata").mkdir()
+    shutil.copy2(Path(__file__).resolve(), backup / "update.py")
     record = {
         "format": 1,
         "root": str(root),
@@ -229,7 +332,9 @@ def apply(root, stage, target_version, archive_sha):
             "archive_sha256": archive_sha,
             "resources_changed": False,
             "service_restarted": False,
+            **recovery(root, backup),
         }
+        print("Rollback: " + shlex.join(result["rollback_command"]), file=sys.stderr)
         log(root, result)
         return result
     except BaseException:
@@ -252,7 +357,24 @@ def execute(args):
         if not (root / "local-ai").is_file():
             raise ValueError("--root must name an existing local-ai installation")
         version(root)
+    if args.check:
+        activity = client_activity(root)
+        return {
+            "state": "checked",
+            "root": str(root),
+            "version": version(root),
+            "ready": (
+                not activity["processes"] and activity["unreadable"] == 0
+                if activity["supported"]
+                else None
+            ),
+            "activity_check": activity,
+            "backup_scope": "program-and-installation-metadata",
+            "history_backed_up": False,
+            "native_client_changed": False,
+        }
     with locked(root):
+        check_activity(root, args.allow_active_clients)
         if args.rollback:
             backup = Path(args.rollback).expanduser().resolve()
             record = restore(root, backup)
@@ -263,6 +385,8 @@ def execute(args):
                 "backup": str(backup),
                 "resources_changed": False,
                 "service_restarted": False,
+                "native_client_changed": False,
+                "history_backed_up": False,
             }
             log(root, result)
             return result
@@ -299,7 +423,11 @@ def execute(args):
             if not helper.is_file():
                 helper.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(Path(__file__).resolve(), helper)
-            return apply(root, stage, target_version, actual)
+            # Recheck after download/unpack; a client may have started meanwhile.
+            activity = check_activity(root, args.allow_active_clients)
+            result = apply(root, stage, target_version, actual)
+            result["activity_check"] = activity
+            return result
 
 
 def parser():
@@ -311,17 +439,29 @@ def parser():
     source.add_argument("--version", help="Download an explicit Git tag, for example v1.3.7")
     source.add_argument("--archive", help="Local source tar archive; no network access")
     source.add_argument("--rollback", help="Restore a backup printed by a previous update")
+    source.add_argument(
+        "--check",
+        action="store_true",
+        help="Read-only activity check; no download or replacement; exit 3 if not ready",
+    )
+    result.add_argument(
+        "--allow-active-clients",
+        action="store_true",
+        help="Explicitly permit program-only update/rollback with detected active clients; "
+        "never stop processes or upgrade OpenCode",
+    )
     result.add_argument("--sha256", help="Optional expected SHA256 of the source archive")
     return result
 
 
 def main(argv=None):
     arguments = parser().parse_args(argv)
-    if arguments.rollback and arguments.sha256:
+    if (arguments.rollback or arguments.check) and arguments.sha256:
         parser().error("--sha256 applies only to source archives")
     try:
-        print(json.dumps(execute(arguments), indent=2))
-        return 0
+        result = execute(arguments)
+        print(json.dumps(result, indent=2))
+        return 3 if arguments.check and result["ready"] is not True else 0
     except KeyboardInterrupt:
         print("Update interrupted", file=sys.stderr)
         return 130

@@ -537,6 +537,8 @@ web_ready indicates stdlib reader availability, not network reachability; diagno
 
 ## Program updates
 
+The development-main updater adds --check (read-only activity scan; exit 3 when not ready) and --allow-active-clients (explicit program-only continuation without signals). Backups include a recovery script, not history. Obtain the new updater first; the original v1.4.4 script lacks these flags. See [activity checks](update.md#development-main-check-active-clients-before-updating).
+
 The standalone Python helper scripts/update.py is independent of ./local-ai subcommands. For --root, --version, --archive, --sha256 and --rollback, complete examples, backups and exit codes, use the [update guide](update.md). It never installs images/models/clients or restarts inference. Model/image changes and native OpenCode upgrades remain separate operations.
 
 ## Operations and troubleshooting

@@ -1,6 +1,10 @@
+import contextlib
 import importlib.util
 import io
 import json
+import os
+import shutil
+import subprocess
 import tarfile
 import tempfile
 import unittest
@@ -224,3 +228,150 @@ class UpdateTests(unittest.TestCase):
         self.assertEqual(updater.version(self.root), "1.1.0")
         self.assertEqual((self.root / "local-ai").read_text(), "old launcher")
         self.assert_assets_untouched()
+
+    def activity(self):
+        return {
+            "supported": True,
+            "unreadable": 0,
+            "processes": [
+                {
+                    "pid": 4711,
+                    "kind": "opencode",
+                    "executable": str(self.root / "clients/bin/opencode"),
+                    "uid": 1000,
+                }
+            ],
+        }
+
+    def test_check_is_read_only_and_reports_active_without_prompts(self):
+        args = ["--root", str(self.root), "--check"]
+        with patch.object(updater, "client_activity", return_value=self.activity()):
+            with contextlib.redirect_stdout(io.StringIO()) as output:
+                self.assertEqual(updater.main(args), 3)
+        result = json.loads(output.getvalue())
+        self.assertFalse(result["ready"])
+        self.assertFalse(result["history_backed_up"])
+        self.assertFalse((self.root / ".update.lock").exists())
+        self.assertFalse(list(self.work.glob("local-ai-backup-*")))
+        self.assert_assets_untouched()
+
+    def test_check_with_no_proc_never_claims_ready(self):
+        with patch.object(
+            updater,
+            "client_activity",
+            return_value={"supported": False, "processes": [], "unreadable": 0},
+        ):
+            result = updater.execute(
+                updater.parser().parse_args(["--root", str(self.root), "--check"])
+            )
+        self.assertIsNone(result["ready"])
+
+    def test_active_client_blocks_before_download_or_program_backup(self):
+        args = updater.parser().parse_args(["--root", str(self.root), "--version", "v1.2.0"])
+        with patch.object(updater, "client_activity", return_value=self.activity()):
+            with patch("urllib.request.urlopen", side_effect=AssertionError("must not download")):
+                with self.assertRaisesRegex(RuntimeError, "Active client.*4711"):
+                    updater.execute(args)
+        self.assertEqual(updater.version(self.root), "1.1.0")
+        self.assertFalse(list(self.work.glob("local-ai-backup-*")))
+        self.assert_assets_untouched()
+
+    def test_client_starting_during_unpack_blocks_before_replacement(self):
+        clear = {"supported": True, "processes": [], "unreadable": 0}
+        with patch.object(updater, "client_activity", side_effect=[clear, self.activity()]):
+            with self.assertRaisesRegex(RuntimeError, "Active client"):
+                self.update()
+        self.assertEqual(updater.version(self.root), "1.1.0")
+        self.assertFalse(list(self.work.glob("local-ai-backup-*")))
+        self.assert_assets_untouched()
+
+    def test_explicit_active_override_never_signals_or_replaces_client(self):
+        with patch.object(updater, "client_activity", return_value=self.activity()):
+            with patch("os.kill", side_effect=AssertionError("no signals")):
+                result = updater.execute(self.args("--allow-active-clients"))
+        self.assertFalse(result["native_client_changed"])
+        self.assertFalse(result["history_backed_up"])
+        self.assertEqual(result["activity_check"]["processes"][0]["pid"], 4711)
+        self.assertEqual(result["backup_scope"], "program-and-installation-metadata")
+        self.assert_assets_untouched()
+
+    def test_active_client_also_blocks_rollback(self):
+        result = self.update()
+        args = updater.parser().parse_args(
+            ["--root", str(self.root), "--rollback", result["backup"]]
+        )
+        with patch.object(updater, "client_activity", return_value=self.activity()):
+            with self.assertRaisesRegex(RuntimeError, "Active client"):
+                updater.execute(args)
+        self.assertEqual(updater.version(self.root), "1.2.0")
+
+    def test_saved_recovery_command_works_without_installed_launcher_or_script(self):
+        result = self.update()
+        (self.root / "local-ai").unlink()
+        updater.remove(self.root / "scripts")
+        command = result["rollback_command"]
+        self.assertEqual(Path(command[1]).parent, Path(result["backup"]))
+        completed = subprocess.run(command, capture_output=True, text=True, timeout=15)
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(json.loads(completed.stdout)["state"], "rolled-back")
+        self.assertEqual(updater.version(self.root), "1.1.0")
+        self.assert_assets_untouched()
+
+    @unittest.skipUnless(
+        Path("/proc/self/exe").exists() and Path("/bin/sleep").exists(),
+        "requires Linux procfs and sleep fixture",
+    )
+    def test_real_process_detected_without_stopping_it(self):
+        binary = self.root / "clients/amd64/bin/opencode"
+        binary.parent.mkdir(parents=True)
+        shutil.copy2("/bin/sleep", binary)
+        child = subprocess.Popen([str(binary), "60"])
+        try:
+            report = updater.client_activity(self.root)
+            self.assertIn(child.pid, [item["pid"] for item in report["processes"]])
+            with self.assertRaisesRegex(RuntimeError, "Active client"):
+                self.update()
+            self.assertIsNone(child.poll())
+        finally:
+            child.terminate()
+            child.wait(timeout=5)
+
+
+class ActivityScanTests(unittest.TestCase):
+    def test_association_boundaries_deleted_executable_and_launcher(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "install"
+            root.mkdir()
+            proc = Path(tmp) / "proc"
+            proc.mkdir()
+
+            def process(pid, executable, args=(), cwd=None, environment=b""):
+                entry = proc / str(pid)
+                entry.mkdir()
+                (entry / "exe").symlink_to(executable)
+                (entry / "cwd").symlink_to(cwd or root, target_is_directory=True)
+                (entry / "cmdline").write_bytes(b"\0".join(os.fsencode(x) for x in args))
+                (entry / "environ").write_bytes(environment)
+
+            process(4711, str(root / "clients/amd64/bin/opencode") + " (deleted)")
+            process(4712, root.parent / "install-other/clients/bin/opencode")
+            process(4713, "/usr/bin/python3", ["python3", str(root / "local-ai")])
+            process(
+                4714,
+                "/usr/bin/python3",
+                ["python3", "-m", "local_ai.cli"],
+                cwd=root.parent,
+                environment=b"SECRET=not-in-report\0PYTHONPATH=" + os.fsencode(root / "src"),
+            )
+            process(4715, "/bin/echo", ["echo", str(root / "local-ai")])
+            process(
+                4716,
+                "/usr/bin/python3",
+                ["python3", "-m", "local_ai.cli"],
+                environment=b"PYTHONPATH=/other/src",
+            )
+            report = updater.client_activity(root, proc)
+            self.assertEqual([p["pid"] for p in report["processes"]], [4711, 4713, 4714])
+            self.assertNotIn("SECRET", json.dumps(report))
+            self.assertNotIn("not-in-report", json.dumps(report))
+            self.assertFalse(updater.client_activity(root, proc / "missing")["supported"])

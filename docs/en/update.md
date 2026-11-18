@@ -8,6 +8,20 @@ Use this for program-only upgrades of an installed local-ai directory. See [READ
 
 Update the GPU001 and bcm-headnode program directories separately. Examples use /raid/local-ai; replace --root if the actual program lives elsewhere. It must contain local-ai and src/, not just model data. Python 3.10+ and write permission on the installation and its parent are required; online script retrieval needs curl.
 
+## Development main: check active clients before updating
+
+These capabilities belong to the development-main updater, not the original v1.4.4 script. Obtain scripts/update.py from the target source first. Run on the machine containing the installation:
+
+    python3 scripts/update.py --root /raid/local-ai --check
+
+The check is read-only: no download, update lock, backup or conversation-body access. JSON activity_check lists this installation's PIDs, kind, executable and UID. ready=true exits 0; activity or incomplete visibility exits 3 (ready=null when unavailable). This is a snapshot, not a barrier against later launches.
+
+Updates/rollbacks check before downloading; updates check again before replacement. Detected activity exits 1 by default without replacement or signals. To deliberately retain running clients during a program-only update/rollback, add --allow-active-clients to the original command. It never stops, detaches, restarts or upgrades native OpenCode. Exit and resume later to load changed code/instructions.
+
+Linux detection uses visible /proc entries for native OpenCode under clients/ and Bash/Python launchers in this installation, not similar path prefixes. External --client-dir locations, other hosts, invisible processes and later launches are not fully covered. Unavailable/incomplete visibility is warned about; failure to inspect unrelated processes does not establish safety or cause automatic stops. Confirm manually.
+
+New backups also contain backup/update.py. JSON returns rollback_command as arguments; stderr prints the shell-quoted command. Recovery works even if the installed launcher/scripts are missing. backup_scope=program-and-installation-metadata, history_backed_up=false and native_client_changed=false. Program backups exclude private chat databases and personal AGENTS.md. Native OpenCode upgrades are separate: exit sessions and protect full private state first; program rollback cannot downgrade its database.
+
 ## Bootstrap and upgrade
 
 v1.4.4 includes scripts/update.py. For an older installation without the helper, obtain it separately using the commands below. Exit local chat and avoid launching management commands during replacement. GPU inference can remain running.
@@ -118,8 +132,10 @@ python3 /raid/local-ai/scripts/update.py --help
 | --version | Download a numeric version tag from this repository, optionally prefixed v |
 | --archive | Local source tar archive; offline |
 | --rollback | Restore a backup created by the updater |
-| --sha256 | Optional expected source-archive checksum; incompatible with --rollback |
+| --sha256 | Optional expected source checksum; incompatible with --rollback/--check |
+| --check | Development main: read-only check, no download/replacement; exit 3 if not ready |
+| --allow-active-clients | Development main: explicitly allow detected activity for program-only update/rollback without stopping or upgrading native clients |
 
-Select exactly one of --version, --archive and --rollback. This updates an unpacked source installation, not system drivers, container runtimes or Python environments.
+For updates/rollbacks select one of --version, --archive and --rollback; development-main --check is a separate mutually exclusive read-only mode. This updates an unpacked source installation, not system drivers, container runtimes or Python environments.
 
 [中文（默认）](../update.md)

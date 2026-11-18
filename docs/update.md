@@ -8,6 +8,20 @@ v1.4.4 更新包含 templates/，它属于可替换程序文件；个人 AGENTS.
 
 GPU001 与 bcm-headnode 分别更新各自的程序目录。以下沿用 /raid/local-ai；若旧安装在其他位置，将 --root 改成实际包含 local-ai 和 src/ 的目录，不能填写只有模型的数据目录。更新需要该目录及其父目录写权限、Python 3.10+；在线下载脚本时需要 curl。
 
+## 开发主线：升级前检查活动客户端
+
+以下能力属于开发主线更新器，不在原 v1.4.4 标签的脚本中；先从目标源码取得新版 scripts/update.py。在程序所在机器执行：
+
+    python3 scripts/update.py --root /raid/local-ai --check
+
+检查只读，不下载、不创建更新锁或备份，不读取聊天正文。JSON 的 activity_check 列出本安装的 PID、类别、可执行路径和 UID；ready=true 退出 0，发现活动客户端或检测不完整时退出 3（不可用时 ready=null）。它是进程快照，不是持续锁住会话启动；成功后仍可能有人启动客户端。
+
+实际更新/回退会在下载前检测，更新还在替换前再检查一次。默认发现活动进程即退出 1，保留原程序，不发送信号。确需保留会话更新程序时，向原更新/回退命令加 --allow-active-clients；它不终止、后台托管或重启进程，也不升级原生 OpenCode。稍后退出并恢复客户端以加载新程序/指令。
+
+Linux 检测依赖 /proc 可见性，识别本安装 clients/ 下的 OpenCode 和 Bash/Python 启动器，不混淆相似路径前缀。外部 --client-dir、其他机器、权限不可见进程和检测后新启动的进程不在完整保证范围内。不可用/不完整会警告；实际更新不会仅因看不到无关进程就宣称安全或停止它们，须自行确认。
+
+新备份另存 backup/update.py。成功 JSON 返回 rollback_command 参数数组，stderr 打印带引号的完整命令；安装根 launcher/scripts 缺失仍可运行。backup_scope=program-and-installation-metadata、history_backed_up=false、native_client_changed=false。程序备份不包含私人聊天数据库或个人 AGENTS.md；原生 OpenCode 升级是独立操作，须退出会话并单独保护完整私有状态，程序回退不能降级数据库。
+
 ## 首次取得脚本并升级
 
 v1.4.4 已包含 scripts/update.py；旧安装没有脚本时，先按下面的方法单独获取。先结束本机聊天，避免更新期间启动新的管理命令；GPU 推理容器可保持运行。
@@ -117,9 +131,11 @@ python3 /raid/local-ai/scripts/update.py --help
 | --version | 从本仓库下载指定数字版本标签，可带 v |
 | --archive | 使用本地源码 tar 包，不联网 |
 | --rollback | 从脚本生成的备份恢复 |
-| --sha256 | 可选，源码包预期 SHA256；不能与 --rollback 同用 |
+| --sha256 | 可选，源码包预期 SHA256；不能与 --rollback/--check 同用 |
+| --check | 开发主线：只读检查，不下载或替换；未就绪退出 3 |
+| --allow-active-clients | 开发主线：更新/回退时显式允许检测到的活动进程，不停止或升级原生客户端 |
 
---version、--archive、--rollback 三选一。此脚本更新源码安装目录，不更新系统驱动、容器运行时或 Python 环境。
+更新/回退时 --version、--archive、--rollback 三选一；开发主线 --check 为单独互斥的只读模式。此脚本更新源码安装目录，不更新系统驱动、容器运行时或 Python 环境。
 
 ---
 

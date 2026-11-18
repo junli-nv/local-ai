@@ -1,5 +1,11 @@
 # Validation record
 
+## Development main: updater protection and candidate client (2026-11-19)
+
+All 298 local unit tests, Ruff lint/format and source-archive documentation checks pass. The 21 targeted updater tests pass, covering read-only checks, real Linux process detection/liveness, similar-path boundaries/environment privacy, clients starting during unpack, explicit continuation, active rollback refusal and standalone recovery with installed launcher/scripts removed. Resource contents/inodes are preserved; program backup is not called history backup.
+
+Same-host OpenCode 1.19.5/1.19.6 API/TUI all measured after_tool: follow-ups reached the model about 5.08–5.11 seconds after submission, after the five-second tool completed. Retain the active version; upgrading alone did not solve delivery. See [candidate comparison](client-steering.md). This does not validate natural-language pause/stop, airgap operation or GPU behavior.
+
 ## Portable local test fixtures: 2026-11-18
 
 Synchronized remote main bcc35e4 and latest tag v1.4.4 before editing, then reproduced both existing failures. Port tests no longer require a configured 127.0.0.2 on macOS. Actual checks also showed macOS permits overlapping specific/wildcard binds with SO_REUSEADDR. All platforms now verify a real wildcard listener conflict; Linux retains the original cross-interface scenario. Add a check that the selected address reaches bind. The offline server migration test explicitly simulates its AMD64 fixture architecture, retaining assertions for renamed import paths, no downloads and no GPU startup. Production port checks and architecture validation are unchanged.

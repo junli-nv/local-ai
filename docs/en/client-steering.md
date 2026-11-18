@@ -59,6 +59,23 @@ The initial probe failed before measurement because first-workspace session crea
 - Distinguish pausing the assistant from cancelling a command. Ordinary follow-ups must not implicitly kill work; clarify ambiguous targets when several tasks run.
 - Retain session recovery, exactly-once writes, permissions, cleanup, disconnected operation and existing client contracts in future acceptance.
 - Recording this requirement does not authorize a background system, client migration or remote-service changes.
+## Same-host candidate comparison and first delivery (2026-11-19)
+
+The user authorized implementation, including stopping sessions or replacing clients when needed. This delivery implements updater activity checks/standalone program recovery and compares native client candidates.
+
+On one Linux AMD64 host with a local mock model and five-second Shell call, existing 1.19.5 and latest stable NPM candidate 1.19.6 each ran API/TUI once with the same script/defaults. Messages were observed saved before tool completion and commands ran once:
+
+| OpenCode | Path | Submission to model request | Classification |
+|---|---|---:|---|
+| 1.19.5 | api | 5.085 s | after_tool |
+| 1.19.5 | tui | 5.112 s | after_tool |
+| 1.19.6 | api | 5.080 s | after_tool |
+| 1.19.6 | tui | 5.099 s | after_tool |
+
+Neither version delivered during execution. Millisecond differences are not speed evidence; keep active 1.19.5 and retain 1.19.6 separately. Raw reports/events/backend logs remain private; reproduce with the script above. This does not validate model understanding, pause/stop, airgap behavior or GPU performance.
+
+Next investigate a local execution-tool adapter: long commands return queryable task identities so the main session handles follow-ups. Pause prevents new steps; stop targets owned tasks and confirms descendant exit; resume avoids duplicate execution. This is not implemented; submission is not completion. General background hosting, cross-BCM history backup/recovery and aggregate diagnostics remain staged work.
+
 
 ## Where the Claude-derived template changes live
 

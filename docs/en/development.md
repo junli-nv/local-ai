@@ -103,6 +103,13 @@ Chinese is primary; maintain English separately and synchronize both entry paths
 Use the [manual](commands.md) and [deployment guide](deployment.md) for operations;
 this section records design reasons.
 
+### Current backlog state (2026-11-19)
+
+- Implemented on development main: updater activity checks, explicit program-only continuation, standalone rollback helper and program/history backup boundaries; see [updates](update.md#development-main-check-active-clients-before-updating). Linux scanning is not a launch lock.
+- Measured, target unmet: same-host 1.19.5/1.19.6 API/TUI follow-ups still arrive after the long Shell returns. Retain the active client; execution adaptation needs task identity, pause/stop, descendant cleanup and duplicate-execution validation; see [steering](client-steering.md).
+- Later: private cross-BCM history backup/recovery, tasks hosted from launch, aggregate diagnostics. Program backup is not history backup; tasks/report logs are not background execution.
+- KV offloading and tar extraction remain low priority. No inference recipe change or new tag/Release this round.
+
 ### Low-priority backlog: KV cache offloading
 
 Decision on 2026-11-17: defer integration. See [exploration](performance.md#kv-cache-offloading-low-priority-backlog-2026-11-17) for review triggers and validation steps.

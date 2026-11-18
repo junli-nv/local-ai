@@ -307,6 +307,8 @@ Tasks include hardware troubleshooting, scripts, services and Slurm/Kubernetes j
 
 Use the [program update guide](docs/en/update.md) to update GPU and BCM installations separately while retaining resources, configuration and running instances. The standalone scripts/update.py supports explicit tags, local source archives and backup rollback, without install or resource preparation. v1.3.2 includes the updater; the guide also covers bootstrapping installations that lack it.
 
+The development-main updater offers --check and refuses detected client activity by default. Program backups include recovery tooling, not chat history; see [updates](docs/en/update.md#development-main-check-active-clients-before-updating).
+
 ## Export and offline installation
 
 Online preparation can use any CPU architecture: prepare --profile selects target images and pinned models without executing the target image. See the [mixed-architecture procedure](docs/en/offline.md#scenario-2-download-on-an-online-preparation-host). This functionality is included in the current release.
