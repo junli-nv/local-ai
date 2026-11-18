@@ -1,5 +1,9 @@
 # Validation record
 
+## General-template project locations and chat directory: 2026-11-18
+
+The user identified missing project-location and chat-directory sections when copying the general template alone. Local Git history contains neither heading nor the complete paragraphs; /home was mentioned only in the BCM template, while project sizing and native background-read limitations appeared only in the setup guide. The previous language-rule commit did not delete these sections. Add both supplied sections to both general templates and align setup guidance; omit the topic-extension comment as subsequently requested. Preserve BCM discovery scope and authorization limits. Personal AGENTS.md still requires manual merging; no user files are changed automatically. This corrects template coverage without new live-client or model-behavior acceptance.
+
 ## Response-language and user-attribution template revision: 2026-11-17
 
 Both general templates now prioritize explicit language requests, otherwise following the user's latest direct request. Logs, quotations, tool output and summaries do not trigger a language switch. When unclear, retain the user's previous direct-conversation language, or ask if none is available; impose no default language. User quotations or paraphrases require original-message evidence, and indirect records must be identified. Update setup guidance and developer decisions. Templates remain opt-in; no personal files, plugins or runtime behavior were changed.

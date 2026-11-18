@@ -42,3 +42,13 @@ Adapt this reference template to your environment. Instructions apply only withi
 - If known scopes yield nothing, report host, searched directories and criteria, then ask for location.
 - Do not run recursive find, grep or rg from / without an explicit request.
 - Keep client and GPU-host paths distinct when crossing hosts.
+
+## Project locations
+
+- User scripts commonly live under /home. This is a known candidate location, not permission to execute arbitrary scripts there.
+
+## Chat working directory
+
+- Choose a small project directory relevant to the task. Do not use /, /cm, or a parent containing all compute-node images as the chat project root.
+- OpenCode itself may process project files; model prompts cannot prevent the client's background file reads.
+- Select a suitable directory explicitly with --project. Do not make all of /cm the project merely to locate one BCM script.
