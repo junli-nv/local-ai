@@ -1,5 +1,7 @@
 # User manual and command reference
 
+v1.4.2 decouples user-local history from servers and installation paths, including ad-hoc routes. history list inspects legacy records; history update-endpoint is a compatibility tool, not a routine switching step.
+
 ## Task diagnostics and workflow acceptance (v1.4.0)
 
 Run v1.4.1 on BCM from /raid/local-ai; these features are available since v1.4.0, and earlier archives lack them.
@@ -23,7 +25,7 @@ Timeout cleans the local client process group and exits 124; Ctrl+C exits 130 an
 Neither undoes files or remote actions. --heartbeat defaults to 15 seconds; 0 disables batch stderr progress.
 --direct-api bypasses the temporary API observer while retaining native event/task records.
 Observation defaults on, binds only a random 127.0.0.1 port and closes at exit.
-History and saved connections remain keyed by the original endpoint.
+The observer address does not change connection or history identity; default and ad-hoc history rules are described below.
 Native SDK dependencies and locks are reused by client identity into isolated config directories. Cold starts may initialize dependencies; later launches reuse existing materials without copying old connection configs or personal rules.
 
 Request usage is taken from the API; absent cached_tokens is null, never inferred from global cache hits.
@@ -392,7 +394,7 @@ On bcm-headnode as alice:
 
 For model/image upgrades, validate a separate data directory and instance while retaining the old source, weights and image locks. Avoid forcing a replacement over production weights as a rollback strategy.
 
-One BCM installation can connect to many endpoints. See [multiple-service examples](../../README.en.md#connect-to-multiple-services-from-one-bcm). Keep the installed model default for same-model services; use chat --model ID when the selected endpoint advertises a different model. This override does not change the default. A mismatch lists available IDs instead of silently selecting a model or another endpoint. Resume flags operate within the selected endpoint's private history.
+One BCM installation can connect to many endpoints; see [examples](../../README.en.md#connect-to-multiple-services-from-one-bcm). Retain the default for matching models or explicitly --model ID and validate compatibility. Mismatches list served IDs without fallback. Endpoint selects inference routing only; resume uses user-local history and original projects.
 
 ### Dynamic reasoning variants
 
@@ -413,11 +415,73 @@ Variants belong to model-level `client.variants`, not GPU engine options. Merge 
 
 Cycling also passes through the native default state with no variant label; it adds no thinking parameters, like normal. Do not declare an explicit default variant: that name conflicts with OpenCode 1.19.5 cycle-wrap state.
 
+## Replace a server and retain sessions
+
+### Routine switching requires no history update
+
+In v1.4.2, local history identity is independent of server addresses and program installation paths. For the same user/state root, saved and ad-hoc --endpoint selections share history. Project paths identify working directories and session ownership; resumption retains the original ID and project. Chat records remain local and the failed server need not be reachable.
+
+On bcm-headnode under the original chat account, assume ses_example belongs to /home/alice/project and GPU002 serves a compatible model:
+
+```bash
+# Route the same conversation to GPU002 without changing defaults
+./local-ai chat --endpoint http://GPU002:18000/v1 --project /home/alice/project --session ses_example
+# To use GPU002 by default, save it and resume the original ID
+./local-ai config set endpoint http://GPU002:18000/v1
+opencode -s ses_example
+```
+
+Substitute the original ID and retain its project path. Ordinary chat requires no history update command.
+Model changes require explicit --model ID and tool/context compatibility checks; no model guessing or fallback to another node.
+Temporary server KV caches are not transferred, so a replacement may repeat prefill without losing conversation records.
+Existing windows retain their connection until reopened. Use another --state-dir for entirely separate history.
+Linux accounts provide access isolation; project organization and separate directories within one account do not.
+
+### Find a forgotten old address
+
+```bash
+./local-ai client history list
+```
+
+The default table shows history ID, session count, local default marker * and recorded endpoints without server calls or conversation bodies.
+--state-dir defaults to private user state; --json is off by default and includes full paths, models and errors.
+Unknown counts show ? and an error, exiting 1. Empty results exit 0 without creating state. Missing metadata shows unknown; a directory hash cannot recover the URL.
+Used addresses appear together; different legacy histories may record the same address, so distinguish counts and IDs. Recorded endpoints are trace metadata, not routing instructions.
+
+### One-time legacy compatibility
+
+v1.4.1 and older keyed histories by endpoint. Upgrade reuses history under the old saved default when present. If the default already points to a replacement and old records are missing, find the old address with history list, then:
+
+```bash
+./local-ai config set endpoint http://GPU002:18000/v1
+./local-ai client history update-endpoint --old http://GPU001:18000/v1 --new http://GPU002:18000/v1
+opencode -s ses_example
+```
+
+--old names the previous address and --new the replacement; omitting --new uses the saved endpoint. This updates history associations and selects that local history without editing installation.json; config set saves defaults. The old server need not be online. Later switches among compatible servers need no repeated history update.
+
+| Option | Meaning and default |
+|---|---|
+| --old URL | Required previous address |
+| --new URL | Replacement; saved endpoint by default, required if absent |
+| --model ID | Saved model by default, otherwise source model |
+| --state-dir DIR | Current user's private state root |
+| --dry-run | Off by default; preview without writes or model connections |
+
+JSON reports sessions, history_directory, endpoint, database_copied=false and backup_directory when changed.
+Source history must contain sessions; a destination with separate sessions is rejected. Multiple legacy histories are not merged or deleted and remain visible in history list.
+Databases, IDs, snapshots and tool outputs stay in place; only metadata changes. A directory name may still hash its original address.
+Private endpoint-backups/ supports rollback on caught write failures. Unchanged repeats create no extra backup.
+Exit codes: success 0, execution/validation failure 1, argument error 2.
+
+Session lookup uses public OpenCode JSON metadata. Legacy association checks only SQLite session counts read-only, with an old JSON fallback when no database exists. Unknown database formats are rejected.
+This does not copy history to another BCM or public offline archives; moving clients requires a separate secure backup of the user's entire private state.
+
 ### Resume and terminal clipboard
 
 The first chat invocation (including --check) creates a per-user resume launcher
 at `~/.local/bin/opencode`. Run the exit hint `opencode -s ses_...` directly to
-restore the original endpoint, project and private history. If needed, run
+restore the original project and private history, using the current saved endpoint for default history and the associated connection for other histories. If needed, run
 `export PATH="$HOME/.local/bin:$PATH"` and add it to `~/.profile`.
 An existing unrelated opencode executable is preserved; use the explicit entry instead:
 

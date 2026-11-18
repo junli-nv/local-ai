@@ -203,7 +203,7 @@ cd /raid/local-ai
 ./local-ai chat --endpoint http://GPU001:18001/v1 --project /home/alice/project
 ```
 
-未带 --endpoint 的 chat 仍用安装时保存的 18000 地址。若要保存新的默认地址，用 config set endpoint URL；无需安装操作。不同 endpoint 分别保存历史，切换端口不会自动迁移会话。
+未带 --endpoint 的 chat 仍用保存的 18000 地址；config set endpoint URL 修改默认值，无需重新安装。临时与默认地址共用当前用户的本地历史，服务器切换不改变会话或项目目录。旧版本记录缺失时按[更换服务器](commands.md#更换服务器并保留会话)兼容一次，正常切换无需重复处理。
 
 每人使用自己的 Linux 账户和私有状态，默认 ~/.local/state/local-ai/。共享程序不等于共享历史；同一账户下的不同目录不是权限隔离，管理员仍可访问用户文件。备份状态前退出客户端。
 

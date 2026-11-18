@@ -173,7 +173,7 @@ def locate(session_id):
 def main(argv=None):
     parser = argparse.ArgumentParser(
         prog="opencode",
-        description="Resume a local-ai session with its original endpoint, project and private history.",
+        description="Resume a local-ai session with its current connection, original project and private history.",
     )
     parser.add_argument("-s", "--session", required=True, help="OpenCode session ID shown on exit")
     args = parser.parse_args(argv)
@@ -181,6 +181,10 @@ def main(argv=None):
         from .client import chat
 
         context, project = locate(args.session)
+        from .history import current_context
+        from .paths import settings
+
+        context = current_context(context, settings())
         if context.get("catalog"):
             os.environ["LOCAL_AI_CATALOG"] = context["catalog"]
         else:

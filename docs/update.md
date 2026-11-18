@@ -1,6 +1,8 @@
 # 更新已有安装
 
-v1.4.1 更新包含 templates/，它属于可替换程序文件；个人 AGENTS.md 位于用户配置目录，不被更新器覆盖。旧更新器没有 templates 白名单时，先从同一目标源码包取得新版 scripts/update.py。配置与人工合并见 [持久工作指令配置](../templates/opencode/agent-instructions.md)。
+v1.4.2 将用户本地历史与服务器地址、安装目录解耦，临时 --endpoint 也沿用历史。旧版记录缺失时按[恢复步骤](commands.md#更换服务器并保留会话)查询和关联一次；日常切服务器只需选择 endpoint。
+
+v1.4.2 更新包含 templates/，它属于可替换程序文件；个人 AGENTS.md 位于用户配置目录，不被更新器覆盖。旧更新器没有 templates 白名单时，先从同一目标源码包取得新版 scripts/update.py。配置与人工合并见 [持久工作指令配置](../templates/opencode/agent-instructions.md)。
 
 本页适用于已经安装、只需更新 local-ai 程序的机器。首次安装见 [README](../README.md)，整套资源迁移见[离线指南](offline.md)。更新脚本只下载小型源码包，不执行 install、Docker、模型下载或 OpenCode 安装。
 
@@ -8,30 +10,30 @@ GPU001 与 bcm-headnode 分别更新各自的程序目录。以下沿用 /raid/l
 
 ## 首次取得脚本并升级
 
-v1.4.1 已包含 scripts/update.py；旧安装没有脚本时，先按下面的方法单独获取。先结束本机聊天，避免更新期间启动新的管理命令；GPU 推理容器可保持运行。
+v1.4.2 已包含 scripts/update.py；旧安装没有脚本时，先按下面的方法单独获取。先结束本机聊天，避免更新期间启动新的管理命令；GPU 推理容器可保持运行。
 
 在 GPU001 执行；在 BCM 按相同过程更新它自己的目录：
 
 ```bash
-curl -fL --retry 3 https://raw.githubusercontent.com/junli-nv/local-ai/v1.4.1/scripts/update.py -o /tmp/local-ai-update.py
-python3 /tmp/local-ai-update.py --root /raid/local-ai --version v1.4.1
+curl -fL --retry 3 https://raw.githubusercontent.com/junli-nv/local-ai/v1.4.2/scripts/update.py -o /tmp/local-ai-update.py
+python3 /tmp/local-ai-update.py --root /raid/local-ai --version v1.4.2
 /raid/local-ai/local-ai --version
 ```
 
---version 显式选择 Git 标签，后续将它替换为目标版本。脚本不自动追 main，也不把 v1.4.1 作为版本白名单。成功应输出 state=updated、version=1.4.1、resources_changed=false、service_restarted=false，以及实际 backup 路径；命令退出 0。
+--version 显式选择 Git 标签，后续将它替换为目标版本。脚本不自动追 main，也不把 v1.4.2 作为版本白名单。成功应输出 state=updated、version=1.4.2、resources_changed=false、service_restarted=false，以及实际 backup 路径；命令退出 0。
 
 运行后脚本保留在安装目录 scripts/update.py，后续可以直接使用：
 
 ```bash
 cd /raid/local-ai
-python3 scripts/update.py --root /raid/local-ai --version v1.4.1
+python3 scripts/update.py --root /raid/local-ai --version v1.4.2
 ```
 
-上例仍指定 v1.4.1；升级下一版时显式替换版本号。再次执行会重新校验源码并创建新的程序备份，不处理模型等大资源。旧标签没有脚本时也会保留当前运行的更新脚本，便于以后更新和导出。
+上例仍指定 v1.4.2；升级下一版时显式替换版本号。再次执行会重新校验源码并创建新的程序备份，不处理模型等大资源。旧标签没有脚本时也会保留当前运行的更新脚本，便于以后更新和导出。
 
 ## 检查结果
 
-v1.4.1 包含 GB200 四卡候选和 Rubin 两卡框架；保留外部 catalog 的安装须显式合并
+v1.4.2 包含 GB200 四卡候选和 Rubin 两卡框架；保留外部 catalog 的安装须显式合并
 新配方。更新不会解除 Rubin 的
 planning_only 或补齐镜像，边界见[专项指南](gb200-rubin.md)。
 
@@ -51,7 +53,7 @@ cd /raid/local-ai
 
 应分别为 ready=true。更新程序不会切换现有实例配方、端口或启动参数。启用 DSpark 等新配置按[实例重建与预热步骤](deployment.zh-CN.md#单用户-dspark-与显式预热)另行处理。新版本若改用其他模型或镜像，资源准备也是独立操作；程序更新本身不会下载它们。
 
-v1.4.1 包含 `server benchmark` 与客户端诊断；请同时更新两端程序以使用各自新增命令。
+v1.4.2 包含 `server benchmark` 与客户端诊断；请同时更新两端程序以使用各自新增命令。
 部署包含该功能的源码后，仅在 GPU001 执行[本机性能测试](commands.md#本机性能测试)，无需更新 BCM 或重新下载模型/镜像。
 更新本身不运行测试；instances/ 下的历史 benchmark JSON 保留，程序/镜像等条件改变后应重新测量。
 
@@ -73,9 +75,9 @@ v1.4.1 包含 `server benchmark` 与客户端诊断；请同时更新两端程�
 ```bash
 mkdir -p /media/local-ai/update
 cd /media/local-ai/update
-curl -fL --retry 3 https://raw.githubusercontent.com/junli-nv/local-ai/v1.4.1/scripts/update.py -o update.py
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.4.1.tar.gz -o local-ai-v1.4.1-source.tar.gz
-sha256sum update.py local-ai-v1.4.1-source.tar.gz > SHA256SUMS
+curl -fL --retry 3 https://raw.githubusercontent.com/junli-nv/local-ai/v1.4.2/scripts/update.py -o update.py
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.4.2.tar.gz -o local-ai-v1.4.2-source.tar.gz
+sha256sum update.py local-ai-v1.4.2-source.tar.gz > SHA256SUMS
 ```
 
 将介质挂载到目标机 /media/local-ai，然后执行：
@@ -83,7 +85,7 @@ sha256sum update.py local-ai-v1.4.1-source.tar.gz > SHA256SUMS
 ```bash
 cd /media/local-ai/update
 sha256sum -c SHA256SUMS
-python3 update.py --root /raid/local-ai --archive local-ai-v1.4.1-source.tar.gz
+python3 update.py --root /raid/local-ai --archive local-ai-v1.4.2-source.tar.gz
 /raid/local-ai/local-ai --version
 ```
 

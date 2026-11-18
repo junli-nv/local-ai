@@ -1,5 +1,15 @@
 # Validation record
 
+## v1.4.2 session/server decoupling: 2026-11-18
+
+Synchronize the development baseline to remote main 53e9050, preserving v1.4.1 and subsequent documentation changes before integrating this feature. All 264 CPU cases, Ruff rules/format and patch checks passed. Twenty-three history cases cover shared saved/ad-hoc routing, user-state isolation, installation-directory changes, legacy recognition, read-only discovery and visible errors, nonempty-target rejection, idempotence and metadata rollback.
+
+Native restore/terminal modes, reasoning variants/Ctrl+T, personal/project instructions in context, observation and compaction passed on Linux AMD64 / OpenCode 1.19.5. Failover uses two local mock APIs: execute a tool on the first, stop it and verify its port is unreachable, then restore the same conversation at a different address. The replacement receives the original user message and tool results; the ledger contains FIRST and SECOND exactly once each. Subsequent compaction passes. scripts/check-observer.py and CI include this scenario in disposable state without real GPU inference.
+
+The real client had 29 old sessions and an empty replacement-address database. Association preserved SHA256, inode and session/message/part counts for all four databases; the old main retained 29 / 4632 / 18097 records. chat --check was ready at the replacement using the original state directory. Public native metadata located the requested old session; resume selected its original project and replacement address, with the final chat invocation mocked and no real inference request. Raw records, session IDs and infrastructure paths remain private.
+
+No database moves, binary upgrades or GPU restarts. Project paths retain work location/session ownership; Linux users provide access isolation, unlike directories within one account. Legacy databases are not automatically merged. Cross-BCM copying, other models and arbitrary future database formats remain unvalidated; unknown formats reject legacy association. Create only the requested new tag after successful CI, retaining prior tags without automatically creating a GitHub Release. See [replacement and recovery](commands.md#replace-a-server-and-retain-sessions).
+
 ## Check refresh units before listing CDI devices: 2026-11-18
 
 Checked the automatic-refresh mechanism against NVIDIA's CDI documentation. Both languages now check nvidia-cdi-refresh.service and .path before listing devices in README, prerequisites, both offline routes and future GB200/Rubin acceptance queries; deployment guidance links to the same procedure. Explain successful one-shot inactive (dead), status=0/SUCCESS, enabled/active (waiting) for .path, nonzero status exits and missing units on older releases. README centralizes logs, enabling, refreshing, manual generation and duplicate-definition handling. Offline startup is a separate code block after selected UUID verification. This is a documentation correction with no remote service queries/changes or additional GPU/Toolkit hardware acceptance.

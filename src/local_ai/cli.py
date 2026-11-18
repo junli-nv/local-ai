@@ -17,6 +17,7 @@ from . import (
     configuration,
     deployment,
     documents,
+    history,
     images,
     installlog,
     preparation,
@@ -447,6 +448,50 @@ def parser():
                 required=True,
                 help="Destination archive path; companion checksum/lock files are created",
             )
+    histories = clients.add_parser(
+        "history", help="Manage connections associated with saved session history"
+    ).add_subparsers(dest="history_action", required=True)
+    b = histories.add_parser(
+        "list", help="List local historical endpoints and session counts without connecting"
+    )
+    b.add_argument(
+        "--state-dir", type=Path, default=client_home(), help="Private client state root"
+    )
+    b.add_argument(
+        "--json", action="store_true", help="Print structured history metadata instead of a table"
+    )
+    b = histories.add_parser(
+        "update-endpoint",
+        help="Update the server address associated with existing sessions",
+        description="Update saved history connections only; installation defaults are unchanged. The target must have no separate sessions.",
+        epilog="Example: ./local-ai client history update-endpoint --old http://GPU001:18000/v1 --new http://GPU002:18000/v1",
+    )
+    b.add_argument(
+        "--old",
+        dest="old_endpoint",
+        required=True,
+        help="Previous model API endpoint whose history is retained",
+    )
+    b.add_argument(
+        "--new",
+        dest="endpoint",
+        default=settings().get("endpoint"),
+        help="Replacement endpoint; defaults to the saved endpoint",
+    )
+    b.add_argument(
+        "--model",
+        default=settings().get("model"),
+        help="Replacement model ID; otherwise retain the source model",
+    )
+    b.add_argument(
+        "--state-dir", type=Path, default=client_home(), help="Private client state root"
+    )
+    b.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show the binding plan without writing files or connecting",
+    )
+
     b = clients.add_parser(
         "workflow", help="Run explicit real model/tool acceptance in a new private directory"
     )
@@ -551,14 +596,14 @@ def parser():
     )
     resume = b.add_mutually_exclusive_group()
     resume.add_argument(
-        "-s", "--session", help="Resume this OpenCode session in the endpoint's private history"
+        "-s", "--session", help="Resume this OpenCode session in the selected private history"
     )
     resume.add_argument(
         "-c",
         "--continue",
         dest="continue_session",
         action="store_true",
-        help="Continue the latest OpenCode session for this project and endpoint",
+        help="Continue the latest OpenCode session for this project and history identity",
     )
     a.epilog = (
         a.epilog or ""
@@ -671,6 +716,28 @@ def dispatch(q):
     if q.group == "model":
         return images.download_model(q.data_dir, profile(q.profile), force=q.force)
     if q.group == "client":
+        if q.action == "history":
+            if q.history_action == "list":
+                rows = history.list_histories(q.state_dir, settings().get("endpoint"))
+                if q.json:
+                    print(json.dumps(rows, indent=2))
+                elif rows:
+                    print("HISTORY               SESSIONS  DEFAULT  RECORDED ENDPOINTS")
+                    for row in rows:
+                        count = row["sessions"] if row["sessions"] is not None else "?"
+                        addresses = ", ".join(row["endpoints"]) or "(unknown)"
+                        marker = "*" if row["default"] else "-"
+                        print(f"{row['history_id']:<20}  {count!s:<8}  {marker:<7}  {addresses}")
+                        if row["error"]:
+                            print("  ERROR: " + row["error"])
+                else:
+                    print("No local session history found.")
+                return int(any(row["error"] for row in rows))
+            if not q.endpoint:
+                raise ValueError("Set --new or configure the saved replacement endpoint")
+            q.default_endpoint = settings().get("endpoint")
+            print(json.dumps(history.update_endpoint(q), indent=2))
+            return 0
         if q.action == "workflow":
             if not q.endpoint:
                 raise ValueError("Set --endpoint or configure the default")

@@ -101,8 +101,7 @@ processes. The environment supplies the network path; administrators may configu
 or other forwarding externally. Examples use --host 0.0.0.0; the parameter default remains
 127.0.0.1 for local access or an administrator-managed proxy.
 
-History is keyed by normalized endpoint, ignoring trailing slashes. Different hosts/ports
-have separate histories and every invocation has independent configuration. State directories
+history.py stores an active user-local identity in history-bindings.json, independent of endpoints and installation directories, recognizing earlier installation bindings during upgrade. Endpoint choices affect API routing only; connections records used addresses for lookup. Explicit --state-dir isolates histories; project metadata restores working directories. Existing databases stay in place. Legacy association rejects nonempty targets, with locked metadata writes, private backups and rollback on caught failures. State directories
 and files use 0700/0600. Old SSH-keyed histories remain untouched and are not auto-migrated.
 Administrators can still access user data.
 

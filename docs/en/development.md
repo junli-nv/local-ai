@@ -1,5 +1,24 @@
 # Development workflow
 
+## Synchronize the remote baseline before every change
+
+Before starting code, test or documentation changes, identify the actual Git checkout, branch, commit and working-tree state, then fetch current origin code and tags. Local tags or an installed program version do not establish the latest remote version. Record the baseline commit; recheck when resuming long work or collaborating across people or machines.
+
+1. Inspect git status --short. Preserve existing changes and untracked files in a private backup or separate worktree. If stashing, retain its ID until application and validation succeed. Never overwrite another contributor's edits or force a pull.
+2. Fetch remote code and tags. This example assumes a clean development checkout already on main; do not apply it blindly to an installation with unresolved edits:
+
+```bash
+git status --short
+git fetch origin --tags
+git merge --ff-only origin/main
+git log -1 --oneline
+git tag --list --sort=-version:refname
+```
+
+3. If main cannot fast-forward or a feature branch is behind, inspect the differences and merge or rebase according to the branch relationship. Resolve each conflict while preserving upstream additions and the requested change. A failed synchronization does not make a stale checkout suitable for release.
+4. Recheck implementation, documentation and tests on the updated baseline. Results from before the merge do not validate the combined code.
+5. Fetch again before committing, pushing or tagging. Check remote branches and existing tags, increment from the actual remote version, and integrate concurrent updates with another regression run. Never force-push main or reuse/move old tags.
+
 ## Required version and artifact checks for every release
 
 1. Confirm the target in src/local_ai/__init__.py and pyproject.toml. Review both languages of README, commands, deployment, offline, rich documents, architecture, development, performance, updates, templates and validation.
@@ -67,13 +86,13 @@ Chinese is primary; maintain English separately and synchronize both entry paths
 | Connect via host IP | Explicit --host; 0.0.0.0 binds, while endpoints use a real host/IP. Preserve existing network/listener settings |
 | Container runs without visible progress | Show logs and startup/loading/readiness/failure. READY requires health, not docker ps, a port or blank curl output |
 | Unclear logs/status | install.log for preparation; instances/NAME/server.log for runtime. Clear messages, JSON stdout, progress stderr and meaningful exit codes |
-| Native resume loses context | opencode -s ID restores endpoint/project/private state using public metadata, handling empty lists and project scope without private database tables |
+| Native resume loses context | opencode -s ID restores the associated endpoint and original project/private state using public metadata, handling empty lists and project scope without private database tables |
 | Application copying fails | Default terminal selection/copy/paste; disable application mouse/clipboard shortcuts. Explain disabled click/wheel behavior and verify terminal modes |
 | Fixed release blocks upgrades/offline use | Reference releases are validation records, not runtime allowlists. Reuse installs, detect imports, allow explicit releases/offline exports and test capabilities |
 | Models/revisions change | Configure recipe identities, directories, names, engine/client capabilities and separate locks; do not inherit hardware acceptance or DeepSeek-specific settings |
 | Directory installation and migration | The unpacked directory is the root, with ordinary src/. install prepares assets in place; export writes a complete dist/ bundle excluding dist/, instance state, histories and credentials. Reinstall/reconfigure after moving |
-| One BCM, multiple model services | Initial installation endpoint is optional; change defaults through config or direct file editing, not reinstallation. chat --endpoint/--model override one invocation without rewriting defaults. Separate endpoint history/cache and resume original connection; never silently fall back to the default node |
-| Source-script delivery | Develop on main/exact commits; the user requested v1.4.1 for this documentation/validation-status update, and future tags still require explicit request and quality review |
+| One BCM, multiple model services | Initial endpoint is optional; config saves defaults and chat --endpoint/--model override one invocation. User-private history is independent of server and installation paths, including ad-hoc routes. Preserve session project directories. Inspect legacy records with client history list and associate once if needed, without database copies, nonempty-history merging, model guessing or endpoint fallback |
+| Source-script delivery | Synchronize remote main and tags first. The user requested the v1.4.2 session-decoupling tag, preserving prior tags. Future tags still require explicit requests and a CI-passed commit; no automatic Release |
 | Single-user speed and first-use compilation spikes | Keep the baseline unchanged; opt into DSpark and explicit bounded warmup. Separate API READY from WARMUP COMPLETE, persist compiler caches per recipe, invalidate completion on restart, and report actual coverage and concurrency tradeoffs |
 | Around 400 ms TTFT seems high | Record method, input size, cache/load and timing first. Separate compilation, generation delay and reasoning content; avoid one-number conclusions |
 
@@ -166,7 +185,7 @@ pyproject.toml configures Python packaging and developer tools; ordinary source-
 | Section | Purpose here |
 |---|---|
 | build-system | setuptools>=68 build backend |
-| project | cluster-local-ai 1.4.1, Python>=3.10, no third-party runtime dependencies |
+| project | cluster-local-ai 1.4.2, Python>=3.10, no third-party runtime dependencies |
 | project.scripts | Installed local-ai entry point: local_ai.cli:main |
 | tool.setuptools | Find packages under src and include profiles.json |
 | project.optional-dependencies | dev extra installs Ruff 0.14.2 |
@@ -336,6 +355,9 @@ migration. Exit clients and back up history before switching. Restore the
 original backup when downgrading across incompatible database migrations.
 
 ## Delivery and version labels
+
+The user requested a new v1.4.2 tag for local history/routing decoupling; verify existing remote v1.4.1 rather than reusing that version.
+
 
 The user requested committing, pushing and adding the v1.4.1 annotated tag; this does not automatically create a GitHub Release. Retain the v1.4.0 and historical v1.3.7 tags and acceptance records. The v1.4.0 GitHub Release was withdrawn at the user's earlier request; withdrawn version tags are not reused. Development continues on main/exact commits, with support limited by the validation record. Tests and CI are basic requirements; future tags require an explicit user request and do not automatically create GitHub Releases.
 

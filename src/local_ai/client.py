@@ -10,11 +10,12 @@ import sys
 import time
 from pathlib import Path
 
-from . import __version__, native_cache, tasks, telemetry
+from . import __version__, history, native_cache, tasks, telemetry
 from .artifacts import validate
 from .common import atomic_json, fingerprint, private_dir
 from .endpoint import endpoint_url, wait_endpoint
 from .operations import GUIDANCE
+from .paths import settings
 from .profiles import client_options
 from .resume import register
 
@@ -137,7 +138,8 @@ def chat(options):
         raise RuntimeError("Client not installed; run local-ai client install on this headnode")
     manifest = validate(assets)
     state_root = private_dir(options.state_dir)
-    key = service_key(base)
+    default_endpoint = settings().get("endpoint")
+    key = history.resolve(state_root, base, default_endpoint)
     state = private_dir(state_root / "services" / key)
     session = private_dir(state / "logs" / ("session-%d-%d" % (time.time_ns(), os.getpid())))
     project = Path(options.project).expanduser().resolve()
@@ -146,6 +148,9 @@ def chat(options):
     if not options.check and options.run is None and not sys.stdin.isatty():
         raise ValueError("Interactive chat requires a terminal; use --run for batch execution")
     wait_endpoint(base, options.model)
+    if history.resolve(state_root, base, default_endpoint) != key:
+        raise ValueError("History binding changed during startup; retry chat")
+    history.remember_history(state_root, base, key, default_endpoint)
     env = prepare(state, assets, session, base, options.model, project)
     register(state_root, state, assets, base, options.model, project)
     if options.check:

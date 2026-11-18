@@ -38,7 +38,7 @@ BCM 负责 OpenCode、项目文件、Shell/Git/SSH 工具、用户凭据、历�
 | `configuration.py` | 独立读写客户端默认值，不安装或连接服务 |
 | `paths.py` / `program.py` | 可迁移路径与普通程序文件选择 |
 | `deployment.py` / `bundle.py` | 就地准备角色资源、完整导出与清单校验 |
-| `resume.py` / `operations.py` | 原生会话恢复与通用任务指引 |
+| `history.py` / `resume.py` / `operations.py` | 默认历史身份、原生会话恢复与通用任务指引 |
 | `cli.py` | 解析参数并显式分派操作 |
 | `completion.py` | 从 argparse 读取补全候选并生成 Bash 脚本；绕过业务分派与安装日志 |
 
@@ -91,7 +91,7 @@ client.py 仍启动一个 document_mcp 标准输入/输出子进程。documents.
 由部署环境负责；nginx/frp 等外部工具可提供反向代理或转发，客户端只填写最终地址。
 GPU 服务按示例监听 0.0.0.0，默认参数仍为 127.0.0.1；监听地址通过 --host 指定。
 
-历史按规范化后的 API endpoint 区分，末尾斜杠不影响身份。不同主机或端口使用独立历史。
+history.py 在用户状态根的 history-bindings.json 保存固定 active 历史身份，地址与程序安装目录不参与新身份计算；旧安装绑定可只读识别后升级。所有 endpoint 选择只改变 API 路由，connections 记录使用过的地址用于查询。独立 --state-dir 显式隔离历史；项目目录用于恢复工作位置。旧状态目录不改名、不复制数据库，兼容工具拒绝覆盖非空目标；元数据加锁、私有备份并在捕获写入失败时回滚。
 每次连接使用独立配置文件；状态目录和配置权限分别为 0700、0600。旧版 SSH 历史目录
 不会被删除，也不会自动迁移到 API 地址。系统管理员仍可访问用户文件。
 

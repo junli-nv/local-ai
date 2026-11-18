@@ -1,6 +1,6 @@
 # local-ai
 
-v1.4.1 clarifies air-gapped client startup, system-wide offline settings and Docker package preparation, and updates B200/GB300 four-GPU hardware validation status. It includes the v1.4.0 client diagnostics and workflow features; see [release notes](docs/en/release-1.4.1.md) for this update and its limits.
+v1.4.2 decouples local session history from server addresses, retaining sessions after saved endpoint changes. It adds historical endpoint lookup and a compatibility tool for old records, preserving v1.4.1 airgap and hardware guidance. See [server replacement](docs/en/commands.md#replace-a-server-and-retain-sessions) and [release notes](docs/en/release-1.4.2.md).
 
 [中文（默认）](README.md)
 
@@ -31,7 +31,7 @@ The managed server currently uses the NVIDIA toolchain. See the profile table be
 
 ## Installation and usage
 
-The current version is v1.4.1. Examples download complete source from this tag; ./local-ai --version should report 1.4.1. See [validation](docs/en/validation.md) for acceptance scope and unvalidated platforms.
+The current version is v1.4.2. Examples download complete source from this tag; ./local-ai --version should report 1.4.2. See [validation](docs/en/validation.md) for acceptance scope and unvalidated platforms.
 
 ## Example conventions and documentation
 
@@ -99,7 +99,7 @@ Download into an empty directory and check Docker, GPUs and CDI:
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.4.1.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.4.2.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ./local-ai --version
@@ -208,7 +208,7 @@ Log in as alice on bcm-headnode and use BCM's own empty directory:
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.4.1.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.4.2.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ```
@@ -294,7 +294,7 @@ For a different model on GPU002, also pass --model with its advertised ID. If th
 ./local-ai chat --endpoint http://GPU002:18000/v1 --model other-model --check
 ```
 
---model is also invocation-only. Omitting it uses the installed model default, without guessing another node's model; mismatch errors list advertised IDs. Histories/caches are separate per endpoint. Return to the original endpoint to continue its history. chat --session ID/--continue must select that endpoint too; the native opencode -s ID launcher locates the original address.
+--model is also invocation-only and otherwise uses the installed default, with advertised IDs reported on mismatch. User-local history is independent of endpoint and installation paths; ad-hoc --endpoint shares the selected history. --session ID/--continue use that history while retaining project directories. [Associate missing legacy records once](docs/en/commands.md#replace-a-server-and-retain-sessions); ordinary server switching requires no history update.
 
 Resume with opencode -s ses_.... The first chat creates ~/.local/bin/opencode and reports PATH/name conflicts. chat --session ID and chat --continue are alternatives. Mouse capture/clipboard bindings are disabled by default; use terminal copying/pasting and keyboard navigation. See [session resume and terminal copying](docs/en/commands.md#resume-and-terminal-clipboard).
 

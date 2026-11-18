@@ -1,5 +1,7 @@
 # 使用手册与命令参考
 
+v1.4.2 将本地历史与服务器、安装目录解耦，默认和临时 endpoint 都复用所选历史。history list 用于查询旧记录，history update-endpoint 只用于旧版本兼容；日常切换无需更新历史。
+
 ## 任务诊断与工作流回归（v1.4.0）
 
 在 BCM 的 /raid/local-ai 使用 v1.4.1；这些功能自 v1.4.0 提供，更早归档不包含。
@@ -20,7 +22,7 @@
 chat 的 --run-timeout 默认 0（无限制），仅适用 --run，单位秒；超时清理本地客户端进程组并退出 124。
 Ctrl+C 清理该组并退出 130，SIGTERM 清理后退出 143，不撤销已发生的文件或远端操作。--heartbeat 默认 15 秒，0 关闭，仅批处理打印到 stderr。
 --direct-api 绕过临时本机 API 观测转发器，保留原生事件和任务记录，适合诊断兼容性；默认启用观测。
-转发器仅监听 127.0.0.1 随机端口，退出即关闭；原连接与历史仍按实际 endpoint 隔离。
+转发器仅监听 127.0.0.1 随机端口，退出即关闭；观测地址不改变连接与历史身份，默认历史和临时连接规则见下文。
 原生 SDK 依赖和锁文件按客户端身份复用到独立配置目录；冷启动可能初始化依赖，后续会话复用已有材料。不会复制旧会话的连接配置或个人规则。
 
 请求报告直接读取 API usage；cached_tokens 缺失为 null（未知），不从服务端全局命中率推断单次请求缓存。
@@ -388,7 +390,7 @@ client install/export 均接受 `--client-dir`，默认是安装根目录下的 
 
 升级模型或镜像时，使用独立的数据目录和实例进行验收，保留旧源码、权重和镜像锁。不要在原生产数据目录中强制覆盖权重后再尝试回退。
 
-一套 BCM 安装可连接多个 endpoint，见[多服务示例](../README.md#从同一个-bcm-连接多个服务)。模型相同可沿用安装默认模型；目标服务模型不同时，使用 chat --model ID，本次覆盖不改写默认值。不匹配时列出服务发布的 ID，不会静默挑选其他模型或回退到默认节点。恢复参数作用于选定 endpoint 的私有历史。
+一套 BCM 安装可连接多个 endpoint，见[多服务示例](../README.md#从同一个-bcm-连接多个服务)。模型相同沿用默认模型，其他模型显式 chat --model ID 并自行验证兼容性；不匹配列出服务 ID，不静默回退。endpoint 只决定本次推理路由；恢复参数使用当前用户的本地历史并保留原项目。
 
 ### 动态思考档位
 
@@ -409,10 +411,72 @@ client install/export 均接受 `--client-dir`，默认是安装根目录下的 
 
 循环中还会经过一个不显示档位名称的原生默认状态，与 normal 同样不附加思考参数。不要在自定义配方中显式声明 default 档位；该名称与 OpenCode 1.19.5 的循环回绕内部值冲突。
 
+## 更换服务器并保留会话
+
+### 日常切换：无需更新历史
+
+v1.4.2 的本地历史身份与服务器地址、程序安装目录无关。同一用户使用同一私有状态根时，默认 endpoint 与临时 --endpoint 都沿用同一份历史。项目路径用于定位工作目录和会话归属；恢复时保留原会话 ID 与原项目。服务器无需保存聊天记录，也不需要旧服务器在线。
+
+在 bcm-headnode 以原聊天用户执行。假设原会话 ID 为 ses_example、项目为 /home/alice/project，GPU002 已提供兼容模型服务：
+
+```bash
+# 本次把同一会话交给 GPU002，默认配置不变
+./local-ai chat --endpoint http://GPU002:18000/v1 --project /home/alice/project --session ses_example
+# 如需以后都默认使用 GPU002，保存地址后按原 ID 恢复
+./local-ai config set endpoint http://GPU002:18000/v1
+opencode -s ses_example
+```
+
+将 ses_example 替换为原 ID，项目路径保持原值。普通 chat 无需先运行历史更新命令。
+更换模型时显式 --model ID，并验证工具调用及上下文兼容性；不会自动猜测模型或切换到其他节点。
+服务器临时 KV 缓存不迁移，换服务器可能需要重新 prefill；这不影响本地对话记录。
+已打开窗口保留原连接配置，退出后再恢复。需要完全独立历史时显式指定另一个 --state-dir。
+用户账户提供权限隔离；同一账户内按项目组织会话和使用不同目录不构成权限隔离。
+
+### 查询旧地址
+
+```bash
+./local-ai client history list
+```
+
+默认表格列出历史 ID、会话数量、本地默认历史标记 * 和记录过的 endpoint，不连接服务器或读取对话正文。
+--state-dir 默认用户私有状态根；--json 默认关闭，启用后还显示完整历史目录、模型和错误。
+未知数量显示 ? 和错误，退出 1；无记录退出 0 且不创建状态。缺失连接元数据时地址显示 unknown，不能从目录摘要反推 URL。
+同一历史使用过的地址合并显示；旧版本不同历史可能记录相同地址，应结合数量和历史 ID 区分。记录过的 endpoint 只用于追踪，不决定当前推理去向。
+
+### 旧版本历史兼容：只需处理一次
+
+v1.4.1 及更早版本按 endpoint 保存历史。升级会复用旧默认地址下已有记录；若默认地址已经改为新服务器而旧历史没有出现，先用 history list 找到旧地址，再执行：
+
+```bash
+./local-ai config set endpoint http://GPU002:18000/v1
+./local-ai client history update-endpoint --old http://GPU001:18000/v1 --new http://GPU002:18000/v1
+opencode -s ses_example
+```
+
+--old 是旧地址，--new 是新地址；省略 --new 时使用当前保存的 endpoint。此命令更新历史连接关联并选择这份本地历史，不修改 installation.json；默认地址由 config set 保存。无需旧服务器在线。关联完成后，日常任意切换兼容服务器都不再需要重复更新。
+
+| 参数 | 含义与默认值 |
+|---|---|
+| --old URL | 必填，旧服务地址 |
+| --new URL | 新地址，默认当前保存的 endpoint；未配置时必填 |
+| --model ID | 默认已保存 model，否则保留源连接模型 |
+| --state-dir DIR | 默认当前用户私有状态根 |
+| --dry-run | 默认关闭；预览，不写文件、不连接模型 |
+
+JSON 输出 sessions、history_directory、endpoint、database_copied=false；实际修改时还输出 backup_directory。
+源历史必须有会话；目标已有另一套会话时拒绝覆盖。旧版多套历史不自动合并或删除，仍可通过 history list 查看。
+数据库、ID、快照和工具输出留在原位，只更新连接元数据；旧目录名仍可能是地址摘要。
+endpoint-backups/ 私有备份支持捕获写入失败时回滚；重复操作无变化时不创建额外备份。
+成功退出 0，执行或校验失败退出 1，参数错误退出 2。
+
+会话定位使用 OpenCode 公开 JSON 接口；旧历史关联前只读检查 SQLite session 数量，无数据库时兼容旧 JSON 存储。未知数据库格式拒绝修改。
+本功能不复制历史到其他 BCM，也不把历史放入公共离线包；迁移客户端机器需另外安全备份整个用户私有状态。
+
 ### 恢复会话与终端复制
 
 首次运行 chat（包括 --check）会在 `~/.local/bin/opencode` 创建当前用户的恢复入口。
-退出提示中的 `opencode -s ses_...` 可直接执行，自动找回原 endpoint、项目目录和私有历史。
+退出提示中的 `opencode -s ses_...` 可直接执行，自动找回原项目目录和私有历史；默认历史使用当前保存的 endpoint，其他历史使用对应连接。
 若该目录不在 PATH，按提示执行 `export PATH="$HOME/.local/bin:$PATH"`，并按需加入 `~/.profile`。
 不会覆盖已有的其他 opencode 程序；有名称冲突时使用下面的显式入口：
 

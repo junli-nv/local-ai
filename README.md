@@ -1,6 +1,6 @@
 # local-ai
 
-v1.4.1 完善 airgap 客户端启动、系统级离线设置及 Docker 软件包准备说明，更新 B200/GB300 四卡实机验证状态。包含 v1.4.0 的客户端诊断与工作流功能；本次变更与边界见[发布说明](docs/release-1.4.1.md)。
+v1.4.2 将本地会话历史与服务器地址解耦：切换 endpoint 后沿用原会话，提供历史地址查询和旧记录关联工具。保留 v1.4.1 的 airgap 部署与硬件验证说明。步骤见[更换服务器并保留会话](docs/commands.md#更换服务器并保留会话)，边界见[发布说明](docs/release-1.4.2.md)。
 
 **local-ai 是一个面向本地集群的 AI 工作助手，帮助用户通过自然语言完成系统运维、代码开发和日常文件处理。**
 
@@ -29,7 +29,7 @@ v1.4.1 完善 airgap 客户端启动、系统级离线设置及 Docker 软件包
 
 ## 安装与使用
 
-当前版本为 v1.4.1，以下示例下载该标签的完整源码。./local-ai --version 应显示 1.4.1，实际验收范围与未覆盖平台见[验证记录](docs/validation.md)。
+当前版本为 v1.4.2，以下示例下载该标签的完整源码。./local-ai --version 应显示 1.4.2，实际验收范围与未覆盖平台见[验证记录](docs/validation.md)。
 
 ## 示例约定与文档入口
 
@@ -97,7 +97,7 @@ BCM 架构独立选择。配置只使用同一 OS 可见的本地 GPU；GB300 TP
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.4.1.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.4.2.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ./local-ai --version
@@ -206,7 +206,7 @@ v1.4.0 提供 `server benchmark`。
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.4.1.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.4.2.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ```
@@ -292,7 +292,7 @@ chat --endpoint 不改写 installation.json，也不要求重新安装。--check
 ./local-ai chat --endpoint http://GPU002:18000/v1 --model other-model --check
 ```
 
---model 也只对本次生效；省略时仍用安装默认模型，不会自动猜测另一节点的模型。不匹配时错误会列出服务端发布的 ID。不同 endpoint 的历史和缓存分开保存；返回原 endpoint 可继续其原会话。用 chat --session ID 或 --continue 时，也须选择对应 endpoint；原生 opencode -s ID 恢复入口会查找原地址。
+--model 也只对本次生效；省略时用安装默认模型，不猜测其他节点的模型。不匹配会列出服务端 ID。同一用户的本地历史与 endpoint、安装目录无关，临时 --endpoint 也沿用所选历史；--session ID 与 --continue 使用该历史并保留项目目录。旧版记录缺失时，按[更换服务器并保留会话](docs/commands.md#更换服务器并保留会话)兼容一次；正常切换无需更新历史。
 
 退出后可用原生提示的 opencode -s ses_... 恢复。首次 chat 创建 ~/.local/bin/opencode 恢复入口，并提示 PATH 或同名程序冲突；也可用 chat --session ID 或 chat --continue。默认关闭鼠标捕获及内置剪贴板快捷键，使用终端复制粘贴、键盘导航，详见[会话恢复与终端复制](docs/commands.md#恢复会话与终端复制)。
 

@@ -24,6 +24,8 @@ documentation. Do not reinterpret them as restrictions on ordinary operations ta
 
 Read the [product decisions and working order](development.md#developer-handoff-decisions-and-working-order) before taking over. Update implementation, entry docs and evidence together when changing a decision.
 
+- Before code, test or documentation changes, preserve existing edits, fetch remote code/tags and synchronize the development baseline. Confirm remote commits/versions, revalidate after merging and recheck before release; local tags alone are insufficient. See [baseline synchronization](development.md#synchronize-the-remote-baseline-before-every-change).
+
 - Here, submitting code includes commit and push; verify the authorized push against the remote and inspect CI.
 
 - Keep GPU-server and BCM-client roles separate.

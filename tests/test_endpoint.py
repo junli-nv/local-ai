@@ -191,7 +191,7 @@ class EndpointTests(unittest.TestCase):
             self.assertEqual(invocation["endpoint"], base)
             self.assertNotIn("ssh_command", invocation)
 
-    def test_switch_endpoints_keeps_saved_defaults_and_separate_state(self):
+    def test_switch_endpoints_keeps_saved_defaults_and_same_history(self):
         with (
             tempfile.TemporaryDirectory() as directory,
             model_api("model-a") as (base_a, requests_a),
@@ -245,8 +245,8 @@ class EndpointTests(unittest.TestCase):
                 self.assertEqual(cfg["model"], "local-deepseek/" + model)
             for variable in ("XDG_DATA_HOME", "XDG_STATE_HOME", "XDG_CACHE_HOME"):
                 self.assertEqual(environments[0][variable], environments[2][variable])
-                self.assertNotEqual(environments[0][variable], environments[1][variable])
-            self.assertEqual(len(list((root / "state/services").iterdir())), 2)
+                self.assertEqual(environments[0][variable], environments[1][variable])
+            self.assertEqual(len(list((root / "state/services").iterdir())), 1)
             self.assertEqual(settings_path.read_text(), original)
             result = json.loads(output.getvalue())
             self.assertEqual((result["endpoint"], result["model"]), (base_b, "model-b"))

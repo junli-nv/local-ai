@@ -34,6 +34,7 @@ def request(url, data=None, timeout=25):
 
 def check(assets):
     calls = []
+    routed_calls = []
 
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self):
@@ -46,6 +47,7 @@ def check(assets):
         def do_POST(self):
             value = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
             calls.append(value)
+            routed_calls.append((self.server.server_port, value))
             tool_results = sum(m.get("role") == "tool" for m in value.get("messages", []))
             functions = {t["function"]["name"] for t in value.get("tools", [])}
             if functions and tool_results < 1:
@@ -140,11 +142,27 @@ def check(assets):
         api = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
         thread = threading.Thread(target=api.serve_forever)
         thread.start()
+        original_port = api.server_port
         endpoint = f"http://127.0.0.1:{api.server_port}/v1"
         session = None
         summaries = []
         try:
-            for prompt in ("Create FIRST.", "APPEND_SECOND without repeating FIRST."):
+            for turn, prompt in enumerate(
+                ("Create FIRST.", "APPEND_SECOND without repeating FIRST.")
+            ):
+                if turn:
+                    replacement = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+                    replacement_thread = threading.Thread(target=replacement.serve_forever)
+                    replacement_thread.start()
+                    previous, previous_thread = api, thread
+                    api, thread = replacement, replacement_thread
+                    previous.shutdown()
+                    previous_thread.join(timeout=3)
+                    previous.server_close()
+                    with socket.socket() as probe:
+                        probe.settimeout(1)
+                        assert probe.connect_ex(("127.0.0.1", original_port)) != 0
+                    endpoint = f"http://127.0.0.1:{api.server_port}/v1"
                 command = [
                     sys.executable,
                     "-c",
@@ -199,6 +217,17 @@ def check(assets):
                     flush=True,
                 )
             assert (project / "ledger.txt").read_text().splitlines() == ["FIRST", "SECOND"]
+            assert {port for port, _ in routed_calls} == {original_port, api.server_port}
+            replacement_calls = [body for port, body in routed_calls if port == api.server_port]
+            assert replacement_calls, "Replacement API received no requests"
+            assert any(
+                message.get("role") == "user" and "Create FIRST." in str(message.get("content"))
+                for message in replacement_calls[0].get("messages", [])
+            ), "The replacement API did not receive the original conversation"
+            assert any(
+                message.get("role") == "tool"
+                for message in replacement_calls[0].get("messages", [])
+            ), "Original tool results were missing after server replacement"
             # Force native compaction via its public session API in the same temporary history.
             state = files[-1].parent.parent.parent
             setup = root / "compaction"
@@ -257,6 +286,9 @@ def check(assets):
                         "client": "native",
                         "tool_roundtrips": 2,
                         "same_session_resume": True,
+                        "server_replaced": True,
+                        "original_server_stopped": True,
+                        "prior_messages_on_replacement": True,
                         "cache_usage_observed": True,
                         "compaction_hook": True,
                         "ledger_exactly_once": True,
