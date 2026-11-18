@@ -67,8 +67,11 @@ cd /raid/local-ai
 ./local-ai server inventory
 nvidia-smi
 nvidia-smi topo -m
+systemctl status nvidia-cdi-refresh.service nvidia-cdi-refresh.path --no-pager
 nvidia-ctk cdi list
 ```
+
+刷新服务是一次性任务，inactive (dead) 配合最近一次 status=0/SUCCESS 可正常；.path 通常应为 enabled、active (waiting)。旧版 Toolkit 缺少单元不代表 GPU 故障。状态非零时按 [README 的 CDI 配置](../README.md#配置-gpu-的-cdi-设备定义首次部署必查)区分正常退出、服务失败与手动生成路径，再核对所选 UUID；这里的查询不会刷新定义。
 
 1. 保存脱敏 CPU/OS、GPU 名称与计算能力、驱动、显存、主存和 NUMA 拓扑；确认所选 GPU 在
    同一 OS 可见（GB200 四卡、Rubin 两卡），所选 CDI UUID 完整且设备与端口空闲。

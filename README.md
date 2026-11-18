@@ -105,6 +105,7 @@ cd /raid/local-ai
 docker version
 docker info --format 'Server={{.ServerVersion}} Driver={{.Driver}} Root={{.DockerRootDir}}'
 nvidia-smi
+systemctl status nvidia-cdi-refresh.service nvidia-cdi-refresh.path --no-pager
 nvidia-ctk cdi list
 ```
 
@@ -114,14 +115,31 @@ Docker 客户端必须能连接本机 Docker 守护进程。下面先完成 CDI 
 
 **在 GPU001 执行。** 新机器即使 nvidia-smi 正常，也需要核实 CDI 定义。nvidia-ctk cdi list 必须包含准备使用的每张卡的 nvidia.com/gpu=GPU-... UUID 别名；已有完整别名时无需重复生成。
 
+先解读上面的 systemctl status 输出：Toolkit 1.18 起提供自动刷新机制；.path 通常应为 enabled、active (waiting)，.service 是一次性任务，成功运行后显示 inactive (dead) 属正常情况，应核对最近一次执行为 status=0/SUCCESS。status 对 inactive 或不存在的单元可能返回非零，不能仅凭退出码认定 CDI 不可用，也不要因此跳过 cdi list 和 UUID 核对。旧版 Toolkit 或未提供该单元的安装可使用手动定义，Unit not found 不等于 GPU/驱动故障。
+
+若服务显示 failed、执行失败或一直未生成定义，先查看日志：
+
+```bash
+sudo journalctl -u nvidia-cdi-refresh.service -b --no-pager -n 100
+```
+
+若使用自动刷新且单元未启用，在确认 /etc/cdi 与 /var/run/cdi 没有重复或冲突的 NVIDIA 定义后启用：
+
+```bash
+sudo systemctl enable --now nvidia-cdi-refresh.path nvidia-cdi-refresh.service
+```
+
 若列表为空或缺少所选 UUID，系统有自动刷新服务时执行：
 
 ```bash
 sudo systemctl restart nvidia-cdi-refresh.service
+systemctl status nvidia-cdi-refresh.service --no-pager
 nvidia-ctk cdi list
 ```
 
 如果提示 Unit nvidia-cdi-refresh.service not found，改用下面的手动生成方式。先确认 /etc/cdi 和 /var/run/cdi 中没有其他有效或冲突的 NVIDIA 定义；不要同时保留重复定义。
+
+若服务存在但刷新失败，先按上面的日志排障；确需改为手动管理时，先停用自动刷新单元并处理已有定义，避免两种生成方式产生重复条目。自动刷新不会覆盖所有 MIG 重配置场景，调整后仍需显式刷新并核对 UUID。机制与状态示例见 [NVIDIA CDI 官方说明](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/cdi-support.html)。
 
 ```bash
 sudo install -d /etc/cdi

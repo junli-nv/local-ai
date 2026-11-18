@@ -1,5 +1,11 @@
 # Validation record
 
+## Check refresh units before listing CDI devices: 2026-11-18
+
+Checked the automatic-refresh mechanism against NVIDIA's CDI documentation. Both languages now check nvidia-cdi-refresh.service and .path before listing devices in README, prerequisites, both offline routes and future GB200/Rubin acceptance queries; deployment guidance links to the same procedure. Explain successful one-shot inactive (dead), status=0/SUCCESS, enabled/active (waiting) for .path, nonzero status exits and missing units on older releases. README centralizes logs, enabling, refreshing, manual generation and duplicate-definition handling. Offline startup is a separate code block after selected UUID verification. This is a documentation correction with no remote service queries/changes or additional GPU/Toolkit hardware acceptance.
+
+The local macOS ARM64/Python 3.14 suite ran 241 cases: 236 passed, one optional FFmpeg skip and four errors. Two are existing platform limits (127.0.0.2 binding and an AMD64 server fixture); two endpoint cases encounter sandbox restrictions on user state/resume-launcher writes. Existing documentation contracts (Bash syntax, relative links and CLI examples), version references across 38 documents, Ruff lint/format and git diff --check passed. Reviewed new commands, execution locations, status meanings, both offline routes and the README flow in both languages. Runtime implementation and tests were not changed.
+
 ## General-template project locations and chat directory: 2026-11-18
 
 The user identified missing project-location and chat-directory sections when copying the general template alone. Local Git history contains neither heading nor the complete paragraphs; /home was mentioned only in the BCM template, while project sizing and native background-read limitations appeared only in the setup guide. The previous language-rule commit did not delete these sections. Add both supplied sections to both general templates and align setup guidance; omit the topic-extension comment as subsequently requested. Preserve BCM discovery scope and authorization limits. Personal AGENTS.md still requires manual merging; no user files are changed automatically. This corrects template coverage without new live-client or model-behavior acceptance.

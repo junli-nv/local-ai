@@ -73,8 +73,11 @@ cd /raid/local-ai
 ./local-ai server inventory
 nvidia-smi
 nvidia-smi topo -m
+systemctl status nvidia-cdi-refresh.service nvidia-cdi-refresh.path --no-pager
 nvidia-ctk cdi list
 ```
+
+The refresh service is a one-shot task: inactive (dead) with a latest status=0/SUCCESS can be normal. The .path unit should normally be enabled and active (waiting). Missing units on older Toolkit releases do not establish a GPU failure. For nonzero status exits, follow [README CDI setup](../../README.en.md#configure-gpu-cdi-definitions-before-first-deployment) to distinguish normal completion, service failure and manual generation, then verify selected UUIDs. These queries do not refresh definitions.
 
 1. Record sanitized CPU/OS, GPU names/compute capability, driver, HBM, host memory and NUMA.
    Confirm OS-visible GPUs (four GB200 or two Rubin), complete selected CDI UUIDs, and free devices/ports.

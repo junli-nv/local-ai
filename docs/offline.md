@@ -103,7 +103,13 @@ tar -xf local-ai.tar --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ./local-ai install --role server --profile b300-tp4 --offline
 ./local-ai server inventory
+systemctl status nvidia-cdi-refresh.service nvidia-cdi-refresh.path --no-pager
 nvidia-ctk cdi list
+```
+
+先判读刷新状态：.service 是一次性任务，inactive (dead) 且最近一次 status=0/SUCCESS 可正常；.path 通常应为 enabled、active (waiting)。status 非零或 Unit not found 时，按 [CDI 配置](../README.md#配置-gpu-的-cdi-设备定义首次部署必查)检查日志、刷新或手动生成，不能只凭状态码判定失败。确认所选 0–3 卡的 UUID 别名完整且无冲突后，再启动：
+
+```bash
 ./local-ai server start --host 0.0.0.0 --gpus 0,1,2,3 --name a --port 18000
 ./local-ai server status --name a
 ```
@@ -200,7 +206,13 @@ tar -xf local-ai.tar --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ./local-ai install --role server --profile gb300-tp4 --offline
 ./local-ai server inventory
+systemctl status nvidia-cdi-refresh.service nvidia-cdi-refresh.path --no-pager
 nvidia-ctk cdi list
+```
+
+先判读刷新状态：.service 是一次性任务，inactive (dead) 且最近一次 status=0/SUCCESS 可正常；.path 通常应为 enabled、active (waiting)。status 非零或 Unit not found 时，按 [CDI 配置](../README.md#配置-gpu-的-cdi-设备定义首次部署必查)检查日志、刷新或手动生成，不能只凭状态码判定失败。确认所选 0–3 卡的 UUID 别名完整且无冲突后，再启动：
+
+```bash
 ./local-ai server start --host 0.0.0.0 --gpus 0,1,2,3 --name a --port 18000
 ./local-ai server status --name a
 ```

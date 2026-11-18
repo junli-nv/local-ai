@@ -24,9 +24,12 @@ docker version
 docker info --format 'Server={{.ServerVersion}} Driver={{.Driver}} Root={{.DockerRootDir}}'
 nvidia-smi
 nvidia-ctk --version
+systemctl status nvidia-cdi-refresh.service nvidia-cdi-refresh.path --no-pager
 nvidia-ctk cdi list
 nvidia-smi --query-gpu=index,uuid --format=csv,noheader
 ```
+
+先核对刷新单元，再看 CDI 列表：.service 成功退出后可以是 inactive (dead)，应看 status=0/SUCCESS；.path 通常为 enabled、active (waiting)。status 非零不一定是故障；旧版 Toolkit 的 Unit not found 可走手动生成路径。失败日志、启用/刷新与手动生成步骤见 [README 的 CDI 配置](../README.md#配置-gpu-的-cdi-设备定义首次部署必查)。
 
 成功标准：可连接本机守护进程，Server API >=1.49，每个选中 GPU UUID 都有 CDI 条目，且容器实测可访问 GPU。docker active 或宿主机 nvidia-smi 正常不能替代容器验证。
 

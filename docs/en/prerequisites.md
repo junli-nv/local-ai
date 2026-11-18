@@ -24,9 +24,12 @@ docker version
 docker info --format 'Server={{.ServerVersion}} Driver={{.Driver}} Root={{.DockerRootDir}}'
 nvidia-smi
 nvidia-ctk --version
+systemctl status nvidia-cdi-refresh.service nvidia-cdi-refresh.path --no-pager
 nvidia-ctk cdi list
 nvidia-smi --query-gpu=index,uuid --format=csv,noheader
 ```
+
+Check refresh units before interpreting the CDI list: .service may be inactive (dead) after successful completion; check status=0/SUCCESS. The .path unit should normally be enabled and active (waiting). A nonzero status exit is not necessarily a failure; Unit not found on older Toolkit releases allows the manual-generation path. For failure logs, enabling/refreshing units and manual generation, follow [README CDI setup](../../README.en.md#configure-gpu-cdi-definitions-before-first-deployment).
 
 Require a reachable local daemon, Server API >=1.49, a CDI alias for every selected GPU UUID and verified GPU access inside a container. An active daemon or working host nvidia-smi alone is insufficient.
 

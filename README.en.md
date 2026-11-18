@@ -107,6 +107,7 @@ cd /raid/local-ai
 docker version
 docker info --format 'Server={{.ServerVersion}} Driver={{.Driver}} Root={{.DockerRootDir}}'
 nvidia-smi
+systemctl status nvidia-cdi-refresh.service nvidia-cdi-refresh.path --no-pager
 nvidia-ctk cdi list
 ```
 
@@ -116,14 +117,31 @@ The Docker client must connect to the local daemon. Complete CDI setup below bef
 
 **Run on GPU001.** Working nvidia-smi output is not sufficient: verify CDI definitions too. nvidia-ctk cdi list must include a nvidia.com/gpu=GPU-... UUID alias for every selected GPU. Skip regeneration when those aliases already exist.
 
+Interpret the systemctl status output above first: Toolkit 1.18 introduced automatic refresh. The .path unit should normally be enabled and active (waiting). The .service unit is a one-shot task; inactive (dead) after completion is normal when its latest execution reports status=0/SUCCESS. The status command may return nonzero for inactive or missing units; that alone does not establish unusable CDI, and you must still check cdi list and UUIDs. Older Toolkit releases or installations without these units may use manual definitions; Unit not found does not establish a GPU/driver failure.
+
+If the service is failed, its execution failed, or definitions were never generated, inspect its logs first:
+
+```bash
+sudo journalctl -u nvidia-cdi-refresh.service -b --no-pager -n 100
+```
+
+When using automatic refresh with disabled units, first check /etc/cdi and /var/run/cdi for duplicate or conflicting NVIDIA definitions, then enable the units:
+
+```bash
+sudo systemctl enable --now nvidia-cdi-refresh.path nvidia-cdi-refresh.service
+```
+
 If the list is empty or selected UUIDs are absent, use the automatic refresh service when available:
 
 ```bash
 sudo systemctl restart nvidia-cdi-refresh.service
+systemctl status nvidia-cdi-refresh.service --no-pager
 nvidia-ctk cdi list
 ```
 
 If it reports Unit nvidia-cdi-refresh.service not found, generate definitions manually below. First check /etc/cdi and /var/run/cdi for other valid or conflicting NVIDIA definitions; do not retain duplicates.
+
+If the service exists but refresh fails, troubleshoot the logs above first. If switching to manual management is necessary, disable the automatic refresh units and handle existing definitions first to avoid duplicate entries from the two generation methods. Automatic refresh does not cover every MIG reconfiguration scenario; explicitly refresh and verify UUIDs after such changes. See [NVIDIA's CDI documentation](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/cdi-support.html) for the mechanism and status examples.
 
 ```bash
 sudo install -d /etc/cdi

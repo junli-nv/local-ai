@@ -103,7 +103,13 @@ tar -xf local-ai.tar --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ./local-ai install --role server --profile b300-tp4 --offline
 ./local-ai server inventory
+systemctl status nvidia-cdi-refresh.service nvidia-cdi-refresh.path --no-pager
 nvidia-ctk cdi list
+```
+
+Interpret refresh status first: .service is a one-shot task, so inactive (dead) with a latest status=0/SUCCESS can be normal; .path should normally be enabled and active (waiting). For nonzero status exits or Unit not found, follow [CDI setup](../../README.en.md#configure-gpu-cdi-definitions-before-first-deployment) for logs, refresh or manual generation rather than treating the exit code alone as failure. Verify complete, conflict-free UUID aliases for selected GPUs 0–3 before starting:
+
+```bash
 ./local-ai server start --host 0.0.0.0 --gpus 0,1,2,3 --name a --port 18000
 ./local-ai server status --name a
 ```
@@ -206,7 +212,13 @@ tar -xf local-ai.tar --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ./local-ai install --role server --profile gb300-tp4 --offline
 ./local-ai server inventory
+systemctl status nvidia-cdi-refresh.service nvidia-cdi-refresh.path --no-pager
 nvidia-ctk cdi list
+```
+
+Interpret refresh status first: .service is a one-shot task, so inactive (dead) with a latest status=0/SUCCESS can be normal; .path should normally be enabled and active (waiting). For nonzero status exits or Unit not found, follow [CDI setup](../../README.en.md#configure-gpu-cdi-definitions-before-first-deployment) for logs, refresh or manual generation rather than treating the exit code alone as failure. Verify complete, conflict-free UUID aliases for selected GPUs 0–3 before starting:
+
+```bash
 ./local-ai server start --host 0.0.0.0 --gpus 0,1,2,3 --name a --port 18000
 ./local-ai server status --name a
 ```
