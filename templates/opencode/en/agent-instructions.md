@@ -6,7 +6,7 @@ They are separate from repository development instructions and are not automatic
 ## Files and host
 
 Combine the [general template](AGENTS.general.md) with the [BCM template](AGENTS.bcm.md) when appropriate.
-The general template covers response language and user-source attribution without imposing a default language.
+The general template covers response language, user-source attribution, and waiting/progress updates for long tasks without imposing a default language.
 It also includes project locations and chat working-directory constraints, so copying it carries those rules into personal instructions.
 The template's own language does not determine the response language.
 Adapt cluster paths, especially /cm and /cm/images. Use either language, not both copies.
@@ -52,7 +52,7 @@ which program updates replace. Do not commit credentials or internal raw logs.
 
 ## Verify loading
 
-End the old chat and start again under the same user/environment. With the client installed and API reachable:
+After merging rules into the actual personal AGENTS.md, exit and restart OpenCode so the new session reads them again. Use the same user/environment, with the client installed and API reachable:
 
 ```bash
 cd /raid/local-ai
@@ -91,6 +91,8 @@ automatic denial as a user rejection. Prompts are not mandatory file isolation; 
 require separate account permissions or execution-layer controls.
 
 ## Maintenance and distribution
+
+The general template calls for reasonably segmented waits, updates based on significant changes and waiting conditions, combined repetitive information, and log files for large outputs. It sets no fixed reporting interval, line count or required heading. These are model behavioral instructions, not a timer or background notification mechanism; blocking calls may prevent messages until they return. After updating templates, manually merge personal rules and exit/restart OpenCode. Updating repository templates alone does not change personal configuration.
 
 Installation, updates and export carry templates without applying them. Compare changes, back up and merge personal rules manually.
 Complete offline bundles include templates/, not personal files under ~/.config/opencode; transfer personal rules separately and securely.

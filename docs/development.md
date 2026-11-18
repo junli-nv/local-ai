@@ -36,7 +36,7 @@ scripts/check-reasoning.py、scripts/check-instructions.py 和 scripts/check-obs
 保留缺失值、未完成流、未完成工具、并发计时重叠、信号清理及版本隔离测试。
 observer.mjs 必须随源码、wheel 和程序更新携带；不能引入独立 Node.js 运行要求。
 
-补充决定（2026-11-17）：在 templates/opencode/ 同目录维护通用、BCM 模板与实际客户端配置说明，英文放 en/。模板随程序更新/导出，不自动安装。client.prepare 在隔离配置前解析个人规则路径并显式加载；用户文件不写入仓库或离线包。维护步骤见 [持久工作指令配置](../templates/opencode/agent-instructions.md)。通用模板按用户直接请求选择回复语言，不预设默认语言；引用用户要求须核实原始消息，摘要或间接记录需标明来源。
+补充决定（2026-11-17）：在 templates/opencode/ 同目录维护通用、BCM 模板与实际客户端配置说明，英文放 en/。模板随程序更新/导出，不自动安装。client.prepare 在隔离配置前解析个人规则路径并显式加载；用户文件不写入仓库或离线包。维护步骤见 [持久工作指令配置](../templates/opencode/agent-instructions.md)。通用模板按用户直接请求选择回复语言，不预设默认语言；引用用户要求须核实原始消息，摘要或间接记录需标明来源。长任务约定按阶段与状态变化汇报，合理分段等待、合并重复信息、大量输出优先写日志，不规定固定时间或行数，也不提供定时保证；个人规则合并后退出并重新启动 OpenCode。
 
 ## 接手开发：产品决策与工作顺序
 

@@ -1,5 +1,11 @@
 # Validation record
 
+## General-template waiting and progress guidance: 2026-11-18
+
+Fetched remote main and tags before editing; confirmed baseline 199f702 and latest tag v1.4.2. Both general templates now include the user-approved guidance: reasonably segmented waits, proactive updates on stages/status changes, combined repetitive information, log files for large outputs, continued authorized work after reporting, and accurate job states. No fixed wait duration, reporting interval, line count or heading is required. Blocking tool calls may delay updates; prompts provide no timer guarantee. Align README entries, developer decisions and personal-rule setup guidance. Manually merge the actual personal AGENTS.md and exit/restart OpenCode; templates are not applied automatically.
+
+The complete local macOS ARM64/Python 3.14 unittest rerun outside the sandbox ran 264 cases: 261 passed, one optional FFmpeg skip and two existing platform errors (127.0.0.2 binding and an AMD64 server fixture on ARM64). Initial sandbox errors from denied local mock-API port binding are not product conclusions. Ruff lint/format, documentation contracts (Bash syntax, relative links, CLI examples), version references across 40 documents and git diff --check passed. Reviewed both languages of the rules, setup/restart steps, README flow and the scope of existing command, deployment, offline, architecture, development, performance and update guidance. This changes templates/documentation only, adds no timer and changes no personal rules. Live-model progress-reporting behavior was not revalidated.
+
 ## v1.4.2 session/server decoupling: 2026-11-18
 
 Synchronize the development baseline to remote main 53e9050, preserving v1.4.1 and subsequent documentation changes before integrating this feature. All 264 CPU cases, Ruff rules/format and patch checks passed. Twenty-three history cases cover shared saved/ad-hoc routing, user-state isolation, installation-directory changes, legacy recognition, read-only discovery and visible errors, nonempty-target rejection, idempotence and metadata rollback.

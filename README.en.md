@@ -51,7 +51,7 @@ Use appropriate sudo/Docker permissions; root may omit sudo. Data defaults follo
 | This page | First online installation, startup, chat, configuration and migration links |
 | [Deployment](docs/en/deployment.md) | CDI, storage recovery, instance replacement, DSpark/warmup and multiple instances |
 | [Command manual](docs/en/commands.md) | Options, defaults, exit codes, session resume and client versions |
-| [Persistent instructions](templates/opencode/en/agent-instructions.md) | General/BCM templates, personal paths, merging and loading checks (v1.4.0) |
+| [Persistent instructions](templates/opencode/en/agent-instructions.md) | General/BCM templates (including long-task progress guidance), personal paths, merging and loading checks (v1.4.0) |
 | [Offline deployment](docs/en/offline.md) | Existing-installation migration or online preparation |
 | [Architecture](docs/en/architecture.md), [development](docs/en/development.md) | Design, extension and contributor handoff |
 
