@@ -38,6 +38,19 @@ The new evidence directory has mode 0700. report.json, api/tui-events.json and b
 
 Exit 0 and state=measured mean a complete measurement, not that responsiveness is achieved. immediate_delivery_in_all_cases is true only when every measured case delivers during_tool and applies only to that window. Missing events, unexpected tool termination, lost messages, repeated commands, timeouts and native failures exit nonzero with a failure report; do not reinterpret failure as simply unsupported immediate delivery.
 
+## First measured baseline: OpenCode 1.19.5
+
+Measured on 2026-11-18 in Linux AMD64 CPU CI at commit 6020cdd with a five-second mock Shell command. The [complete CI and steering-probe evidence](https://github.com/junli-nv/local-ai/actions/runs/44326930925) retain report.json and per-case events. All three Python matrices and native-client contracts passed; the immediate-delivery objective remains unmet.
+
+| Path | Persistence first observed after submission | Model delivery after submission | Relative to command completion | Classification |
+|---|---|---|---|---|
+| API | About 0.070 seconds | About 5.006 seconds | About 0.039 seconds afterward | after_tool |
+| Real TUI text plus Enter | About 0.242 seconds | About 5.023 seconds | About 0.051 seconds afterward | after_tool |
+
+Both paths exposed the stored user message before command completion, executed the command once and subsequently persisted the mock acknowledgement, without submission/model-service errors. This supports a delay between backend receipt and the next main-session model request while Shell is blocking, rather than absent terminal receipt or missing prompt guidance. Polling affects observation timestamps; these numbers are not exact receive latency, performance benchmarks or cross-version guarantees. Natural-language pause/stop behavior was not tested.
+
+The initial probe failed before measurement because first-workspace session creation inherited a short polling-request timeout. Allowing the case's remaining total deadline produced the complete results above. The failed initialization does not establish message-delivery behavior.
+
 ## Follow-up work
 
 - Compare current and isolated candidate clients to identify reusable native steering before considering a narrow execution-tool adapter. Preserve the validated client.
