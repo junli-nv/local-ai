@@ -1,6 +1,6 @@
 # local-ai
 
-v1.4.2 decouples local session history from server addresses, retaining sessions after saved endpoint changes. It adds historical endpoint lookup and a compatibility tool for old records, preserving v1.4.1 airgap and hardware guidance. See [server replacement](docs/en/commands.md#replace-a-server-and-retain-sessions) and [release notes](docs/en/release-1.4.2.md).
+v1.4.3 applies personal OpenCode instructions during client installation, preserving existing content, backing up changes and updating managed rules on reinstall. General rules are the default; BCM, English and skipping are available. Retains v1.4.2 session/server decoupling. See [release notes](docs/en/release-1.4.3.md).
 
 [中文（默认）](README.md)
 
@@ -31,7 +31,7 @@ The managed server currently uses the NVIDIA toolchain. See the profile table be
 
 ## Installation and usage
 
-The current version is v1.4.2. Examples download complete source from this tag; ./local-ai --version should report 1.4.2. See [validation](docs/en/validation.md) for acceptance scope and unvalidated platforms.
+The current version is v1.4.3. Examples download complete source from this tag; ./local-ai --version should report 1.4.3. See [validation](docs/en/validation.md) for acceptance scope and unvalidated platforms.
 
 ## Example conventions and documentation
 
@@ -51,7 +51,7 @@ Use appropriate sudo/Docker permissions; root may omit sudo. Data defaults follo
 | This page | First online installation, startup, chat, configuration and migration links |
 | [Deployment](docs/en/deployment.md) | CDI, storage recovery, instance replacement, DSpark/warmup and multiple instances |
 | [Command manual](docs/en/commands.md) | Options, defaults, exit codes, session resume and client versions |
-| [Persistent instructions](templates/opencode/en/agent-instructions.md) | General/BCM templates (including long-task progress guidance), personal paths, merging and loading checks (v1.4.0) |
+| [Persistent instructions](templates/opencode/en/agent-instructions.md) | Automatic general/BCM templates, personal-rule backups, managed blocks and loading checks (v1.4.3) |
 | [Offline deployment](docs/en/offline.md) | Existing-installation migration or online preparation |
 | [Architecture](docs/en/architecture.md), [development](docs/en/development.md) | Design, extension and contributor handoff |
 
@@ -99,7 +99,7 @@ Download into an empty directory and check Docker, GPUs and CDI:
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.4.2.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.4.3.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ./local-ai --version
@@ -208,7 +208,7 @@ Log in as alice on bcm-headnode and use BCM's own empty directory:
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.4.2.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.4.3.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ```
@@ -218,6 +218,8 @@ cd /raid/local-ai
 ```bash
 ./local-ai install --role client --endpoint http://GPU001:18000/v1
 ```
+
+Client installation also applies Chinese general rules to the running user's ~/.config/opencode/AGENTS.md (or its XDG_CONFIG_HOME location). Existing content is retained, changes are backed up and only the managed block is updated on reinstall. Add --instructions bcm for BCM rules, --instructions-language en for English, or --instructions none for asset-only preparation or self-managed rules. Install as the actual chat user; sudo/root configures only that user. Exit and resume existing chats afterward. See [personal rule setup](templates/opencode/en/agent-instructions.md).
 
 This optional initial default is saved in **BCM's /raid/local-ai/installation.json** after installation succeeds. GPU server installation does not configure the BCM address. Later changes use config, as shown below.
 

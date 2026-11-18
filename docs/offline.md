@@ -1,12 +1,12 @@
 # 导出、转移与离线安装
 
-只更换 GPU 服务节点、保留原 BCM 时，无须复制会话数据库。v1.4.2 的默认和临时 endpoint 共用本地历史；旧版记录按[恢复步骤](commands.md#更换服务器并保留会话)兼容一次。换 BCM 的私人历史迁移不属于公共离线导出。
+只更换 GPU 服务节点、保留原 BCM 时，无须复制会话数据库。v1.4.2 起默认和临时 endpoint 共用本地历史；旧版记录按[恢复步骤](commands.md#更换服务器并保留会话)兼容一次。换 BCM 的私人历史迁移不属于公共离线导出。
 
 在 airgap 环境中，启动聊天时使用 `npm_config_offline=true ./local-ai chat`；尚未保存默认地址时加 `--endpoint http://GPU001:18000/v1`。`install --offline` 只控制安装阶段，不会为后续 OpenCode 启动持久设置 npm 离线模式。该环境变量避免原生依赖初始化等待外部 npm registry；模型 API 仍通过内网访问。不想每次输入前缀时，按下方[持久设置 npm 离线模式](#持久设置-npm-离线模式)配置一次。本地 observer 仅使用原生运行时内置模块；离线标志下的工具、恢复与压缩验收已通过。
 
-v1.4.2 的 observer.mjs 随 src/ 导出；原生依赖运行缓存、诊断和工作流结果不属于公共离线材料。
+v1.4.3 的 observer.mjs 随 src/ 导出；原生依赖运行缓存、诊断和工作流结果不属于公共离线材料。
 
-v1.4.2 的完整导出包含 templates/ 参考模板，不携带个人 AGENTS.md。用户规则另行安全迁移，并按 [持久工作指令配置](../templates/opencode/agent-instructions.md) 合并；不自动应用模板。
+v1.4.3 的完整导出包含 templates/，不携带个人 AGENTS.md。目标机客户端安装默认离线应用通用模板，可选 --instructions bcm、--instructions-language en；准备机只打包公共客户端时加 --instructions none。用户私有规则仍需另行安全迁移，模板管理区块外的内容保留；详见[持久工作指令配置](../templates/opencode/agent-instructions.md)。
 
 本页统一维护完整迁移流程，与常规在线部署分开。场景一在旧 GPU 节点导出镜像和模型、在旧 BCM 导出客户端，再分别到目标端导入；场景二由联网准备机备齐两端材料。离线导入指校验、解压后执行 install --offline，没有另一个顶层 import 命令。
 
@@ -18,7 +18,7 @@ v1.4.2 的完整导出包含 templates/ 参考模板，不携带个人 AGENTS.md
 
 包内含顶层 local-ai/ 和 bundle.json 校验清单。排除 dist/、实例状态、日志、临时缓存、Git 元数据、个人历史和凭据。Docker 活动数据库及驱动由宿主机管理。
 
-下面两条路线各自完整，选择一条从头执行。gpu-old/bcm-old 是原有来源主机；prep-host 只联网准备，不启动 GPU。新目标沿用 README 的 GPU001/bcm-headnode。源码下载固定 v1.4.2；开发测试使用 main 时另行记录确切提交。
+下面两条路线各自完整，选择一条从头执行。gpu-old/bcm-old 是原有来源主机；prep-host 只联网准备，不启动 GPU。新目标沿用 README 的 GPU001/bcm-headnode。源码下载固定 v1.4.3；开发测试使用 main 时另行记录确切提交。
 
 ## 进入 airgap 环境前准备 Docker
 
@@ -148,11 +148,11 @@ gb300-tp4，要求同一 OS 可见四张 GB300/B300，每卡至少 250000 MiB �
 准备机需 Python 3.10+、tar、sha256sum、Docker API 1.49+，可访问 GitHub、镜像仓库和公开的
 Hugging Face 模型；准备阶段无需 GPU、驱动、CDI、ARM 仿真或 QEMU。
 
-v1.4.2 已包含 prepare。下载固定标签的完整源码；解压目录仍是安装根：
+v1.4.3 已包含 prepare。下载固定标签的完整源码；解压目录仍是安装根：
 
 ```bash
-local_ai_source=/tmp/local-ai-v1.4.2-source.tar.gz
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.4.2.tar.gz -o "$local_ai_source"
+local_ai_source=/tmp/local-ai-v1.4.3-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.4.3.tar.gz -o "$local_ai_source"
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
 tar -xzf "$local_ai_source" --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
@@ -253,7 +253,7 @@ cd /raid/ai-prod
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.4.2.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.4.3.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ./local-ai --version
@@ -285,7 +285,7 @@ GPU 启动前若缺少 UUID 别名，先完成[CDI 配置](deployment.zh-CN.md#c
 编译缓存和预热记录随实例状态一并排除。目标机安装、API 启动后按需执行[显式预热](deployment.zh-CN.md#单用户-dspark-与显式预热)；联网准备阶段不运行推理。
 
 包含 benchmark 功能的源码可在离线目标 GPU 上按[本机性能测试](commands.md#本机性能测试)测量已启动实例，
-无需联网或额外依赖。benchmark JSON 与其他实例状态一样不随导出迁移，目标机需重新测量。v1.4.2 已包含此命令。
+无需联网或额外依赖。benchmark JSON 与其他实例状态一样不随导出迁移，目标机需重新测量。v1.4.3 已包含此命令。
 
 ## 可选文档转换依赖
 

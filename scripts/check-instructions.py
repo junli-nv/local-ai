@@ -12,6 +12,7 @@ from unittest.mock import patch
 
 from local_ai.artifacts import validate
 from local_ai.client import prepare
+from local_ai.instructions import apply
 
 MARKER = "LOCAL_AI_PERSONAL_RULES_7e63d91a"
 
@@ -72,6 +73,8 @@ def check(assets):
         worker.start()
         try:
             with patch.dict(os.environ, {"XDG_CONFIG_HOME": str(config)}):
+                installed = apply("general", "en")
+                installed_rules = rules.read_bytes()
                 env = prepare(
                     state,
                     assets,
@@ -111,8 +114,11 @@ def check(assets):
                 "project_rules_in_model_context": "LOCAL_AI_PROJECT_RULES_b1a8049f" in instructions,
                 "built_in_guidance_in_model_context": "documents_read_document" in instructions,
                 "session_config_isolated": env["XDG_CONFIG_HOME"] == str(session / "config"),
-                "personal_rules_unchanged": rules.read_text()
+                "installed_template_in_model_context": "Waiting and progress updates for long tasks"
+                in instructions,
+                "existing_personal_rules_backed_up": Path(installed["backup"]).read_text()
                 == "# Personal instruction\n" + MARKER + "\n",
+                "personal_rules_unchanged_during_chat": rules.read_bytes() == installed_rules,
             }
             print(json.dumps(checks))
             if not all(

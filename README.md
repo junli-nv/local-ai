@@ -1,6 +1,6 @@
 # local-ai
 
-v1.4.2 将本地会话历史与服务器地址解耦：切换 endpoint 后沿用原会话，提供历史地址查询和旧记录关联工具。保留 v1.4.1 的 airgap 部署与硬件验证说明。步骤见[更换服务器并保留会话](docs/commands.md#更换服务器并保留会话)，边界见[发布说明](docs/release-1.4.2.md)。
+v1.4.3 在客户端安装时自动应用个人 OpenCode 工作指令：保留已有内容、备份修改并支持重复安装更新。默认通用模板，可选 BCM/英文或跳过。沿用 v1.4.2 的会话与服务器解耦功能，详见[发布说明](docs/release-1.4.3.md)。
 
 **local-ai 是一个面向本地集群的 AI 工作助手，帮助用户通过自然语言完成系统运维、代码开发和日常文件处理。**
 
@@ -29,7 +29,7 @@ v1.4.2 将本地会话历史与服务器地址解耦：切换 endpoint 后沿用
 
 ## 安装与使用
 
-当前版本为 v1.4.2，以下示例下载该标签的完整源码。./local-ai --version 应显示 1.4.2，实际验收范围与未覆盖平台见[验证记录](docs/validation.md)。
+当前版本为 v1.4.3，以下示例下载该标签的完整源码。./local-ai --version 应显示 1.4.3，实际验收范围与未覆盖平台见[验证记录](docs/validation.md)。
 
 ## 示例约定与文档入口
 
@@ -49,7 +49,7 @@ v1.4.2 将本地会话历史与服务器地址解耦：切换 endpoint 后沿用
 | 本页 | 首次在线安装、启动、聊天、配置及迁移入口 |
 | [部署指南](docs/deployment.zh-CN.md) | CDI、存储故障、实例重建、DSpark/预热与双实例 |
 | [命令手册](docs/commands.md) | 参数、默认值、退出码、会话恢复与客户端版本 |
-| [持久工作指令](templates/opencode/agent-instructions.md) | 通用/BCM 模板（含长任务进度约定）、个人配置位置、合并与生效检查（v1.4.0） |
+| [持久工作指令](templates/opencode/agent-instructions.md) | 安装时自动应用通用/BCM 模板、个人规则备份、管理区块与生效检查（v1.4.3） |
 | [离线部署](docs/offline.md) | 已安装环境迁移，或联网准备后离线安装 |
 | [架构](docs/architecture.md)、[开发指南](docs/development.md) | 模块设计、扩展和接手开发 |
 
@@ -97,7 +97,7 @@ BCM 架构独立选择。配置只使用同一 OS 可见的本地 GPU；GB300 TP
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.4.2.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.4.3.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ./local-ai --version
@@ -206,7 +206,7 @@ v1.4.0 提供 `server benchmark`。
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.4.2.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.4.3.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ```
@@ -216,6 +216,8 @@ cd /raid/local-ai
 ```bash
 ./local-ai install --role client --endpoint http://GPU001:18000/v1
 ```
+
+客户端安装同时默认将中文通用模板应用到当前用户的 ~/.config/opencode/AGENTS.md（设置 XDG_CONFIG_HOME 时使用对应路径）；已有内容保留，改变前备份，重复安装只更新 local-ai 管理区块。BCM 规则加 --instructions bcm，英文模板加 --instructions-language en，只准备公共程序或自行维护规则时加 --instructions none。以实际聊天用户安装；sudo/root 只配置该用户。已有聊天请退出后恢复原会话。详见[个人规则配置](templates/opencode/agent-instructions.md)。
 
 本例可选的初始地址在安装成功后写入 **BCM 的 /raid/local-ai/installation.json**。GPU 服务端安装不会设置 BCM 地址；后续通过下节的 config 修改。
 

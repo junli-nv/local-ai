@@ -10,7 +10,7 @@ configuration; per-launch configs remain isolated. workflows.py invokes models/t
 in a separate directory. Read-only inspection generates no acceptance load.
 See [metric semantics](commands.md#task-diagnostics-and-workflow-acceptance-v140).
 
-Client preparation resolves personal AGENTS.md before isolating XDG_CONFIG_HOME, then explicitly references it after operations.md. Templates are opt-in and never overwrite personal files. See [persistent instruction setup](../../templates/opencode/en/agent-instructions.md).
+Client preparation resolves personal AGENTS.md before isolating XDG_CONFIG_HOME, then explicitly references it after operations.md. Since v1.4.3, client installation applies general rules to that same user path by default, with BCM/English/skip options. instructions.py serializes installs with a private lock, backs up changes and atomically replaces only the managed block while retaining other content. Server-only installs, the standalone updater and exports do not apply personal rules. See [persistent instruction setup](../../templates/opencode/en/agent-instructions.md).
 
 [中文（默认）](../architecture.md)
 

@@ -14,6 +14,7 @@ from test_installation import model_fixture
 from local_ai import bundle, deployment
 from local_ai.cli import parser
 from local_ai.common import arch
+from local_ai.profiles import profile
 from local_ai.program import source_files
 
 
@@ -33,6 +34,7 @@ class PortableTests(unittest.TestCase):
             for k, v in os.environ.items()
             if k not in {"LOCAL_AI_ROOT", "LOCAL_AI_DATA_DIR", "LOCAL_AI_CATALOG", "PYTHONPATH"}
         }
+        self.env["XDG_CONFIG_HOME"] = str(self.work / "personal-config")
         self.patch = patch.dict(
             os.environ, {**self.env, "LOCAL_AI_ROOT": str(self.base)}, clear=True
         )
@@ -171,6 +173,8 @@ class PortableTests(unittest.TestCase):
         with patch("urllib.request.urlopen", side_effect=AssertionError("no network")):
             result = deployment.install(args)
         self.assertTrue(result["installed"])
+        self.assertEqual(result["client"]["instructions"]["status"], "created")
+        self.assertTrue((Path(self.env["XDG_CONFIG_HOME"]) / "opencode/AGENTS.md").is_file())
         self.assertEqual(parser().parse_args(["chat"]).endpoint, "http://GPU001:18000/v1")
         self.assertEqual(self.client.stat().st_mode & 0o777, 0o755)
 
@@ -207,6 +211,50 @@ class PortableTests(unittest.TestCase):
         with patch("urllib.request.urlopen", side_effect=AssertionError("no network")):
             with self.assertRaisesRegex(ValueError, "no client"):
                 deployment.install(parser().parse_args(["install", "--offline"]))
+
+    def test_unified_install_can_skip_personal_rules_offline(self):
+        with patch("urllib.request.urlopen", side_effect=AssertionError("no network")):
+            result = deployment.install(
+                parser().parse_args(
+                    ["install", "--role", "client", "--offline", "--instructions", "none"]
+                )
+            )
+        self.assertEqual(result["client"]["instructions"], {"status": "skipped"})
+        self.assertFalse(Path(self.env["XDG_CONFIG_HOME"]).exists())
+
+    def test_both_role_applies_selected_rules_and_server_role_leaves_them_untouched(self):
+        policy = profile("b300-tp4")
+        with (
+            patch("local_ai.deployment.arch", return_value=policy["arch"]),
+            patch("local_ai.deployment.client_assets", return_value=self.client),
+            patch("local_ai.deployment.images.cached_model", return_value={"cached": True}),
+            patch("local_ai.deployment.images.resolve_image", return_value="cached-image"),
+            patch("local_ai.deployment.ensure_archive", return_value=self.base / "image.tar"),
+        ):
+            result = deployment.install(
+                parser().parse_args(
+                    [
+                        "install",
+                        "--role",
+                        "both",
+                        "--offline",
+                        "--instructions",
+                        "bcm",
+                        "--instructions-language",
+                        "en",
+                    ]
+                )
+            )
+            target = Path(result["client"]["instructions"]["path"])
+            self.assertIn("# BCM scenario instructions", target.read_text())
+            original = target.read_bytes()
+            with patch(
+                "local_ai.deployment.instructions.apply", side_effect=AssertionError("no rules")
+            ):
+                deployment.install(
+                    parser().parse_args(["install", "--role", "server", "--offline"])
+                )
+            self.assertEqual(target.read_bytes(), original)
 
     def test_server_export_and_import_use_new_paths_without_starting_gpu(self):
         policy, _ = model_fixture(self.base)

@@ -83,7 +83,7 @@ client.py 仍启动一个 document_mcp 标准输入/输出子进程。documents.
 离线导出同时保存归档 SHA256 和镜像配置/层指纹，导入时两者都要通过。
 仅有相同 tag 不足以证明镜像相同；指纹允许 Docker 导入后引用表示改变，但要求内容等价。
 
-客户端在隔离 XDG_CONFIG_HOME 前定位当前用户的个人 AGENTS.md，并在 operations.md 后通过 instructions 显式引用；模板只供选择，不自动安装或覆盖个人文件。配置步骤见 [持久工作指令配置](../templates/opencode/agent-instructions.md)。
+客户端在隔离 XDG_CONFIG_HOME 前定位当前用户的个人 AGENTS.md，并在 operations.md 后通过 instructions 显式引用；v1.4.3 的客户端安装默认向同一用户路径应用通用模板，可选 BCM/英文或跳过。instructions.py 通过私有锁串行安装、修改前备份及原子替换，只更新管理区块并保留区块外内容；server、独立更新器和导出不应用个人规则。配置步骤见 [持久工作指令配置](../templates/opencode/agent-instructions.md)。
 
 ## 连接与用户状态
 

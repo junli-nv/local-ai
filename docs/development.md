@@ -36,7 +36,7 @@ scripts/check-reasoning.py、scripts/check-instructions.py 和 scripts/check-obs
 保留缺失值、未完成流、未完成工具、并发计时重叠、信号清理及版本隔离测试。
 observer.mjs 必须随源码、wheel 和程序更新携带；不能引入独立 Node.js 运行要求。
 
-补充决定（2026-11-17）：在 templates/opencode/ 同目录维护通用、BCM 模板与实际客户端配置说明，英文放 en/。模板随程序更新/导出，不自动安装。client.prepare 在隔离配置前解析个人规则路径并显式加载；用户文件不写入仓库或离线包。维护步骤见 [持久工作指令配置](../templates/opencode/agent-instructions.md)。通用模板按用户直接请求选择回复语言，不预设默认语言；引用用户要求须核实原始消息，摘要或间接记录需标明来源。长任务约定按阶段与状态变化汇报，合理分段等待、合并重复信息、大量输出优先写日志，不规定固定时间或行数，也不提供定时保证；个人规则合并后退出并重新启动 OpenCode。
+补充决定（2026-11-17）：在 templates/opencode/ 同目录维护通用、BCM 模板与实际客户端配置说明，英文放 en/。v1.4.3 起客户端安装默认应用通用模板；独立程序更新与导出仍只携带模板。client.prepare 在隔离配置前解析个人规则路径并显式加载；用户文件不写入仓库或离线包。维护步骤见 [持久工作指令配置](../templates/opencode/agent-instructions.md)。通用模板按用户直接请求选择回复语言，不预设默认语言；引用用户要求须核实原始消息，摘要或间接记录需标明来源。长任务约定按阶段与状态变化汇报，合理分段等待、合并重复信息、大量输出优先写日志，不规定固定时间或行数，也不提供定时保证；客户端安装应用或手工修改个人规则后退出并重新启动 OpenCode。
 
 ## 接手开发：产品决策与工作顺序
 
@@ -87,7 +87,7 @@ GPU 服务端负责推理；BCM 客户端用当前用户权限执行文件、She
 | 模型会更新，也可能换模型 | 仓库/revision、目录、服务名、引擎参数和客户端能力按配方配置；独立模型锁；新配方不继承实机验收，不套用 DeepSeek 专用参数 |
 | 目录式安装与迁移 | 解压目录即安装根，普通 src/ 保存源码；install 就地准备角色资源，export 默认生成 dist/ 完整离线包；排除 dist/、实例状态、个人历史和凭据；换目录后重新安装并配置本机资源 |
 | 一个 BCM 连接多个模型服务 | 初始 endpoint 可选；config 保存默认值，chat --endpoint/--model 仅本次覆盖。历史按用户私有状态根管理，与服务器及安装目录无关，临时 endpoint 同样复用。项目目录随会话保留；旧记录用 client history list 查询、必要时 update-endpoint 兼容一次，不复制数据库、不合并非空历史，不猜测模型或回退节点 |
-| 源码脚本如何发布 | 先同步远端 main 与标签；本次按用户要求发布 v1.4.2 会话解耦更新，保留既有标签。后续 tag 仍须明确要求，基于通过 CI 的确切提交，不自动创建 Release |
+| 源码脚本如何发布 | 先同步远端 main 与标签；本次按用户要求发布 v1.4.3 客户端个人规则自动安装更新，保留既有标签。后续 tag 仍须明确要求，基于通过 CI 的确切提交，不自动创建 Release |
 | 单用户速度与首次编译尖峰 | 保留原配方，显式选择 DSpark 与有限推理预热；API READY 不等于 WARMUP COMPLETE，编译缓存按配方持久化，重启使完成记录失效；记录实际覆盖范围与并发取舍 |
 | 约 400 ms TTFT 是否过高 | 记录方法、输入规模、缓存/负载及端到端/首 token 耗时再判断；不混淆启动编译、生成前延迟与思考内容，不凭单个数值给结论 |
 
@@ -140,7 +140,7 @@ GPU 服务端负责推理；BCM 客户端用当前用户权限执行文件、She
 | 配置节 | 本项目的用途 |
 |---|---|
 | `build-system` | 使用 setuptools>=68 构建安装包 |
-| `project` | 包名 cluster-local-ai、版本 1.4.2、Python>=3.10；运行时第三方依赖为空 |
+| `project` | 包名 cluster-local-ai、版本 1.4.3、Python>=3.10；运行时第三方依赖为空 |
 | `project.scripts` | 安装后的 local-ai 命令调用 local_ai.cli:main |
 | `tool.setuptools` | 从 src 查找模块，并将 profiles.json 包含到安装包 |
 | `project.optional-dependencies` | dev 组包含 Ruff 0.14.2，仅开发时安装 |
@@ -328,7 +328,7 @@ PYTHONPATH=src .venv/bin/python scripts/check-client.py --client-dir /home/alice
 
 ## 交付与版本标记
 
-本次用户明确要求 v1.4.2 新标签，承载本地历史与推理路由解耦；先核对远端现有 v1.4.1，不复用旧版本号。
+本次用户明确要求 v1.4.3 新标签，承载客户端个人规则自动安装；开发基线为 cfd4da0，远端现有最新标签为 v1.4.2，不复用旧版本号。
 
 
 v1.4.1 按用户要求提交、推送并新增附注标签；本次不自动创建 GitHub Release。保留 v1.4.0、历史 v1.3.7 标签及验收记录。v1.4.0 的 GitHub Release 已按此前要求撤下。此前撤下的版本标签不复用。开发继续跟进 main 与确切提交，支持范围以验证记录为准。完成测试与 CI 是基本条件；后续标签仍须用户明确要求，不自动创建 GitHub Release。

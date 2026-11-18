@@ -20,6 +20,7 @@ from . import (
     history,
     images,
     installlog,
+    instructions,
     preparation,
     readiness,
     server,
@@ -41,6 +42,21 @@ class CommandParser(argparse.ArgumentParser):
     def __init__(self, *args, **kwargs):
         kwargs.setdefault("formatter_class", argparse.ArgumentDefaultsHelpFormatter)
         super().__init__(*args, **kwargs)
+
+
+def instruction_options(command):
+    command.add_argument(
+        "--instructions",
+        choices=["general", "bcm", "none"],
+        default="general",
+        help="Apply personal rules: general, general plus BCM, or none to leave rules untouched; client roles only",
+    )
+    command.add_argument(
+        "--instructions-language",
+        choices=["zh", "en"],
+        default="zh",
+        help="Installed template language; does not set the assistant response language",
+    )
 
 
 def parser():
@@ -167,6 +183,7 @@ def parser():
         help="Allow downloads; extracted bundles otherwise default to offline",
     )
     b.set_defaults(offline=None)
+    instruction_options(b)
     b = groups.add_parser(
         "prepare",
         help="Online host: prepare target-platform images and models without running them",
@@ -424,6 +441,7 @@ def parser():
             help="Native client asset directory on this BCM host",
         )
         if action == "install":
+            instruction_options(b)
             b.add_argument(
                 "--binary",
                 type=Path,
@@ -752,6 +770,7 @@ def dispatch(q):
             value = artifacts.install(q.client_dir, q.binary, q.seed_cache, q.version, q.sha256)
             if q.client_dir.resolve() == client_assets(arch()):
                 deployment.publish_client(q.client_dir)
+            value["instructions"] = instructions.apply(q.instructions, q.instructions_language)
             return value
         if q.action == "export":
             return artifacts.export_client(q.client_dir, q.output)

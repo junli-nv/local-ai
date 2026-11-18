@@ -35,7 +35,7 @@ usage and compaction hooks, not model quality. Explicitly run the three client w
 keeping private outputs out of Git. Preserve unknown values, incomplete streams/tools, overlapping spans, signal cleanup
 and version-isolation coverage. Include observer.mjs in source, wheels and program updates without requiring standalone Node.js.
 
-Additional decision (2026-11-17): keep general/BCM templates and setup guidance together in templates/opencode/, with English under en/. Carry them in updates/exports without applying them. client.prepare resolves personal rules before config isolation and explicitly loads them; personal files stay outside Git and bundles. See [persistent instruction setup](../../templates/opencode/en/agent-instructions.md). The general template follows direct user requests without imposing a default response language; user attribution requires original-message evidence, with summaries or indirect records identified as such. Long-task guidance calls for updates on stages/status changes, reasonably segmented waits, combined repetitive information and log files for large outputs, without fixed timing, line counts or a timer guarantee. Exit and restart OpenCode after merging personal rules.
+Additional decision (2026-11-17): keep general/BCM templates and setup guidance together in templates/opencode/, with English under en/. Since v1.4.3, client installation applies general rules by default; standalone updates/exports still only carry templates. client.prepare resolves personal rules before config isolation and explicitly loads them; personal files stay outside Git and bundles. See [persistent instruction setup](../../templates/opencode/en/agent-instructions.md). The general template follows direct user requests without imposing a default response language; user attribution requires original-message evidence, with summaries or indirect records identified as such. Long-task guidance calls for updates on stages/status changes, reasonably segmented waits, combined repetitive information and log files for large outputs, without fixed timing, line counts or a timer guarantee. Exit and restart OpenCode after installation applies or you edit personal rules.
 
 [中文（默认）](../development.md)
 
@@ -92,7 +92,7 @@ Chinese is primary; maintain English separately and synchronize both entry paths
 | Models/revisions change | Configure recipe identities, directories, names, engine/client capabilities and separate locks; do not inherit hardware acceptance or DeepSeek-specific settings |
 | Directory installation and migration | The unpacked directory is the root, with ordinary src/. install prepares assets in place; export writes a complete dist/ bundle excluding dist/, instance state, histories and credentials. Reinstall/reconfigure after moving |
 | One BCM, multiple model services | Initial endpoint is optional; config saves defaults and chat --endpoint/--model override one invocation. User-private history is independent of server and installation paths, including ad-hoc routes. Preserve session project directories. Inspect legacy records with client history list and associate once if needed, without database copies, nonempty-history merging, model guessing or endpoint fallback |
-| Source-script delivery | Synchronize remote main and tags first. The user requested the v1.4.2 session-decoupling tag, preserving prior tags. Future tags still require explicit requests and a CI-passed commit; no automatic Release |
+| Source-script delivery | Synchronize remote main and tags first. The user requested the v1.4.3 automatic personal-instruction installation tag, preserving prior tags. Future tags still require explicit requests and a CI-passed commit; no automatic Release |
 | Single-user speed and first-use compilation spikes | Keep the baseline unchanged; opt into DSpark and explicit bounded warmup. Separate API READY from WARMUP COMPLETE, persist compiler caches per recipe, invalidate completion on restart, and report actual coverage and concurrency tradeoffs |
 | Around 400 ms TTFT seems high | Record method, input size, cache/load and timing first. Separate compilation, generation delay and reasoning content; avoid one-number conclusions |
 
@@ -185,7 +185,7 @@ pyproject.toml configures Python packaging and developer tools; ordinary source-
 | Section | Purpose here |
 |---|---|
 | build-system | setuptools>=68 build backend |
-| project | cluster-local-ai 1.4.2, Python>=3.10, no third-party runtime dependencies |
+| project | cluster-local-ai 1.4.3, Python>=3.10, no third-party runtime dependencies |
 | project.scripts | Installed local-ai entry point: local_ai.cli:main |
 | tool.setuptools | Find packages under src and include profiles.json |
 | project.optional-dependencies | dev extra installs Ruff 0.14.2 |
@@ -356,7 +356,7 @@ original backup when downgrading across incompatible database migrations.
 
 ## Delivery and version labels
 
-The user requested a new v1.4.2 tag for local history/routing decoupling; verify existing remote v1.4.1 rather than reusing that version.
+The user requested a new v1.4.3 tag for automatic personal-instruction installation. The development baseline is cfd4da0 and the latest existing remote tag is v1.4.2; preserve prior versions.
 
 
 The user requested committing, pushing and adding the v1.4.1 annotated tag; this does not automatically create a GitHub Release. Retain the v1.4.0 and historical v1.3.7 tags and acceptance records. The v1.4.0 GitHub Release was withdrawn at the user's earlier request; withdrawn version tags are not reused. Development continues on main/exact commits, with support limited by the validation record. Tests and CI are basic requirements; future tags require an explicit user request and do not automatically create GitHub Releases.

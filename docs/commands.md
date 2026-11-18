@@ -52,7 +52,7 @@ observer_ready=false、malformed_records 或未完成流表示观测缺失，不
 result.json 保存正确性与逐轮墙钟耗时，完整事件和 stderr 保留在输出目录；成功退出 0，失败 1，中断 130。
 只是一组小型验收，不代表复杂任务质量或生产 SLA。比较版本时固定模型、配方、负载并重复测试，分别保留输出目录。
 
-v1.4.0 支持加载客户端用户的个人工作指令；位置、模板组合及检查方法见 [持久工作指令配置](../templates/opencode/agent-instructions.md)。不新增 CLI 参数，不自动写入个人规则。
+v1.4.0 支持加载客户端用户的个人工作指令；位置、模板组合及检查方法见 [持久工作指令配置](../templates/opencode/agent-instructions.md)。v1.4.3 起安装支持自动应用模板，聊天启动本身不改个人文件。
 
 全局 `./local-ai --version` 输出项目版本后退出；与 `client install --version` 的客户端版本选择参数不同。
 
@@ -185,6 +185,8 @@ cd /raid/local-ai
 BCM 使用 install --role client --endpoint http://GPU001:18000/v1，替代上述 server 安装命令；两台机器各自保存设置。兼容的准备机可用 --role both 准备两端资源。client install/export 是只处理客户端的低级命令，不能替代完整 install/export。
 
 初次安装的 install --endpoint 仅在安装成功后将地址写入安装根目录 installation.json 的 endpoint 字段。不传该参数时保留已有地址；首次安装不会自动发现服务端地址。未保存地址时，chat 必须传 --endpoint；chat --endpoint 只覆盖本次连接，不保存。GPU 安装与 BCM 客户端设置分开配置。
+
+v1.4.3 起 install --role client/both 和 client install 默认应用中文通用模板到运行用户的个人 AGENTS.md；server 角色不应用。--instructions 可选 general（默认）、bcm（通用加 BCM）、none（不创建、修改或删除规则）；--instructions-language 可选 zh（默认）或 en，不决定模型回复语言。使用 sudo 只配置实际运行用户；准备机只打包公共客户端可选 none。已有内容保留，修改前生成权限 0600 的备份；重装只更新 local-ai 管理区块，无变化则不写入。将自定义内容放在区块外；此前手工复制的模板不自动去重。符号链接、其他用户文件、损坏标记或写入失败会报错。JSON 的 client.instructions（低级命令为 instructions）报告 path/status/template/language/backup；skipped 仅含 status。退出并恢复 OpenCode 后使用新规则，详见[配置与恢复](../templates/opencode/agent-instructions.md)。
 
 ## 配置客户端默认值
 
@@ -359,6 +361,8 @@ client install/export 均接受 `--client-dir`，默认是安装根目录下的 
 | `--seed-cache` | client install | 导入离线公共缓存目录；可选 |
 | `--version` | client install | 显式选择版本；省略时复用安装或识别导入程序；首次在线下载参考版本 1.19.5 |
 | `--sha256` | client install | 本地导入程序的预期 SHA256；可选，来自可信材料清单 |
+| `--instructions` | install/client install | general（默认）/bcm（通用加 BCM）/none（不改个人规则）；仅客户端角色应用 |
+| `--instructions-language` | install/client install | zh（默认）/en；模板语言，不决定回复语言 |
 | `--output` | client export | 必填，客户端归档输出路径；同时生成 .sha256 |
 
 离线步骤按[已有安装导出](offline.md#场景一从已安装环境导出并迁移)或[联网准备](offline.md#场景二从联网环境下载并准备)选择；两条路线都包含目标端导入示例。CPU 架构按 BCM 本机选择，与 GPU 服务端独立。

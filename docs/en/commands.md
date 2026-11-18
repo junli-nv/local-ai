@@ -56,7 +56,7 @@ result.json records correctness and per-turn wall time; full JSON events and std
 Exit codes: success 0, failure 1, interrupt 130. This small suite is not a complex-task quality rating or SLA.
 Fix model/recipe/load and repeat in separate output directories when comparing client versions.
 
-Development source loads client-user personal instructions; see [persistent instruction setup](../../templates/opencode/en/agent-instructions.md) for paths, template composition and checks. No new CLI option or automatic personal-file writes.
+v1.4.0 and later load client-user personal instructions; see [persistent instruction setup](../../templates/opencode/en/agent-instructions.md) for paths, template composition and checks. Since v1.4.3, installation options apply personal templates automatically; chat startup does not modify personal files.
 
 Global `./local-ai --version` prints the project version and exits. It differs from `client install --version`, which selects the native client release.
 
@@ -195,6 +195,8 @@ install --model selects the client model ID; server installs use --profile's mod
 On BCM, use install --role client --endpoint http://GPU001:18000/v1 instead of the server command. Each host keeps its own settings; --role both prepares both roles on a compatible host. client install/export are lower-level client-only operations and do not replace complete install/export.
 
 For initial installation, install --endpoint writes the address to endpoint in INSTALL_ROOT/installation.json only after successful installation. Omitting --endpoint preserves an existing saved address; a fresh installation does not discover one automatically. Without a saved address, chat requires --endpoint. chat --endpoint overrides one invocation without saving it. GPU installation and BCM client settings are separate.
+
+Since v1.4.3, install --role client/both and client install apply Chinese general rules to the running user's personal AGENTS.md by default; server-only installs do not. --instructions accepts general (default), bcm (general plus BCM), or none (no creation, modification or removal). --instructions-language accepts zh (default) or en and does not select the response language. sudo configures only its actual running user; choose none on asset-only preparation hosts. Existing content is retained and changes get a mode-0600 backup; reinstallation replaces only the local-ai managed block, without writing unchanged content. Keep customizations outside that block; hand-copied old templates are not deduplicated automatically. Symlinks, other-user files, damaged markers and write failures cause an error. JSON client.instructions (instructions on the lower-level command) reports path/status/template/language/backup; skipped has only status. Exit and resume OpenCode afterward. See [setup and recovery](../../templates/opencode/en/agent-instructions.md).
 
 ## Configure saved client defaults
 
@@ -368,6 +370,8 @@ client install/export accept --client-dir, defaulting to public assets in INSTAL
 | --seed-cache | client install | Optional offline public cache directory |
 | --version | client install | Explicit release; otherwise reuse installed or detect imported version; first online reference 1.19.5 |
 | --sha256 | client install | Optional expected checksum from a trusted binary manifest |
+| --instructions | install/client install | general (default), bcm (general plus BCM), none (leave rules untouched); applies to client roles only |
+| --instructions-language | install/client install | zh (default) or en; template language, not response language |
 | --output | client export | Required archive destination; also creates .sha256 |
 
 Choose [installed-environment migration](offline.md#scenario-1-export-an-installed-environment) or [online preparation](offline.md#scenario-2-download-on-an-online-preparation-host); both contain complete destination import examples.

@@ -79,8 +79,9 @@ def prepare(state, assets, session, base, model, project):
     }
     cfg["instructions"] = [str(instructions)]
     # Resolve personal rules before replacing XDG_CONFIG_HOME with session isolation.
-    user_config = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config")
-    personal_rules = (user_config.expanduser() / "opencode/AGENTS.md").resolve()
+    from .instructions import personal_path
+
+    personal_rules = personal_path().resolve()
     if personal_rules.is_file():
         cfg["instructions"].append(str(personal_rules))
     cfg["mcp"] = {

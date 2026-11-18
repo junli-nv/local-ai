@@ -4,7 +4,7 @@ import json
 import os
 from pathlib import Path
 
-from . import __version__, artifacts, images, installlog
+from . import __version__, artifacts, images, installlog, instructions
 from .common import arch, atomic_json, sha256
 from .endpoint import endpoint_url
 from .paths import client_assets, root, settings
@@ -130,6 +130,9 @@ def install(options):
         (assets / "seed-cache").mkdir(parents=True, exist_ok=True)
         client_result = artifacts.install(assets, version=options.client_version)
         publish_client(assets)
+        client_result["instructions"] = instructions.apply(
+            options.instructions, options.instructions_language
+        )
     role = options.role
     if profiles and (client_assets(arch()) / "manifest.json").is_file():
         role = "both"

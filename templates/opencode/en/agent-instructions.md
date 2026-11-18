@@ -1,7 +1,7 @@
 # Persistent instructions on the client
 
 These maintained references reduce repeated correction in new conversations; prompts cannot guarantee compliance.
-They are separate from repository development instructions and are not automatically installed policies.
+They are separate from repository development instructions. Since v1.4.3, client installation applies the general template by default.
 
 ## Files and host
 
@@ -20,39 +20,41 @@ Changing the user/HOME through sudo changes the personal location; check the act
 
 v1.4.0 resolves that personal path before isolating OpenCode's session configuration.
 An existing personal file is explicitly appended to instructions after built-in operations.md.
-Other personal model/plugin/connection settings are not imported; personal rules are never rewritten.
+Other personal model/plugin/connection settings are not imported; chat startup itself does not rewrite personal rules.
 The native client still discovers project AGENTS.md. Instructions are combined: resolve conflicts explicitly
 rather than relying on order. Original v1.3.7 source lacks this loading bridge; use v1.4.0 or later, and record the commit for development branches.
 
-## Configure or merge
+## Apply during installation
 
-In Bash on bcm-headnode, from the installation root, combine these English references.
-For a non-BCM client, use only the general template. Existing instructions are backed up and kept;
-review and manually merge the candidate into AGENTS.md.
+Run on the client as the actual chat user. Do not switch to root merely to configure personal rules. A sudo/root installation configures only its running user, not an inferred account or every user. Templates default to Chinese; their language does not determine the response language.
 
 ```bash
 cd /raid/local-ai
-set -e
-rules_dir="${XDG_CONFIG_HOME:-$HOME/.config}/opencode"
-mkdir -p "$rules_dir"
-candidate="$(mktemp "$rules_dir/AGENTS.candidate.XXXXXX")"
-cat templates/opencode/en/AGENTS.general.md templates/opencode/en/AGENTS.bcm.md > "$candidate"
-chmod 600 "$candidate"
-if [ -e "$rules_dir/AGENTS.md" ]; then
-  cp -p "$rules_dir/AGENTS.md" "$rules_dir/AGENTS.md.bak-$(date +%Y%m%d-%H%M%S)"
-  diff -u "$rules_dir/AGENTS.md" "$candidate" || test "$?" -eq 1
-  printf 'Existing rules preserved; manually merge candidate: %s\n' "$candidate"
-else
-  mv -i "$candidate" "$rules_dir/AGENTS.md"
-fi
+./local-ai install --role client --endpoint http://GPU001:18000/v1
+# General plus BCM rules
+./local-ai install --role client --instructions bcm
+# English rules
+./local-ai install --role client --instructions bcm --instructions-language en
+# Prepare client assets without creating or modifying personal rules
+./local-ai install --role client --instructions none
 ```
 
-Keep machine/user customizations in the personal file or project AGENTS.md, not in templates/,
-which program updates replace. Do not commit credentials or internal raw logs.
+Both install --role client/both and lower-level client install accept these options. Server-only installation does not configure personal rules. Offline behavior is identical and needs no template download. Use --instructions none on preparation hosts that only package assets. Reinstallation reuses verified client binaries and does not start GPUs.
+
+JSON client.instructions (instructions for the lower-level command) reports path, status (created/updated/unchanged/skipped), template and language, plus backup when an existing file changes. Skipping returns only status. Progress and backup paths go to stderr and install.log.
+
+- Create a missing file; otherwise append one local-ai managed block while retaining existing content.
+- Reinstallation replaces only the block between `<!-- local-ai:instructions:begin -->` and `<!-- local-ai:instructions:end -->`. Identical contents cause no write or additional backup.
+- Before changing an existing file, save AGENTS.md.bak-RANDOM in the same directory with mode 0600, then replace the target atomically without granting other users read/write access.
+- Keep personal customizations outside the managed block. Edits inside it are replaced on reinstall. Previously hand-copied templates are not deleted automatically; resolve duplication/conflicts on first application as needed.
+- --instructions none neither changes nor removes an existing block. Pass it on each installation if you maintain all rules yourself.
+- Symlinks, files owned by another user, malformed markers and write failures cause an installation error instead of a false success. Repair and retry, or use --instructions none for self-managed rules.
+
+To restore, first back up the current file, then copy backup from the JSON/install log to path and exit/restart OpenCode. Keep private machine paths and credentials out of templates/, which source updates replace.
 
 ## Verify loading
 
-After merging rules into the actual personal AGENTS.md, exit and restart OpenCode so the new session reads them again. Use the same user/environment, with the client installed and API reachable:
+After installation applies rules or you edit the actual personal AGENTS.md, exit and restart OpenCode so the new session reads them again. Use the same user/environment, with the client installed and API reachable:
 
 ```bash
 cd /raid/local-ai
@@ -92,9 +94,9 @@ require separate account permissions or execution-layer controls.
 
 ## Maintenance and distribution
 
-The general template calls for reasonably segmented waits, updates based on significant changes and waiting conditions, combined repetitive information, and log files for large outputs. It sets no fixed reporting interval, line count or required heading. These are model behavioral instructions, not a timer or background notification mechanism; blocking calls may prevent messages until they return. After updating templates, manually merge personal rules and exit/restart OpenCode. Updating repository templates alone does not change personal configuration.
+The general template calls for reasonably segmented waits, updates based on significant changes and waiting conditions, combined repetitive information, and log files for large outputs. It sets no fixed reporting interval, line count or required heading. These are model behavioral instructions, not a timer or background notification mechanism; blocking calls may prevent messages until they return. Updating source alone does not change personal rules. Rerun client installation to apply updated templates, then exit/restart OpenCode.
 
-Installation, updates and export carry templates without applying them. Compare changes, back up and merge personal rules manually.
+Client installation applies templates by default. The standalone scripts/update.py and export only update/carry program templates, leaving personal rules untouched. After upgrading, rerun client installation as the actual chat user to apply new templates; existing files are backed up automatically.
 Complete offline bundles include templates/, not personal files under ~/.config/opencode; transfer personal rules separately and securely.
 Old updaters may omit templates/: obtain the newer scripts/update.py from the same feature-bearing source archive before updating.
 Do not replace session XDG_CONFIG_HOME isolation with global configuration, or edit generated session configs as permanent settings.
