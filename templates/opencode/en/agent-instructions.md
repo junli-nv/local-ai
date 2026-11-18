@@ -10,7 +10,7 @@ The general template covers response language, user-source attribution, and wait
 It also includes project locations and chat working-directory constraints, so copying it carries those rules into personal instructions.
 The template's own language does not determine the response language.
 Adapt cluster paths, especially /cm and /cm/images. Use either language, not both copies.
-See [Claude Code prompt references and adaptations](prompt-references.md) for pinned third-party sources, official-source scope, the change mapping and evaluation limits; external prompts are not loaded directly.
+See [Claude Code prompt references and adaptations](../../../docs/en/prompt-references.md) for pinned third-party sources, official-source scope, the change mapping and evaluation limits; external prompts are not loaded directly.
 [中文](../agent-instructions.md).
 
 Run on bcm-headnode as the actual chat user, not on GPU001. Examples use installation /raid/local-ai and

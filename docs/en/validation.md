@@ -1,5 +1,11 @@
 # Validation record
 
+## Move prompt references into docs: 2026-11-18
+
+At the user's request, move both prompt-references.md files from templates/opencode/ to docs/ and docs/en/, updating setup/development entries and internal relative links. Preserve sources, pinned commits and adaptation mappings. Actual AGENTS templates and install/chat code are unchanged; reference documents are not loaded at runtime and trigger no network download. Synchronize remote main 8855c7d before editing.
+
+Local macOS ARM64/Python 3.14 ran 279 cases: 276 passed, one optional FFmpeg skip and two existing platform errors (127.0.0.2 binding and an AMD64 server fixture). Ruff lint/format, version checks across 44 documents, documentation contracts and patch checks passed. Reviewed bilingual entry points and moved relative links. No personal configuration changes or moved version tags.
+
 ## Claude Code prompt references and general-template adaptations: 2026-11-18
 
 Synchronized remote main 5c56813 and tag v1.4.3 before development. At the user's request, located third-party Claude Code prompts, primarily Piebald-AI/claude-code-system-prompts at pinned commit be7338dd7770a426141be50d89aa54fb6cfd62de. Read four files and recorded their individual ccVersion labels, using the official system-prompt overview and best practices for scope and supplementary guidance. Bilingual references map sources to adaptations and distinguish third-party collection, official disclosure, local wording and unverified claims. They do not present the collection as one complete official prompt used in a request.

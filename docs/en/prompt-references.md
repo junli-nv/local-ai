@@ -25,8 +25,8 @@ Keep existing language, user-attribution, host/path discovery, BCM exclusions an
 
 ## Application and evaluation
 
-Adaptations live directly in the [Chinese general template](../AGENTS.general.md) and [English general template](AGENTS.general.md). References stay separate to avoid loading the research collection into every chat. Follow [setup](agent-instructions.md) and rerun client installation to back up and update the managed block in personal AGENTS.md. Repository edits alone do not change actual personal files. No special model identity or nonexistent tools are required.
+Adaptations live directly in the [Chinese general template](../../templates/opencode/AGENTS.general.md) and [English general template](../../templates/opencode/en/AGENTS.general.md). References stay separate to avoid loading the research collection into every chat. Follow [setup](../../templates/opencode/en/agent-instructions.md) and rerun client installation to back up and update the managed block in personal AGENTS.md. Repository edits alone do not change actual personal files. No special model identity or nonexistent tools are required.
 
 File/context checks establish formatting, installation and delivery, not improved task performance. Compare identical models, tasks, resources and acceptance criteria to measure unrelated edits, missing verification and repeated confirmation. No new live-model comparison was performed. References do not turn OpenCode into Claude Code or add unimplemented permissions, hot reload, immediate interruption or background capabilities.
 
-[Setup](agent-instructions.md) · [中文](../prompt-references.md)
+[Setup](../../templates/opencode/en/agent-instructions.md) · [中文](../prompt-references.md)

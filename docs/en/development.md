@@ -41,7 +41,7 @@ Additional decision (2026-11-17): keep general/BCM templates and setup guidance 
 
 ## Developer handoff: decisions and working order
 
-Additional decision (2026-11-18): independently adapt task scope, actual verification, authorized continuity and outcome-first communication from a third-party Claude Code prompt collection and official best practices. Pin sources and map each adaptation in [prompt references](../../templates/opencode/en/prompt-references.md). Do not import complete external prompts or Claude-specific mechanisms, change the general-assistant role/permission boundaries, or resume deferred async execution. Prompt installation/context checks do not establish better model performance.
+Additional decision (2026-11-18): independently adapt task scope, actual verification, authorized continuity and outcome-first communication from a third-party Claude Code prompt collection and official best practices. Pin sources and map each adaptation in [prompt references](prompt-references.md). Do not import complete external prompts or Claude-specific mechanisms, change the general-assistant role/permission boundaries, or resume deferred async execution. Prompt installation/context checks do not establish better model performance.
 
 These requirements were progressively agreed with the project owner on
 2026-11-01. They guide product development, not restrictions on assistant tasks.

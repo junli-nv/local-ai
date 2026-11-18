@@ -25,8 +25,8 @@
 
 ## 如何应用与判断效果
 
-适配后的内容直接维护在[中文通用模板](AGENTS.general.md)和[英文通用模板](en/AGENTS.general.md)，来源说明单独保留，避免每次聊天携带整套研究材料。按[配置说明](agent-instructions.md)重新运行客户端安装，可在备份后更新个人 AGENTS.md 的 local-ai 管理区块；本次仓库修改本身不修改实际用户文件。无需通过特殊模型身份或增加未知工具来使用这些原则。
+适配后的内容直接维护在[中文通用模板](../templates/opencode/AGENTS.general.md)和[英文通用模板](../templates/opencode/en/AGENTS.general.md)，来源说明单独保留，避免每次聊天携带整套研究材料。按[配置说明](../templates/opencode/agent-instructions.md)重新运行客户端安装，可在备份后更新个人 AGENTS.md 的 local-ai 管理区块；本次仓库修改本身不修改实际用户文件。无需通过特殊模型身份或增加未知工具来使用这些原则。
 
 文件检查与上下文转发检查只能证明模板格式、安装和加载，不证明任务效果改善。实际效果应使用相同模型、任务、资源和验收条件对照，查看是否减少无关修改、漏验或反复确认；本次没有新增真实模型对照结果。参考不能把 OpenCode 变成 Claude Code，也不能赋予它没有实现的权限、热加载、即时中断或后台能力。
 
-[配置说明](agent-instructions.md) · [English](en/prompt-references.md)
+[配置说明](../templates/opencode/agent-instructions.md) · [English](en/prompt-references.md)
