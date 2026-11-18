@@ -284,7 +284,12 @@ def run_case(assets, root, mode, hold, timeout, evidence):
                 start_new_session=True,
             )
             wait(ready, "native server health")
-            session_id = request(base + "/session", {"title": "steering probe " + mode})["id"]
+            # Health can respond before the first workspace finishes initializing.
+            session_id = request(
+                base + "/session",
+                {"title": "steering probe " + mode},
+                timeout=max(0.1, deadline - time.monotonic()),
+            )["id"]
             if mode == "tui":
                 master, slave = pty.openpty()
                 try:
