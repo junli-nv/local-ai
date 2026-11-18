@@ -41,6 +41,8 @@ Additional decision (2026-11-17): keep general/BCM templates and setup guidance 
 
 ## Developer handoff: decisions and working order
 
+Pending requirement (2026-11-18): retain OpenCode and improve follow-ups, side questions, pause and stop handling during execution. Only isolated API/TUI timing measurements are currently authorized and implemented. See [new-message responsiveness](client-steering.md) for objectives, execution, interpretation and future acceptance; this does not initiate a general async system or Codex migration.
+
 Additional decision (2026-11-18): independently adapt task scope, actual verification, authorized continuity and outcome-first communication from a third-party Claude Code prompt collection and official best practices. Pin sources and map each adaptation in [prompt references](prompt-references.md). Do not import complete external prompts or Claude-specific mechanisms, change the general-assistant role/permission boundaries, or resume deferred async execution. Prompt installation/context checks do not establish better model performance.
 
 These requirements were progressively agreed with the project owner on

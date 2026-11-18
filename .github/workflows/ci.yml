@@ -53,3 +53,12 @@ jobs:
       - run: python scripts/check-reasoning.py --client-dir /tmp/local-ai-client
       - run: python scripts/check-instructions.py --client-dir /tmp/local-ai-client
       - run: python scripts/check-observer.py --client-dir /tmp/local-ai-client
+      - name: Measure follow-up delivery during a shell call
+        run: python scripts/check-steering.py --client-dir /tmp/local-ai-client --output /tmp/local-ai-steering-evidence
+      - name: Preserve steering probe evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: steering-probe
+          path: /tmp/local-ai-steering-evidence
+          if-no-files-found: ignore

@@ -1,5 +1,13 @@
 # Validation record
 
+## OpenCode in-flight message baseline probe: 2026-11-18
+
+The user approved isolated measurements and recording follow-up requirements, not native-client modifications or a general async system. Synchronized main 196a19b and tag v1.4.3 before editing. scripts/check-steering.py starts a loopback mock API and temporary native session, then submits follow-ups through the API and real TUI input. Record command start/end, submission, observed backend persistence, first main-session model request and observed mock acknowledgement, verifying exactly-once command execution. Configuration, history and files are isolated; no real model/GPU requests or personal configuration changes. CI retains evidence. state=measured does not mean immediate responsiveness is achieved.
+
+Local macOS ARM64/Python 3.14 ran 288 unittest cases: 285 passed, one optional FFmpeg skip and two existing platform errors (127.0.0.2 binding and an AMD64 server fixture). Nine new cases cover persistence versus model delivery, missing evidence, title-request exclusion, fixed commands/path quoting, failure reports, invalid parameters and after_tool not implying success. Ruff lint/format, documentation contracts, version references across 46 documents and patch checks passed. Linux native API/TUI measurements run in CI; this does not extend acceptance to live-model understanding, stopping behavior or disconnected operation. See [message responsiveness](client-steering.md) for bilingual requirements and probe interpretation.
+
+Also clarify that Claude-derived changes are in commit 8855c7d's general templates: authorized continuity, Changes and verification, and outcome-first reporting. BCM templates are unchanged. These commits postdate the published v1.4.3 tag and are absent from its archive. Preserve the existing version/tag without repacking it.
+
 ## Move prompt references into docs: 2026-11-18
 
 At the user's request, move both prompt-references.md files from templates/opencode/ to docs/ and docs/en/, updating setup/development entries and internal relative links. Preserve sources, pinned commits and adaptation mappings. Actual AGENTS templates and install/chat code are unchanged; reference documents are not loaded at runtime and trigger no network download. Synchronize remote main 8855c7d before editing.

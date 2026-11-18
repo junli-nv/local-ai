@@ -52,6 +52,7 @@ v1.4.3 在客户端安装时自动应用个人 OpenCode 工作指令：保留已
 | [持久工作指令](templates/opencode/agent-instructions.md) | 安装时自动应用通用/BCM 模板、个人规则备份、管理区块、生效检查及提示词参考来源（v1.4.3） |
 | [离线部署](docs/offline.md) | 已安装环境迁移，或联网准备后离线安装 |
 | [架构](docs/architecture.md)、[开发指南](docs/development.md) | 模块设计、扩展和接手开发 |
+| [执行期间新消息响应](docs/client-steering.md) | 待完善需求、隔离 API/TUI 基线检查与模板版本区别 |
 
 [推理优化与引擎探索记录](docs/performance.md)保存 DSpark 参数依据、首次编译处理、SGLang 探索及后续复测方法，供继续开发参考。
 

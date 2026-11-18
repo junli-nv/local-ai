@@ -54,6 +54,7 @@ Use appropriate sudo/Docker permissions; root may omit sudo. Data defaults follo
 | [Persistent instructions](templates/opencode/en/agent-instructions.md) | Automatic general/BCM templates, personal-rule backups, managed blocks, loading checks and prompt references (v1.4.3) |
 | [Offline deployment](docs/en/offline.md) | Existing-installation migration or online preparation |
 | [Architecture](docs/en/architecture.md), [development](docs/en/development.md) | Design, extension and contributor handoff |
+| [Messages during execution](docs/en/client-steering.md) | Pending requirement, isolated API/TUI baseline probe and template version differences |
 
 The [optimization and engine exploration record](docs/en/performance.md) preserves DSpark parameter choices, first-use compilation work, SGLang experiments and future comparison methods.
 
