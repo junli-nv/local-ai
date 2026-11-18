@@ -1,5 +1,11 @@
 # Validation record
 
+## v1.4.4 tag preparation: 2026-11-18
+
+The user explicitly requested a new tag and push. Synchronized remote main 97a8e25 and tags before editing; the latest existing tag was v1.4.3. Synchronize runtime/package versions, README, online/offline update examples, bilingual release notes and template-version guidance without moving historical tags. Scope includes earlier general-template adaptations, prompt sources under docs/ and the isolated responsiveness probe; neither immediate responsiveness nor faster tar extraction is implemented.
+
+Local macOS ARM64/Python 3.14 ran all 288 unittest cases: 285 passed, one optional FFmpeg skip and two existing platform errors (127.0.0.2 binding and an AMD64 server fixture). Ruff lint/format, version checks across 48 documents and git diff --check passed. Manually reviewed bilingual entry points, defaults, installation/update/offline workflows, examples and links. Linux tests and native-client checks must pass CI after push before tagging the exact commit. Release checks also require building and inspecting source/wheel artifacts from that commit and verifying the downloaded GitHub tag archive. No GitHub Release is created.
+
 ## OpenCode in-flight message baseline probe: 2026-11-18
 
 The user approved isolated measurements and recording follow-up requirements, not native-client modifications or a general async system. Synchronized main 196a19b and tag v1.4.3 before editing. scripts/check-steering.py starts a loopback mock API and temporary native session, then submits follow-ups through the API and real TUI input. Record command start/end, submission, observed backend persistence, first main-session model request and observed mock acknowledgement, verifying exactly-once command execution. Configuration, history and files are isolated; no real model/GPU requests or personal configuration changes. CI retains evidence. state=measured does not mean immediate responsiveness is achieved.

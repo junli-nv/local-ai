@@ -64,6 +64,6 @@ The initial probe failed before measurement because first-workspace session crea
 
 Commit 8855c7d changes both general templates: authorized continuation and mid-task questions under task execution, a new Changes and verification section, and outcome-first final reporting. The BCM-specific template is unchanged. See [prompt references](prompt-references.md) for sources, fragment versions and mappings.
 
-These changes are on main after the published v1.4.3 tag. Downloading/reinstalling the original v1.4.3 archive cannot provide them. Use source containing those commits and rerun client installation as the actual chat user to update the personal managed block, then exit/resume chat. Existing tags are unchanged; the new responsiveness requirement is not presented as a capability already implemented by prompts.
+v1.4.4 contains these template changes and the baseline probe. Downloading/reinstalling the original v1.4.3 archive cannot provide them. Update to v1.4.4 source and rerun client installation as the actual chat user to update the personal managed block, then exit/resume chat. Existing tags are unchanged; the new responsiveness requirement is not presented as a capability already implemented by prompts.
 
 [Development](development.md) · [中文](../client-steering.md)

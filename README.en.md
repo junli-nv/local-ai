@@ -1,6 +1,6 @@
 # local-ai
 
-v1.4.3 applies personal OpenCode instructions during client installation, preserving existing content, backing up changes and updating managed rules on reinstall. General rules are the default; BCM, English and skipping are available. Retains v1.4.2 session/server decoupling. See [release notes](docs/en/release-1.4.3.md).
+v1.4.4 updates general OpenCode instructions, documents Claude Code prompt sources, and adds an isolated probe for messages sent during execution. Measurements show the current client delivers follow-ups to the model after the command finishes; immediate responsiveness is not implemented. Automatic personal-rule installation is retained. See [release notes](docs/en/release-1.4.4.md).
 
 [中文（默认）](README.md)
 
@@ -31,7 +31,7 @@ The managed server currently uses the NVIDIA toolchain. See the profile table be
 
 ## Installation and usage
 
-The current version is v1.4.3. Examples download complete source from this tag; ./local-ai --version should report 1.4.3. See [validation](docs/en/validation.md) for acceptance scope and unvalidated platforms.
+The current version is v1.4.4. Examples download complete source from this tag; ./local-ai --version should report 1.4.4. See [validation](docs/en/validation.md) for acceptance scope and unvalidated platforms.
 
 ## Example conventions and documentation
 
@@ -51,7 +51,7 @@ Use appropriate sudo/Docker permissions; root may omit sudo. Data defaults follo
 | This page | First online installation, startup, chat, configuration and migration links |
 | [Deployment](docs/en/deployment.md) | CDI, storage recovery, instance replacement, DSpark/warmup and multiple instances |
 | [Command manual](docs/en/commands.md) | Options, defaults, exit codes, session resume and client versions |
-| [Persistent instructions](templates/opencode/en/agent-instructions.md) | Automatic general/BCM templates, personal-rule backups, managed blocks, loading checks and prompt references (v1.4.3) |
+| [Persistent instructions](templates/opencode/en/agent-instructions.md) | Automatic general/BCM templates, personal-rule backups, managed blocks, loading checks and prompt references (since v1.4.3) |
 | [Offline deployment](docs/en/offline.md) | Existing-installation migration or online preparation |
 | [Architecture](docs/en/architecture.md), [development](docs/en/development.md) | Design, extension and contributor handoff |
 | [Messages during execution](docs/en/client-steering.md) | Pending requirement, isolated API/TUI baseline probe and template version differences |
@@ -100,7 +100,7 @@ Download into an empty directory and check Docker, GPUs and CDI:
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.4.3.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.4.4.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ./local-ai --version
@@ -209,7 +209,7 @@ Log in as alice on bcm-headnode and use BCM's own empty directory:
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.4.3.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.4.4.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ```

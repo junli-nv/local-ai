@@ -91,7 +91,7 @@ GPU 服务端负责推理；BCM 客户端用当前用户权限执行文件、She
 | 模型会更新，也可能换模型 | 仓库/revision、目录、服务名、引擎参数和客户端能力按配方配置；独立模型锁；新配方不继承实机验收，不套用 DeepSeek 专用参数 |
 | 目录式安装与迁移 | 解压目录即安装根，普通 src/ 保存源码；install 就地准备角色资源，export 默认生成 dist/ 完整离线包；排除 dist/、实例状态、个人历史和凭据；换目录后重新安装并配置本机资源 |
 | 一个 BCM 连接多个模型服务 | 初始 endpoint 可选；config 保存默认值，chat --endpoint/--model 仅本次覆盖。历史按用户私有状态根管理，与服务器及安装目录无关，临时 endpoint 同样复用。项目目录随会话保留；旧记录用 client history list 查询、必要时 update-endpoint 兼容一次，不复制数据库、不合并非空历史，不猜测模型或回退节点 |
-| 源码脚本如何发布 | 先同步远端 main 与标签；本次按用户要求发布 v1.4.3 客户端个人规则自动安装更新，保留既有标签。后续 tag 仍须明确要求，基于通过 CI 的确切提交，不自动创建 Release |
+| 源码脚本如何发布 | 先同步远端 main 与标签；本次按用户要求发布 v1.4.4 通用模板与消息响应基线检查更新，保留既有标签。后续 tag 仍须明确要求，基于通过 CI 的确切提交，不自动创建 Release |
 | 单用户速度与首次编译尖峰 | 保留原配方，显式选择 DSpark 与有限推理预热；API READY 不等于 WARMUP COMPLETE，编译缓存按配方持久化，重启使完成记录失效；记录实际覆盖范围与并发取舍 |
 | 约 400 ms TTFT 是否过高 | 记录方法、输入规模、缓存/负载及端到端/首 token 耗时再判断；不混淆启动编译、生成前延迟与思考内容，不凭单个数值给结论 |
 
@@ -148,7 +148,7 @@ GPU 服务端负责推理；BCM 客户端用当前用户权限执行文件、She
 | 配置节 | 本项目的用途 |
 |---|---|
 | `build-system` | 使用 setuptools>=68 构建安装包 |
-| `project` | 包名 cluster-local-ai、版本 1.4.3、Python>=3.10；运行时第三方依赖为空 |
+| `project` | 包名 cluster-local-ai、版本 1.4.4、Python>=3.10；运行时第三方依赖为空 |
 | `project.scripts` | 安装后的 local-ai 命令调用 local_ai.cli:main |
 | `tool.setuptools` | 从 src 查找模块，并将 profiles.json 包含到安装包 |
 | `project.optional-dependencies` | dev 组包含 Ruff 0.14.2，仅开发时安装 |
@@ -336,7 +336,7 @@ PYTHONPATH=src .venv/bin/python scripts/check-client.py --client-dir /home/alice
 
 ## 交付与版本标记
 
-本次用户明确要求 v1.4.3 新标签，承载客户端个人规则自动安装；开发基线为 cfd4da0，远端现有最新标签为 v1.4.2，不复用旧版本号。
+本次用户明确要求 v1.4.4 新标签，包含通用模板调整、提示词来源说明及消息响应基线检查；开发基线为 97a8e25，远端现有最新标签为 v1.4.3，不复用旧版本号。离线 tar 解包优化仍为后续低优先级需求。
 
 
 v1.4.1 按用户要求提交、推送并新增附注标签；本次不自动创建 GitHub Release。保留 v1.4.0、历史 v1.3.7 标签及验收记录。v1.4.0 的 GitHub Release 已按此前要求撤下。此前撤下的版本标签不复用。开发继续跟进 main 与确切提交，支持范围以验证记录为准。完成测试与 CI 是基本条件；后续标签仍须用户明确要求，不自动创建 GitHub Release。

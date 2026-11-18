@@ -1,6 +1,6 @@
 # local-ai
 
-v1.4.3 在客户端安装时自动应用个人 OpenCode 工作指令：保留已有内容、备份修改并支持重复安装更新。默认通用模板，可选 BCM/英文或跳过。沿用 v1.4.2 的会话与服务器解耦功能，详见[发布说明](docs/release-1.4.3.md)。
+v1.4.4 更新通用 OpenCode 工作指令，标注 Claude Code 提示词参考来源，并增加执行期间补充消息的隔离测量。测量确认当前客户端仍会等待命令结束后才向模型交付补充消息，尚未实现即时响应。沿用客户端安装自动应用个人规则的功能，详见[发布说明](docs/release-1.4.4.md)。
 
 **local-ai 是一个面向本地集群的 AI 工作助手，帮助用户通过自然语言完成系统运维、代码开发和日常文件处理。**
 
@@ -29,7 +29,7 @@ v1.4.3 在客户端安装时自动应用个人 OpenCode 工作指令：保留已
 
 ## 安装与使用
 
-当前版本为 v1.4.3，以下示例下载该标签的完整源码。./local-ai --version 应显示 1.4.3，实际验收范围与未覆盖平台见[验证记录](docs/validation.md)。
+当前版本为 v1.4.4，以下示例下载该标签的完整源码。./local-ai --version 应显示 1.4.4，实际验收范围与未覆盖平台见[验证记录](docs/validation.md)。
 
 ## 示例约定与文档入口
 
@@ -49,7 +49,7 @@ v1.4.3 在客户端安装时自动应用个人 OpenCode 工作指令：保留已
 | 本页 | 首次在线安装、启动、聊天、配置及迁移入口 |
 | [部署指南](docs/deployment.zh-CN.md) | CDI、存储故障、实例重建、DSpark/预热与双实例 |
 | [命令手册](docs/commands.md) | 参数、默认值、退出码、会话恢复与客户端版本 |
-| [持久工作指令](templates/opencode/agent-instructions.md) | 安装时自动应用通用/BCM 模板、个人规则备份、管理区块、生效检查及提示词参考来源（v1.4.3） |
+| [持久工作指令](templates/opencode/agent-instructions.md) | 安装时自动应用通用/BCM 模板、个人规则备份、管理区块、生效检查及提示词参考来源（v1.4.3 起） |
 | [离线部署](docs/offline.md) | 已安装环境迁移，或联网准备后离线安装 |
 | [架构](docs/architecture.md)、[开发指南](docs/development.md) | 模块设计、扩展和接手开发 |
 | [执行期间新消息响应](docs/client-steering.md) | 待完善需求、隔离 API/TUI 基线检查与模板版本区别 |
@@ -98,7 +98,7 @@ BCM 架构独立选择。配置只使用同一 OS 可见的本地 GPU；GB300 TP
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.4.3.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.4.4.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ./local-ai --version
@@ -207,7 +207,7 @@ v1.4.0 提供 `server benchmark`。
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.4.3.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.4.4.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ```

@@ -96,7 +96,7 @@ Chinese is primary; maintain English separately and synchronize both entry paths
 | Models/revisions change | Configure recipe identities, directories, names, engine/client capabilities and separate locks; do not inherit hardware acceptance or DeepSeek-specific settings |
 | Directory installation and migration | The unpacked directory is the root, with ordinary src/. install prepares assets in place; export writes a complete dist/ bundle excluding dist/, instance state, histories and credentials. Reinstall/reconfigure after moving |
 | One BCM, multiple model services | Initial endpoint is optional; config saves defaults and chat --endpoint/--model override one invocation. User-private history is independent of server and installation paths, including ad-hoc routes. Preserve session project directories. Inspect legacy records with client history list and associate once if needed, without database copies, nonempty-history merging, model guessing or endpoint fallback |
-| Source-script delivery | Synchronize remote main and tags first. The user requested the v1.4.3 automatic personal-instruction installation tag, preserving prior tags. Future tags still require explicit requests and a CI-passed commit; no automatic Release |
+| Source-script delivery | Synchronize remote main and tags first. The user requested the v1.4.4 general-template and message-response baseline tag, preserving prior tags. Future tags still require explicit requests and a CI-passed commit; no automatic Release |
 | Single-user speed and first-use compilation spikes | Keep the baseline unchanged; opt into DSpark and explicit bounded warmup. Separate API READY from WARMUP COMPLETE, persist compiler caches per recipe, invalidate completion on restart, and report actual coverage and concurrency tradeoffs |
 | Around 400 ms TTFT seems high | Record method, input size, cache/load and timing first. Separate compilation, generation delay and reasoning content; avoid one-number conclusions |
 
@@ -193,7 +193,7 @@ pyproject.toml configures Python packaging and developer tools; ordinary source-
 | Section | Purpose here |
 |---|---|
 | build-system | setuptools>=68 build backend |
-| project | cluster-local-ai 1.4.3, Python>=3.10, no third-party runtime dependencies |
+| project | cluster-local-ai 1.4.4, Python>=3.10, no third-party runtime dependencies |
 | project.scripts | Installed local-ai entry point: local_ai.cli:main |
 | tool.setuptools | Find packages under src and include profiles.json |
 | project.optional-dependencies | dev extra installs Ruff 0.14.2 |
@@ -364,7 +364,7 @@ original backup when downgrading across incompatible database migrations.
 
 ## Delivery and version labels
 
-The user requested a new v1.4.3 tag for automatic personal-instruction installation. The development baseline is cfd4da0 and the latest existing remote tag is v1.4.2; preserve prior versions.
+The user requested a new v1.4.4 tag for general-template updates, prompt-source documentation and the message-response baseline probe. The development baseline is 97a8e25 and the latest existing remote tag is v1.4.3; preserve prior versions. Offline tar extraction optimization remains a low-priority follow-up.
 
 
 The user requested committing, pushing and adding the v1.4.1 annotated tag; this does not automatically create a GitHub Release. Retain the v1.4.0 and historical v1.3.7 tags and acceptance records. The v1.4.0 GitHub Release was withdrawn at the user's earlier request; withdrawn version tags are not reused. Development continues on main/exact commits, with support limited by the validation record. Tests and CI are basic requirements; future tags require an explicit user request and do not automatically create GitHub Releases.
