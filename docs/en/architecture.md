@@ -159,4 +159,4 @@ batch.py reads one UTF-8 prompt and converts native events to text; tasks.py ret
 Detailed limits and examples: [execution](execution.md), [automation and migration](automation.md).
 
 
-Post-v2.0.0 main adds per-task recovery/monitor locks and identity-based reattachment without resubmission. Confirmed terminal facts are retained; bounded contiguous result.log caches expose complete/partial coverage. The copied controller performs best-effort collection, and doctor reports missing controllers. Chat-only intermix parsing uses the standard argparse leaf parser. Rule migration removes only exact selected-template copies, with backups and fenced/custom text preservation.
+v2.0.1 adds per-task recovery/monitor locks and identity-based reattachment without resubmission. Confirmed terminal facts are retained; bounded contiguous result.log caches expose complete/partial coverage. The copied controller performs best-effort collection, and doctor reports missing controllers. Chat-only intermix parsing uses the standard argparse leaf parser. Rule migration removes only exact selected-template copies, with backups and fenced/custom text preservation.

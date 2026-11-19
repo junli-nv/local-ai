@@ -196,7 +196,7 @@ On BCM, use install --role client --endpoint http://GPU001:18000/v1 instead of t
 
 For initial installation, install --endpoint writes the address to endpoint in INSTALL_ROOT/installation.json only after successful installation. Omitting --endpoint preserves an existing saved address; a fresh installation does not discover one automatically. Without a saved address, chat requires --endpoint. chat --endpoint overrides one invocation without saving it. GPU installation and BCM client settings are separate.
 
-Since v1.4.3, install --role client/both and client install apply Chinese general rules to the running user's personal AGENTS.md by default; server-only installs do not. --instructions accepts general (default), bcm (general plus BCM), or none (no creation, modification or removal). --instructions-language accepts zh (default) or en and does not select the response language. sudo configures only its actual running user; choose none on asset-only preparation hosts. Existing content is retained and changes get a mode-0600 backup; reinstallation updates the local-ai managed block; newer main also migrates exact template copies, without writing unchanged content. Keep customizations outside that block; original v2.0.0 retains hand-copied templates; newer main migrates exact selected-template copies and preserves customizations. Symlinks, other-user files, damaged markers and write failures cause an error. JSON client.instructions (instructions on the lower-level command) reports path/status/template/language/backup; skipped has only status. Exit and resume OpenCode afterward. See [setup and recovery](../../templates/opencode/en/agent-instructions.md).
+Since v1.4.3, install --role client/both and client install apply Chinese general rules to the running user's personal AGENTS.md by default; server-only installs do not. --instructions accepts general (default), bcm (general plus BCM), or none (no creation, modification or removal). --instructions-language accepts zh (default) or en and does not select the response language. sudo configures only its actual running user; choose none on asset-only preparation hosts. Existing content is retained and changes get a mode-0600 backup; reinstallation updates the local-ai managed block; v2.0.1 also migrates exact template copies, without writing unchanged content. Keep customizations outside that block; original v2.0.0 retains hand-copied templates; v2.0.1 migrates exact selected-template copies and preserves customizations. Symlinks, other-user files, damaged markers and write failures cause an error. JSON client.instructions (instructions on the lower-level command) reports path/status/template/language/backup; skipped has only status. Exit and resume OpenCode afterward. See [setup and recovery](../../templates/opencode/en/agent-instructions.md).
 
 ## Configure saved client defaults
 
@@ -613,9 +613,9 @@ Chat tool local_ai_task exposes start/list/status/output/pause/resume/stop/remov
 Management output is JSON: exit 0 means processed (inspect issues/state), 1 validation/launch error, 2 argument error. Task failure does not change management exit 0. local_ai_task additionally accepts input/data, interactive, adapter/host/remote_project/image/submit_args; start request_id and input request_id are stable keys. Adoption is explicit CLI only. SSH/Slurm/container controls confirm actual backend state; see [limits](execution.md).
 
 
-## Post-v2.0.0 main: recovery and compatibility
+## v2.0.1: recovery and compatibility
 
-These additions are newer than the original v2.0.0 archive; use the verified main commit when testing them.
+These additions ship in v2.0.1 and are absent from the original v2.0.0 archive.
 
 | Entry | Behavior |
 |---|---|

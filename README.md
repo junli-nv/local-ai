@@ -1,8 +1,10 @@
 # local-ai
 
+v2.0.1 为客户端可靠性修复版，见[本次发布说明](docs/release-2.0.1.md)。
+
 v2.0.0 增加任务托管与完成通知、SSH/Slurm/容器控制、私有会话迁移和汇总诊断。批处理默认返回可读文本，支持文件和 stdin；原 JSON 消费者需加 --format json。见[发布说明](docs/release-2.0.0.md)。
 
-v2.0.0 之后主线另补齐 chat 参数顺序、精确旧规则迁移，以及 client job recover 和终态输出缓存。这些新增不在原 v2.0.0 下载包内，见[执行](docs/execution.md)与[批处理](docs/automation.md)。
+v2.0.1 另补齐 chat 参数顺序、精确旧规则迁移，以及 client job recover 和终态输出缓存。这些新增已收入 v2.0.1，原 v2.0.0 下载包不包含它们，见[执行](docs/execution.md)与[批处理](docs/automation.md)。
 
 **local-ai 是一个面向本地集群的 AI 工作助手，帮助用户通过自然语言完成系统运维、代码开发和日常文件处理。**
 
@@ -33,7 +35,7 @@ v2.0.0 之后主线另补齐 chat 参数顺序、精确旧规则迁移，以及 
 
 ## 安装与使用
 
-当前版本为 v2.0.0，以下示例下载该标签的完整源码。./local-ai --version 应显示 2.0.0，实际验收范围与未覆盖平台见[验证记录](docs/validation.md)。
+当前版本为 v2.0.1，以下示例下载该标签的完整源码。./local-ai --version 应显示 2.0.1，实际验收范围与未覆盖平台见[验证记录](docs/validation.md)。
 
 ## 示例约定与文档入口
 
@@ -102,7 +104,7 @@ BCM 架构独立选择。配置只使用同一 OS 可见的本地 GPU；GB300 TP
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v2.0.0.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v2.0.1.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ./local-ai --version
@@ -211,7 +213,7 @@ v1.4.0 提供 `server benchmark`。
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v2.0.0.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v2.0.1.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ```

@@ -18,7 +18,7 @@ Prerequisites: Python 3.10+, Bash, curl, tar, sha256sum (required for transfer v
 
 Archives contain top-level local-ai/ and bundle.json checksums. They exclude dist/, instance state, logs, temporary caches, Git metadata, private histories and credentials. Docker active databases and drivers remain host-managed.
 
-Both routes below are complete and independent; follow one route from start to finish. gpu-old/bcm-old are the existing source hosts; prep-host downloads assets without starting GPUs. New targets use GPU001/bcm-headnode as in README. Source downloads pin v2.0.0; record an exact commit when using main for development.
+Both routes below are complete and independent; follow one route from start to finish. gpu-old/bcm-old are the existing source hosts; prep-host downloads assets without starting GPUs. New targets use GPU001/bcm-headnode as in README. Source downloads pin v2.0.1; record an exact commit when using main for development.
 
 ## Prepare Docker before entering the air-gapped environment
 
@@ -154,8 +154,8 @@ v2.0.0 includes prepare. Download the complete tagged source; the unpacked direc
 remains the installation root:
 
 ```bash
-local_ai_source=/tmp/local-ai-v2.0.0-source.tar.gz
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v2.0.0.tar.gz -o "$local_ai_source"
+local_ai_source=/tmp/local-ai-v2.0.1-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v2.0.1.tar.gz -o "$local_ai_source"
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
 tar -xzf "$local_ai_source" --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
@@ -259,7 +259,7 @@ Preserve custom source edits first. Obtain the complete program from GitHub and 
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v2.0.0.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v2.0.1.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ./local-ai --version
@@ -322,4 +322,4 @@ Ship execution.py and execution.mjs in source, wheels and program updates. Pytho
 The source bundle includes batch.py, portability.py, diagnostics.py, adapters.py and execution.mjs; no new base Python packages or standalone Node are required. SSH/Slurm/container tools are only needed for the selected backend. Public offline exports exclude histories, execution state and credentials. Private [history migration](automation.md) is a separate explicit archive containing unredacted conversations. Update program code on each host separately; preserve running inference, and restart chat to load new plugins. Batch output defaults to text; add --format json for old event consumers.
 
 
-Post-v2.0.0 main result.log and recovery/controller metadata are private execution state, excluded from public exports and history ZIPs. Cached terminal reads do not require networking, but this does not establish strict air-gap installation or all-backend acceptance. Source must also carry scripts/check-recovery.py for explicitly authorized live SSH acceptance.
+v2.0.1 result.log and recovery/controller metadata are private execution state, excluded from public exports and history ZIPs. Cached terminal reads do not require networking, but this does not establish strict air-gap installation or all-backend acceptance. Source must also carry scripts/check-recovery.py for explicitly authorized live SSH acceptance.

@@ -408,4 +408,21 @@ v2.0.0 maintenance: retain each adapters.py controller copy with its task. Ship 
 
 ### Post-v2.0.0 follow-up
 
-Implemented on main: exact unmarked-template migration with backups, chat argument intermixing, explicit verified adapter recovery and bounded terminal output caches. Preserve v2.0.0 tags and document these as newer main behavior until a new version is explicitly requested. Actual SSH recovery on HGX260 and injected transport failure passed; this is not physical network-isolation or cross-version database migration acceptance. Those, long-duration stress and remote PTYs remain separate follow-ups.
+Implemented in v2.0.1: exact unmarked-template migration with backups, chat argument intermixing, explicit verified adapter recovery and bounded terminal output caches. Create v2.0.1 as requested and preserve v2.0.0. The backlog below is recorded, not implemented in this delivery. Actual SSH recovery on HGX260 and injected transport failure passed; this is not physical network-isolation or cross-version database migration acceptance. Those, long-duration stress and remote PTYs remain separate follow-ups.
+
+## Deferred backlog (2026-11-19)
+
+The user considers these non-urgent. Record them for later work; none blocks v2.0.1.
+
+| Item | Future acceptance |
+|---|---|
+| Real Slurm/container recovery | Exercise new recover paths after controller loss, original identity, single submission, terminal facts and complete cached output; prior basic controls do not establish this |
+| Strict offline operation | Isolate networking and clear dependency caches for preparation/install/chat/migration; distinguish real disconnection from injected transport errors |
+| Cross-OpenCode-version history migration | Design explicit compatibility checks, backups and rollback; restore currently requires matching native versions |
+| Long-duration concurrent sessions | Check pause/stop races, completion messages, resource use and large-log coverage |
+| Completion notifications with chat closed | Evaluate an independent mechanism; current notifications require a running chat |
+| Remote PTYs and arbitrary existing TUI reattachment | Evaluate separately; local PTYs and monitor recovery do not provide these |
+| KV cache offloading | Low priority: measure actual long-session benefits and pinned-engine compatibility before considering an optional startup setting |
+| tar extraction time | Low priority: retain tar and measure verification, extraction and import separately before optimizing |
+
+This delivery packages verified fixes as v2.0.1, pushes a new tag and updates BCM. Preserve old tags; do not create a GitHub Release automatically. See [release notes](release-2.0.1.md).

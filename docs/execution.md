@@ -70,7 +70,7 @@ output 默认 16384 字节，--limit 范围 1..65536；复用 next_offset 直到
 [完整参数](commands.md#托管命令任务v200) · [测量与验收](client-steering.md) · [English](en/execution.md)
 
 
-## v2.0.0 之后主线：恢复与离线结果
+## v2.0.1：恢复与离线结果
 
 ```bash
 ./local-ai client job recover JOB_ID

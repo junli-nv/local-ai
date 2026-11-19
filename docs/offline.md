@@ -18,7 +18,7 @@ v2.0.0 的完整导出包含 templates/，不携带个人 AGENTS.md。目标机�
 
 包内含顶层 local-ai/ 和 bundle.json 校验清单。排除 dist/、实例状态、日志、临时缓存、Git 元数据、个人历史和凭据。Docker 活动数据库及驱动由宿主机管理。
 
-下面两条路线各自完整，选择一条从头执行。gpu-old/bcm-old 是原有来源主机；prep-host 只联网准备，不启动 GPU。新目标沿用 README 的 GPU001/bcm-headnode。源码下载固定 v2.0.0；开发测试使用 main 时另行记录确切提交。
+下面两条路线各自完整，选择一条从头执行。gpu-old/bcm-old 是原有来源主机；prep-host 只联网准备，不启动 GPU。新目标沿用 README 的 GPU001/bcm-headnode。源码下载固定 v2.0.1；开发测试使用 main 时另行记录确切提交。
 
 ## 进入 airgap 环境前准备 Docker
 
@@ -151,8 +151,8 @@ Hugging Face 模型；准备阶段无需 GPU、驱动、CDI、ARM 仿真或 QEMU
 v2.0.0 已包含 prepare。下载固定标签的完整源码；解压目录仍是安装根：
 
 ```bash
-local_ai_source=/tmp/local-ai-v2.0.0-source.tar.gz
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v2.0.0.tar.gz -o "$local_ai_source"
+local_ai_source=/tmp/local-ai-v2.0.1-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v2.0.1.tar.gz -o "$local_ai_source"
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
 tar -xzf "$local_ai_source" --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
@@ -253,7 +253,7 @@ cd /raid/ai-prod
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v2.0.0.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v2.0.1.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ./local-ai --version
@@ -319,4 +319,4 @@ npm_config_offline=true ./local-ai chat --run 'Reply with exactly LOCAL_AI_OK. D
 源码包携带 batch.py、portability.py、diagnostics.py、adapters.py 和 execution.mjs；基础 Python 不增加第三方依赖，不需独立 Node。仅选用对应后端时需要 SSH/Slurm/Docker 工具。公共离线包排除私有历史、执行状态和凭据；[私有历史迁移](automation.md)另行显式生成，含未脱敏对话。各主机分别更新程序，保持推理运行，重新进入聊天加载插件。批处理默认文本，旧事件消费者加 --format json。
 
 
-v2.0.0 之后主线的 result.log、恢复/控制器元数据属于私有执行状态，不进入公共导出或历史 ZIP。终态缓存读取不需联网，但不能据此宣称严格离线安装或所有后端已验收；源码同时携带 scripts/check-recovery.py，供显式授权的实际 SSH 验收。
+v2.0.1的 result.log、恢复/控制器元数据属于私有执行状态，不进入公共导出或历史 ZIP。终态缓存读取不需联网，但不能据此宣称严格离线安装或所有后端已验收；源码同时携带 scripts/check-recovery.py，供显式授权的实际 SSH 验收。

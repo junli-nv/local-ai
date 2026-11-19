@@ -1,8 +1,10 @@
 # local-ai
 
+v2.0.1 is a client reliability release; see [release notes](docs/en/release-2.0.1.md).
+
 v2.0.0 adds managed execution, completion notifications, SSH/Slurm/container controls, private history migration and combined diagnostics. Batch chat now defaults to readable text and accepts files/stdin. Existing JSON consumers must use --format json. See [release notes](docs/en/release-2.0.0.md).
 
-Post-v2.0.0 main additionally fixes chat option ordering, migrates exact legacy instruction copies, and adds client job recover with cached terminal results. These additions are newer than the v2.0.0 archive. See [execution](docs/en/execution.md) and [batch](docs/en/automation.md).
+v2.0.1 additionally fixes chat option ordering, migrates exact legacy instruction copies, and adds client job recover with cached terminal results. These additions ship in v2.0.1; the original v2.0.0 archive excludes them. See [execution](docs/en/execution.md) and [batch](docs/en/automation.md).
 
 [中文（默认）](README.md)
 
@@ -35,7 +37,7 @@ The managed server currently uses the NVIDIA toolchain. See the profile table be
 
 ## Installation and usage
 
-The current version is v2.0.0. Examples download complete source from this tag; ./local-ai --version should report 2.0.0. See [validation](docs/en/validation.md) for acceptance scope and unvalidated platforms.
+The current version is v2.0.1. Examples download complete source from this tag; ./local-ai --version should report 2.0.1. See [validation](docs/en/validation.md) for acceptance scope and unvalidated platforms.
 
 ## Example conventions and documentation
 
@@ -104,7 +106,7 @@ Download into an empty directory and check Docker, GPUs and CDI:
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v2.0.0.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v2.0.1.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ./local-ai --version
@@ -213,7 +215,7 @@ Log in as alice on bcm-headnode and use BCM's own empty directory:
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v2.0.0.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v2.0.1.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ```

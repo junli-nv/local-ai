@@ -1,5 +1,12 @@
 # Validation record
 
+## v2.0.1 tag preparation (2026-11-19)
+
+Based on remote main fef6db9, this delivery packages its verified fixes and changes only version/documentation, recording deferred work without new features. BCM Linux/Python 3.12 passed all 337 unit tests and Ruff checks/format. All 56 manuals and 30 current-version references agree; documentation contracts cover CLI examples, relative links and Bash syntax. The update guide's stale version=1.4.4 output text was also corrected.
+
+Native-client, actual SSH and model evidence remains in the following section. Require complete CI on the new commit before tagging, then verify the actual tag source archive and wheel. The BCM update retains active clients, personal configuration, native binaries and history without restarting inference. Real Slurm/container recovery, strict offline, cross-version migration and long-duration stress remain unverified backlog items.
+
+
 ## Post-v2.0.0 main follow-up (2026-11-19)
 
 CI caught a timing assumption in the controls probe: it checked the marker immediately after a Bash tool returned, although Bash can return an asynchronous job ID. The probe now deliberately backgrounds that resumed command, waits for its exact job ID to reach successful terminal state, and checks exact file content, retaining all pause/permission/single-execution assertions.

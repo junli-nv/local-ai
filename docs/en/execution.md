@@ -68,7 +68,7 @@ Default timeout is 3600 wall seconds including pauses, maximum 604800, with at m
 [Parameters](commands.md#managed-command-tasks-v200) · [Measurements](client-steering.md) · [中文](../execution.md)
 
 
-## Recovery and offline results on post-v2.0.0 main
+## Recovery and offline results on v2.0.1
 
 ```bash
 ./local-ai client job recover JOB_ID
