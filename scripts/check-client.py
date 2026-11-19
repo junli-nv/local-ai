@@ -22,8 +22,10 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from local_ai.artifacts import validate
-from local_ai.client import prepare, service_key
+from local_ai.client import prepare
 from local_ai.common import client_home, private_dir
+from local_ai.history import resolve
+from local_ai.paths import settings
 from local_ai.resume import locate, register
 
 
@@ -76,7 +78,7 @@ def interactive_exit(command):
             if b"local-ai compatibility session" in output:
                 break
         if b"local-ai compatibility session" not in output:
-            raise RuntimeError("Native TUI did not open the requested session")
+            raise RuntimeError(f"Native TUI did not open the requested session: {output[-2048:]!r}")
         deadline = time.monotonic() + 10
         interrupt = time.monotonic() + 0.5
         while time.monotonic() < deadline:
@@ -91,9 +93,10 @@ def interactive_exit(command):
                     break
             elif child.poll() is not None:
                 break
-        if child.poll() is None:
-            raise RuntimeError(f"Native TUI did not exit on Ctrl-C: {output[-2048:]!r}")
-        return bytes(output), child.wait()
+        try:
+            return bytes(output), child.wait(timeout=3)
+        except subprocess.TimeoutExpired as error:
+            raise RuntimeError(f"Native TUI did not exit on Ctrl-C: {output[-2048:]!r}") from error
     finally:
         if child.poll() is None:
             os.killpg(child.pid, signal.SIGKILL)
@@ -113,7 +116,8 @@ def check(assets):
         threading.Thread(target=api.serve_forever, daemon=True).start()
         base = "http://127.0.0.1:%d/v1" % api.server_port
         state_root = private_dir(client_home())
-        state = private_dir(state_root / "services" / service_key(base))
+        key = resolve(state_root, base, settings().get("endpoint"))
+        state = private_dir(state_root / "services" / key)
         session = private_dir(state / "logs" / "setup")
         env = prepare(state, assets, session, base, "compat-model", project)
         register(state_root, state, assets, base, "compat-model", project)
