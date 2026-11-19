@@ -397,7 +397,9 @@ def execute(args):
             else:
                 selected = args.version.removeprefix("v")
                 if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", selected):
-                    raise ValueError("--version must be a numeric tag, for example v1.3.7")
+                    raise ValueError(
+                        "--version must be a numeric tag, in the form vMAJOR.MINOR.PATCH"
+                    )
                 url = (
                     "https://github.com/junli-nv/local-ai/archive/refs/tags/v"
                     + selected
@@ -436,7 +438,9 @@ def parser():
     )
     result.add_argument("--root", required=True, help="Existing unpacked installation directory")
     source = result.add_mutually_exclusive_group(required=True)
-    source.add_argument("--version", help="Download an explicit Git tag, for example v1.3.7")
+    source.add_argument(
+        "--version", help="Download an explicit Git tag, in the form vMAJOR.MINOR.PATCH"
+    )
     source.add_argument("--archive", help="Local source tar archive; no network access")
     source.add_argument("--rollback", help="Restore a backup printed by a previous update")
     source.add_argument(

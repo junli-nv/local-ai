@@ -59,4 +59,4 @@ v2.0.0 默认输出助手的可读文本（可含 Markdown），stdout 没有 JS
 缺少 connection.json 的旧版历史，只要启动记录仍有选定 provider、项目和已安装客户端即可备份，归档标记 legacy-launch-config；不会访问历史隧道地址。恢复始终使用显式或当前配置的目标 endpoint。元数据/资产确实缺失仍报错，不猜测、不跳过历史。
 
 
-v2.0.1已修正参数顺序：chat run --format json "任务" 与 chat run "任务" --format json 等价。原 v2.0.0 归档仍需将位置提示词紧跟 run。恢复任务监控和离线结果见[执行指南](execution.md)。
+v2.0.1 已修正参数顺序：chat run --format json "任务" 与 chat run "任务" --format json 等价。原 v2.0.0 归档仍需将位置提示词紧跟 run。恢复任务监控和离线结果见[执行指南](execution.md)。

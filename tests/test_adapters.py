@@ -294,6 +294,67 @@ class AdapterTests(unittest.TestCase):
                 e.perform(self.root, "output", job_id=job["id"], offset=3)
         self.assertIsNotNone(e.load(self.root, job["id"]).get("cache_error"))
 
+    def test_first_log_error_preserves_observed_completion(self):
+        with patch.object(a, "spawn_monitor"):
+            job = self.reserve("slurm")
+        with (
+            patch.object(a, "slurm_info", return_value=("COMPLETED", "0:0")),
+            patch.object(a, "log_page", side_effect=OSError("logs unavailable")),
+        ):
+            with self.assertRaisesRegex(OSError, "logs unavailable"):
+                e.perform(self.root, "output", job_id=job["id"])
+        status = e.perform(self.root, "status", job_id=job["id"])
+        self.assertEqual(status["state"], "completed")
+        self.assertEqual(status["exit_code"], 0)
+        self.assertTrue(status["terminal_confirmed_at"])
+        self.assertFalse(status["uncertain"])
+
+    def test_missing_slurm_log_is_retried_including_legacy_empty_cache(self):
+        with patch.object(a, "spawn_monitor"):
+            job = self.reserve("slurm")
+        saved = e.load(self.root, job["id"])
+        log = self.project / "late.log"
+        saved.update(log_path=str(log), submission_attempted=True)
+        e.save(self.root, saved)
+        with patch.object(a, "slurm_info", return_value=("COMPLETED", "0:0")):
+            with self.assertRaisesRegex(RuntimeError, "output log is not available"):
+                e.perform(self.root, "output", job_id=job["id"])
+            saved = e.load(self.root, job["id"])
+            self.assertFalse(saved.get("output_cache", {}).get("complete", False))
+            a.remember_output(
+                self.root,
+                saved,
+                dict(offset=0, next_offset=0, total_bytes=0, data_base64="", truncated=True),
+            )
+            saved["output_truncated"] = True
+            e.save(self.root, saved)
+            log.write_text("late output")
+            page = e.perform(self.root, "output", job_id=job["id"])
+            self.assertEqual(page["text"], "late output")
+            self.assertFalse(page["truncated"])
+            self.assertTrue(page["all_output_delivered"])
+            page = e.perform(self.root, "output", job_id=job["id"])
+            self.assertEqual(page["source"], "cache")
+            self.assertFalse(page["truncated"])
+
+    def test_partial_terminal_recovery_requires_live_backend(self):
+        with patch.object(a, "spawn_monitor") as spawn:
+            job = self.reserve("ssh", host="fixture")
+            spawn.reset_mock()
+            saved = e.load(self.root, job["id"])
+            saved.update(
+                state="completed", exit_code=0, terminal_confirmed_at=1, submission_attempted=True
+            )
+            e.save(self.root, saved)
+            with patch.object(a, "ssh_request", side_effect=OSError("offline")) as backend:
+                value = e.perform(self.root, "recover", job_id=job["id"])
+            backend.assert_called_once()
+            spawn.assert_not_called()
+        self.assertEqual(value["recovery"], "backend_unverified")
+        self.assertEqual(value["state"], "completed")
+        self.assertEqual(value["terminal_confirmed_at"], 1)
+        self.assertFalse(value["controller_restarted"])
+
     def test_cached_prefix_rejects_changed_bytes_and_gaps(self):
         with patch.object(a, "spawn_monitor"):
             job = self.reserve("ssh", host="fixture")

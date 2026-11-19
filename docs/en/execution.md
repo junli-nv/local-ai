@@ -83,3 +83,5 @@ Once terminal state is observed, status uses the recorded fact even if SSH later
 Complete cached pages can be read without the backend. Partial cache reports coverage_gap=true and never all_output_delivered=true; reading past its available prefix fails with the missing byte range. It does not synthesize empty output. A changed backend output prefix is a coverage error. An already running controller from an older installation is retained; after it exits, explicit recover can collect results using current code. Removal still requires backend validation/cleanup.
 
 This is task monitoring recovery, not cross-BCM task migration, arbitrary TUI reattachment or machine-reboot replay.
+
+Since v2.0.2, log read failures preserve confirmed terminal state and exit code. Retry when a missing Slurm log appears; older empty caches incorrectly marked complete are rechecked. When the terminal cache is incomplete, recover checks the backend first and returns backend_unverified on failure while retaining the terminal state.

@@ -1,5 +1,7 @@
 # local-ai
 
+v2.0.2 修复任务终态保留、Slurm 日志补收和恢复前的后端检查。 [v2.0.2](docs/release-2.0.2.md)
+
 v2.0.1 为客户端可靠性修复版，见[本次发布说明](docs/release-2.0.1.md)。
 
 v2.0.0 增加任务托管与完成通知、SSH/Slurm/容器控制、私有会话迁移和汇总诊断。批处理默认返回可读文本，支持文件和 stdin；原 JSON 消费者需加 --format json。见[发布说明](docs/release-2.0.0.md)。
@@ -35,7 +37,7 @@ v2.0.1 另补齐 chat 参数顺序、精确旧规则迁移，以及 client job r
 
 ## 安装与使用
 
-当前版本为 v2.0.1，以下示例下载该标签的完整源码。./local-ai --version 应显示 2.0.1，实际验收范围与未覆盖平台见[验证记录](docs/validation.md)。
+当前版本为 v2.0.2，以下示例下载该标签的完整源码。./local-ai --version 应显示 2.0.2，实际验收范围与未覆盖平台见[验证记录](docs/validation.md)。
 
 ## 示例约定与文档入口
 
@@ -104,7 +106,7 @@ BCM 架构独立选择。配置只使用同一 OS 可见的本地 GPU；GB300 TP
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v2.0.1.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v2.0.2.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ./local-ai --version
@@ -213,7 +215,7 @@ v1.4.0 提供 `server benchmark`。
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v2.0.1.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v2.0.2.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ```

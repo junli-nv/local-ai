@@ -525,8 +525,11 @@ def log_page(root, job, offset, limit):
                 with path.open("rb") as stream:
                     stream.seek(offset)
                     block = stream.read(limit)
-        if not exists and job["state"] in e.TERMINAL:
-            job["output_truncated"] = True
+        if job["state"] in e.TERMINAL:
+            if not exists:
+                raise RuntimeError("Slurm output log is not available yet")
+            # Older clients marked a missing Slurm log as truncated.
+            job["output_truncated"] = False
     if offset > size:
         raise ValueError("Output cursor exceeds available bytes")
     job["output_bytes"] = size
@@ -584,7 +587,7 @@ def operate(root, action, job, offset=0, limit=16384, **args):
         if confirmed and not args.get("_refresh"):
             if action == "status" or action in {"pause", "resume", "stop"}:
                 return {**e.view(root, job), "source": "cache", "control_requested": None}
-            if action == "output" and job.get("output_cache", {}).get("complete"):
+            if action == "output" and output_cache_complete(job):
                 return cached_output(root, job, offset, limit)
         original_control = job.get("control")
         requested = action if action in {"pause", "resume", "stop"} else original_control
@@ -643,7 +646,7 @@ def operate(root, action, job, offset=0, limit=16384, **args):
                     control_external(job, requested)
                     update_state(job)
                     applied = True
-                value = log_page(root, job, offset, limit) if action == "output" else None
+                value = None
             if confirmed and (
                 job["state"] != confirmed["state"]
                 or job.get("exit_code") != confirmed.get("exit_code")
@@ -653,8 +656,11 @@ def operate(root, action, job, offset=0, limit=16384, **args):
                 )
             if job["state"] in e.TERMINAL:
                 job.setdefault("terminal_confirmed_at", time.time())
-                if value is not None:
-                    remember_output(root, job, value)
+                confirmed = dict(job)
+            if action == "output" and job["adapter"] != "ssh":
+                value = log_page(root, job, offset, limit)
+            if confirmed and value is not None:
+                remember_output(root, job, value)
             job.pop("cache_error", None)
             job.update(updated=time.time(), uncertain=False)
             job.pop("error", None)
@@ -685,6 +691,8 @@ def operate(root, action, job, offset=0, limit=16384, **args):
             )
         except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as error:
             if confirmed:
+                if legacy_missing_slurm_log(job):
+                    job["output_cache"]["complete"] = False
                 job.update(
                     state=confirmed["state"],
                     exit_code=confirmed.get("exit_code"),
@@ -694,6 +702,8 @@ def operate(root, action, job, offset=0, limit=16384, **args):
                 )
                 store(root, job)
                 if action == "output":
+                    if not job.get("output_cache") or legacy_missing_slurm_log(job):
+                        raise
                     return cached_output(root, job, offset, limit)
                 if action == "remove":
                     raise
@@ -823,6 +833,15 @@ def remember_output(root, job, page):
     }
 
 
+def legacy_missing_slurm_log(job):
+    cache = job.get("output_cache", {})
+    return job["adapter"] == "slurm" and cache.get("bytes") == 0 and cache.get("truncated", False)
+
+
+def output_cache_complete(job):
+    return job.get("output_cache", {}).get("complete", False) and not legacy_missing_slurm_log(job)
+
+
 def cached_output(root, job, offset, limit):
     if (
         not isinstance(offset, int)
@@ -866,7 +885,7 @@ def cache_result(root, job):
     while time.monotonic() < end:
         job = e.load(root, job["id"])
         cache = job.get("output_cache", {})
-        if cache.get("complete") or cache.get("bytes", 0) >= 64 << 20:
+        if output_cache_complete(job) or cache.get("bytes", 0) >= 64 << 20:
             return
         offset = cache.get("bytes", 0)
         try:
@@ -892,7 +911,7 @@ def recover(root, identity):
         if (
             job.get("terminal_confirmed_at")
             and job["state"] in e.TERMINAL
-            and job.get("output_cache", {}).get("complete")
+            and output_cache_complete(job)
         ):
             return {
                 **e.view(root, job),
@@ -901,11 +920,15 @@ def recover(root, identity):
             }
         if not job.get("submission_attempted"):
             raise ValueError("Submission was not recorded; recovery cannot submit a new command")
-        status = operate(root, "status", job)
+        status = operate(root, "status", job, _refresh=True)
         job = e.load(root, identity)
-        if status.get("uncertain") or status["state"] in {"unknown", "unreachable"}:
+        if (
+            status.get("source") == "cache"
+            or status.get("uncertain")
+            or status["state"] in {"unknown", "unreachable"}
+        ):
             return {**status, "recovery": "backend_unverified", "controller_restarted": False}
-        if job["state"] in e.TERMINAL and job.get("output_cache", {}).get("complete"):
+        if job["state"] in e.TERMINAL and output_cache_complete(job):
             return {**status, "recovery": "already_complete", "controller_restarted": False}
         restarted = False
         if not controller_alive(job):
