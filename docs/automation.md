@@ -54,3 +54,6 @@ v2.0.0 默认输出助手的可读文本（可含 Markdown），stdout 没有 JS
 默认只读本地元数据：客户端资产、历史、托管任务、近期运行、模型请求计时/usage 与问题；不主动请求推理、不打印对话、命令输出或请求正文。--check-endpoint 才检查模型 API 就绪；--limit 默认 20。缺失观测值保留未知，不能推断没有错误或性能正常。退出 0 表示报告生成，查看 issues 和任务状态判断健康。
 
 [执行与远端适配](execution.md) · [完整参数](commands.md) · [English](en/automation.md)
+
+
+缺少 connection.json 的旧版历史，只要启动记录仍有选定 provider、项目和已安装客户端即可备份，归档标记 legacy-launch-config；不会访问历史隧道地址。恢复始终使用显式或当前配置的目标 endpoint。元数据/资产确实缺失仍报错，不猜测、不跳过历史。

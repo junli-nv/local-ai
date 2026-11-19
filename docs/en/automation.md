@@ -54,3 +54,6 @@ If the project path changed, add --project /home/alice/new-project to restore an
 By default this reads local metadata only: native assets, histories, managed tasks, recent runs, model-request timings/usage and issues. It does not request inference or print conversations, command output or request bodies. --check-endpoint explicitly checks API readiness; --limit defaults to 20. Missing observations remain unknown, not proof of health. Exit 0 means a report was generated; inspect issues and task states.
 
 [Execution and backends](execution.md) · [Parameters](commands.md) · [中文](../automation.md)
+
+
+Legacy clients without connection.json can be backed up when launch records still contain a selected provider, project and installed client. The archive marks legacy-launch-config metadata; a historical tunnel URL is never contacted. Restore always uses your explicit/configured destination endpoint. Missing metadata/assets still fail rather than guessing or skipping history.

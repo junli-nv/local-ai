@@ -67,6 +67,38 @@ class PortabilityTests(unittest.TestCase):
         self.assertEqual(history.load(target)["active"], key)
         self.assertEqual(self.database.read_bytes(), before)
 
+    def test_legacy_launch_configuration_backs_up_without_reconnecting_tunnel(self):
+        (self.state / "connection.json").unlink()
+        log = self.state / "logs" / "old-session"
+        atomic_json(
+            log / "invocation.json",
+            {
+                "project": str(self.root),
+                "command": [str(self.root / "client/bin/opencode")],
+                "ssh_command": ["ssh", "-L", "127.0.0.1:5555:127.0.0.1:18000", "old-host"],
+            },
+        )
+        atomic_json(
+            log / "opencode.json",
+            {
+                "model": "local-deepseek/model",
+                "provider": {
+                    "local-deepseek": {"options": {"baseURL": "http://127.0.0.1:5555/v1"}}
+                },
+            },
+        )
+        p.backup(self.source, self.archive)
+        with zipfile.ZipFile(self.archive) as z:
+            row = json.loads(z.read("manifest.json"))["histories"][0]
+            self.assertEqual(row["metadata_source"], "legacy-launch-config")
+            self.assertEqual(row["endpoint"], "http://127.0.0.1:5555/v1")
+        target = self.root / "target"
+        imported = p.restore(target, self.archive, self.root / "client", "http://new-host/v1")
+        key = imported["histories"][0]["history_id"]
+        context = json.loads((target / "services" / key / "connection.json").read_text())
+        self.assertEqual(context["endpoint"], "http://new-host/v1")
+        self.assertFalse((self.state / "connection.json").exists())
+
     def test_restore_preserves_existing_selection_until_explicit_select(self):
         p.backup(self.source, self.archive)
         existing = self.root / "existing"

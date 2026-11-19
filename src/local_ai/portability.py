@@ -44,6 +44,45 @@ def select(state_root, key):
     return {"state": "selected", "history_id": key, "database_merged": False}
 
 
+def backup_context(state):
+    context = context_for(state)
+    if context:
+        return context
+    # Pre-endpoint clients recorded the selected provider in their launch config.
+    # This is historical metadata only; never reconnect to a saved tunnel URL.
+    for path in sorted((state / "logs").glob("*/invocation.json"), reverse=True):
+        config_path = path.parent / "opencode.json"
+        if not config_path.is_file():
+            continue
+        invocation = json.loads(path.read_text())
+        cfg = json.loads(config_path.read_text())
+        provider, separator, model = cfg.get("model", "").partition("/")
+        command = invocation.get("command")
+        project = invocation.get("project")
+        if (
+            not separator
+            or not model
+            or not isinstance(command, list)
+            or not command
+            or not isinstance(command[0], str)
+            or not Path(command[0]).is_absolute()
+            or not isinstance(project, str)
+            or not Path(project).is_absolute()
+        ):
+            continue
+        base = cfg.get("provider", {}).get(provider, {}).get("options", {}).get("baseURL")
+        if not isinstance(base, str):
+            continue
+        return {
+            "client_dir": str(Path(command[0]).parent.parent),
+            "project": project,
+            "model": model,
+            "endpoint": endpoint_url(base),
+            "metadata_source": "legacy-launch-config",
+        }
+    return None
+
+
 def backup(state_root, output):
     state_root = Path(state_root).expanduser().resolve()
     output = Path(output).expanduser().absolute()
@@ -73,7 +112,7 @@ def backup(state_root, output):
                 continue
             if database.is_symlink():
                 raise ValueError("Symlink history database is not supported")
-            context = context_for(state)
+            context = backup_context(state)
             if not context:
                 raise ValueError("Missing connection metadata for history " + state.name)
             version = validate(Path(context["client_dir"]))["version"]
@@ -96,6 +135,7 @@ def backup(state_root, output):
                     "model": context["model"],
                     "project": context["project"],
                     "project_overrides": context.get("project_overrides", {}),
+                    "metadata_source": context.get("metadata_source", "connection"),
                 }
             )
             manifest["files"][name] = {"sha256": digest(target), "size": target.stat().st_size}

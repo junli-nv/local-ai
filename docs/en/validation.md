@@ -11,6 +11,8 @@ Environment: BCM Linux AMD64, Python 3.12, native OpenCode 1.19.5; existing HGX2
 - Native mock cases controls, denied, enhanced and policy passed, including permitted commands and compound-command denial. API/TUI timing is functional evidence, not a real-model latency promise.
 - Unit coverage includes PTY/input idempotency, owned-group adoption, notice leases, private snapshot safety, backend identity checks and incomplete accounting. Packaging/docs checks compare actual source archives with current manuals.
 
+- Final local regression: 329 tests passed plus Ruff lint/format. A complete private BCM snapshot of four histories was restored into isolated state with all 38 original session IDs retained, including pre-endpoint tunnel launch records.
+
 Private raw evidence is retained on BCM under the acceptance workspace, not published. Offline/air-gap behavior, other synchronous tools, arbitrary TUI reattachment and reboot replay are not established. GPU profiles and performance conclusions retain their earlier acceptance scope below.
 
 
