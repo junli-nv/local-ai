@@ -305,7 +305,7 @@ chat --endpoint 不改写 installation.json，也不要求重新安装。--check
 
 --model 也只对本次生效；省略时用安装默认模型，不猜测其他节点的模型。不匹配会列出服务端 ID。同一用户的本地历史与 endpoint、安装目录无关，临时 --endpoint 也沿用所选历史；--session ID 与 --continue 使用该历史并保留项目目录。旧版记录缺失时，按[更换服务器并保留会话](docs/commands.md#更换服务器并保留会话)兼容一次；正常切换无需更新历史。
 
-退出后可用原生提示的 opencode -s ses_... 恢复。首次 chat 创建 ~/.local/bin/opencode 恢复入口，并提示 PATH 或同名程序冲突；也可用 chat --session ID 或 chat --continue。默认关闭鼠标捕获及内置剪贴板快捷键，使用终端复制粘贴、键盘导航，详见[会话恢复与终端复制](docs/commands.md#恢复会话与终端复制)。
+退出交互聊天后，复制提示中的 local-ai chat --session 命令即可恢复原会话和项目；也可用 chat --continue 继续最近会话。默认关闭鼠标捕获及内置剪贴板快捷键，使用终端复制粘贴、键盘导航，详见[会话恢复与终端复制](docs/commands.md#恢复会话与终端复制)。
 
 助手可排查硬件、开发脚本、配置服务，以及准备、提交和跟踪 Slurm/Kubernetes 作业。要求通过 SSH 到 GPU001 查询硬件时，使用当前账户权限；推理配方不限制运维查询的硬件型号。规则见 [AGENTS.md](AGENTS.md)，纯计划不探测硬件的约束仅针对 server plan --inventory。
 

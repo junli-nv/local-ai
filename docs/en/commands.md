@@ -484,8 +484,7 @@ This does not copy history to another BCM or public offline archives; moving cli
 ### Resume and terminal clipboard
 
 The first chat invocation (including --check) creates a per-user resume launcher
-at `~/.local/bin/opencode`. Run the exit hint `opencode -s ses_...` directly to
-restore the original project and private history, using the current saved endpoint for default history and the associated connection for other histories. If needed, run
+at `~/.local/bin/opencode` for older resume hints. On interactive exit, copy the displayed local-ai chat --session command. It retains the project and private history path, uses the current saved endpoint for default connections, and includes any temporary endpoint or model override. If needed, run
 `export PATH="$HOME/.local/bin:$PATH"` and add it to `~/.profile`.
 An existing unrelated opencode executable is preserved; use the explicit entry instead:
 

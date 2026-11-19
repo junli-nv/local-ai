@@ -5,7 +5,9 @@ import fcntl
 import json
 import os
 import pty
+import re
 import select
+import shlex
 import signal
 import socket
 import struct
@@ -50,13 +52,62 @@ def request(url, data=None, timeout=2):
         return json.load(response)
 
 
+def interactive_exit(command):
+    master, slave = pty.openpty()
+    fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack("HHHH", 44, 160, 0, 0))
+    child = subprocess.Popen(
+        command,
+        stdin=slave,
+        stdout=slave,
+        stderr=slave,
+        start_new_session=True,
+        env=dict(os.environ, TERM="xterm-256color"),
+    )
+    os.close(slave)
+    output = bytearray()
+    try:
+        deadline = time.monotonic() + 30
+        while time.monotonic() < deadline and child.poll() is None:
+            if select.select([master], [], [], 0.2)[0]:
+                try:
+                    output.extend(os.read(master, 65536))
+                except OSError:
+                    break
+            if b"local-ai compatibility session" in output:
+                break
+        if b"local-ai compatibility session" not in output:
+            raise RuntimeError("Native TUI did not open the requested session")
+        deadline = time.monotonic() + 10
+        interrupt = time.monotonic() + 0.5
+        while time.monotonic() < deadline:
+            now = time.monotonic()
+            if now >= interrupt and child.poll() is None:
+                os.write(master, b"\x03")
+                interrupt = now + 2
+            if select.select([master], [], [], 0.2)[0]:
+                try:
+                    output.extend(os.read(master, 65536))
+                except OSError:
+                    break
+            elif child.poll() is not None:
+                break
+        if child.poll() is None:
+            raise RuntimeError(f"Native TUI did not exit on Ctrl-C: {output[-2048:]!r}")
+        return bytes(output), child.wait()
+    finally:
+        if child.poll() is None:
+            os.killpg(child.pid, signal.SIGKILL)
+            child.wait()
+        os.close(master)
+
+
 def check(assets):
     manifest = validate(assets)
     with tempfile.TemporaryDirectory(prefix="local-ai-contract-") as directory:
         root = Path(directory)
         os.environ["HOME"] = str(root / "home")
         os.environ["XDG_STATE_HOME"] = str(root / "user-state")
-        project = root / "project"
+        project = root / "project with spaces"
         project.mkdir()
         api = ThreadingHTTPServer(("127.0.0.1", 0), Models)
         threading.Thread(target=api.serve_forever, daemon=True).start()
@@ -111,58 +162,40 @@ def check(assets):
                 backend.wait(timeout=5)
         context, restored = locate(session_id)
         assert context["endpoint"] == base and restored == str(project)
-        master, slave = pty.openpty()
-        fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack("HHHH", 44, 160, 0, 0))
-        child = subprocess.Popen(
-            [str(Path.home() / ".local/bin/opencode"), "-s", session_id],
-            stdin=slave,
-            stdout=slave,
-            stderr=slave,
-            start_new_session=True,
-            env=dict(os.environ, TERM="xterm-256color"),
-        )
-        os.close(slave)
-        output = bytearray()
-        loaded = False
         try:
-            deadline = time.monotonic() + 30
-            while time.monotonic() < deadline and child.poll() is None:
-                if select.select([master], [], [], 0.2)[0]:
-                    try:
-                        output.extend(os.read(master, 65536))
-                    except OSError:
-                        break
-                if b"local-ai compatibility session" in output:
-                    loaded = True
-                    break
-            os.write(master, b"\x18q")
-            deadline = time.monotonic() + 8
-            while time.monotonic() < deadline and child.poll() is None:
-                if select.select([master], [], [], 0.2)[0]:
-                    try:
-                        output.extend(os.read(master, 65536))
-                    except OSError:
-                        break
-            if child.poll() is None:
-                os.killpg(child.pid, signal.SIGTERM)
-            child.wait(timeout=5)
+            output, returncode = interactive_exit(
+                [str(Path.home() / ".local/bin/opencode"), "-s", session_id]
+            )
+            plain = re.sub(rb"\x1b\[[0-?]*[ -/]*[@-~]", b"", output).decode(errors="replace")
+            hint = re.search(r"(?m)^  Continue  ([^\r\n]+)", plain)
+            if hint is None or f"opencode -s {session_id}" in plain:
+                raise RuntimeError("Ctrl-C did not print the local-ai resume command")
+            command = shlex.split(hint[1])
+            if (
+                Path(command[0]).name != "local-ai"
+                or command[1] != "chat"
+                or command[2:4] != ["--session", session_id]
+                or command[command.index("--project") + 1] != str(project)
+            ):
+                raise RuntimeError("Unexpected local-ai resume command")
+            replay, replay_code = interactive_exit(command)
+            if replay_code or b"local-ai compatibility session" not in replay:
+                raise RuntimeError("The displayed command did not restore the same session")
         finally:
-            if child.poll() is None:
-                os.killpg(child.pid, signal.SIGKILL)
-                child.wait()
-            os.close(master)
             api.shutdown()
             api.server_close()
+        loaded = b"local-ai compatibility session" in output
         mouse = [n for n in (1000, 1002, 1003, 1006) if f"\x1b[?{n}h".encode() in output]
         report = {
             "client_version": manifest["version"],
             "session_restored": loaded,
             "mouse_capture_enabled": mouse,
             "bracketed_paste": b"\x1b[?2004h" in output,
-            "exit_code": child.returncode,
+            "exit_code": returncode,
+            "exit_hint_replay": True,
         }
         print(json.dumps(report))
-        if not loaded or mouse or not report["bracketed_paste"] or child.returncode != 0:
+        if not loaded or mouse or not report["bracketed_paste"] or returncode != 0:
             raise SystemExit("Native client contract failed")
 
 

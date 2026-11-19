@@ -480,7 +480,7 @@ endpoint-backups/ 私有备份支持捕获写入失败时回滚；重复操作�
 ### 恢复会话与终端复制
 
 首次运行 chat（包括 --check）会在 `~/.local/bin/opencode` 创建当前用户的恢复入口。
-退出提示中的 `opencode -s ses_...` 可直接执行，自动找回原项目目录和私有历史；默认历史使用当前保存的 endpoint，其他历史使用对应连接。
+交互聊天退出时，优先复制屏幕提示中的 local-ai chat --session 命令。命令保留本次的项目和私有历史路径；默认连接使用当前保存的 endpoint，临时覆盖的连接或模型会随命令显示。旧的 opencode -s 入口仍可恢复历史提示中的会话。
 若该目录不在 PATH，按提示执行 `export PATH="$HOME/.local/bin:$PATH"`，并按需加入 `~/.profile`。
 不会覆盖已有的其他 opencode 程序；有名称冲突时使用下面的显式入口：
 

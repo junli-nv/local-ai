@@ -307,7 +307,7 @@ For a different model on GPU002, also pass --model with its advertised ID. If th
 
 --model is also invocation-only and otherwise uses the installed default, with advertised IDs reported on mismatch. User-local history is independent of endpoint and installation paths; ad-hoc --endpoint shares the selected history. --session ID/--continue use that history while retaining project directories. [Associate missing legacy records once](docs/en/commands.md#replace-a-server-and-retain-sessions); ordinary server switching requires no history update.
 
-Resume with opencode -s ses_.... The first chat creates ~/.local/bin/opencode and reports PATH/name conflicts. chat --session ID and chat --continue are alternatives. Mouse capture/clipboard bindings are disabled by default; use terminal copying/pasting and keyboard navigation. See [session resume and terminal copying](docs/en/commands.md#resume-and-terminal-clipboard).
+After exiting interactive chat, copy the displayed local-ai chat --session command to restore the session and project. Use chat --continue to resume the latest session. Mouse capture/clipboard bindings are disabled by default; use terminal copying/pasting and keyboard navigation. See [session resume and terminal copying](docs/en/commands.md#resume-and-terminal-clipboard).
 
 Tasks include hardware troubleshooting, scripts, services and Slurm/Kubernetes jobs. SSH queries use current-user permissions, independently of inference profiles. Rules are in [AGENTS.md](AGENTS.md); the no-probing constraint applies only to pure server plan --inventory.
 

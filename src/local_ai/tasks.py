@@ -2,6 +2,7 @@
 
 import json
 import os
+import re
 import selectors
 import shlex
 import signal
@@ -48,6 +49,60 @@ def terminated(signum, frame):
     raise Terminated()
 
 
+class ResumeHint:
+    """Rewrite only OpenCode's interactive exit summary, even across pipe reads."""
+
+    prefix = b"\n  \x1b[90mContinue  \x1b[0m\x1b[1m"
+    marker = prefix + b"opencode -s "
+    session = re.compile(rb"(ses_[A-Za-z0-9_-]{1,128})\x1b\[0m")
+    max_suffix = 140
+
+    def __init__(self, command):
+        self.command = command
+        self.pending = b""
+
+    def feed(self, chunk, final=False):
+        data = self.pending + chunk
+        self.pending = b""
+        result = bytearray()
+        while data:
+            offset = data.find(self.marker)
+            if offset < 0:
+                if not final:
+                    for length in range(min(len(data), len(self.marker) - 1), 0, -1):
+                        if data.endswith(self.marker[:length]):
+                            self.pending, data = data[-length:], data[:-length]
+                            break
+                result.extend(data)
+                break
+            result.extend(data[:offset])
+            data = data[offset:]
+            session = self.session.match(data, len(self.marker))
+            if session:
+                result.extend(self.prefix)
+                args = [
+                    *self.command[:2],
+                    "--session",
+                    session[1].decode("ascii"),
+                    *self.command[2:],
+                ]
+                result.extend(os.fsencode(shlex.join(args)) + b"\x1b[0m")
+                data = data[session.end() :]
+            elif not final and len(data) < len(self.marker) + self.max_suffix:
+                self.pending = data
+                break
+            else:
+                result.extend(self.marker)
+                data = data[len(self.marker) :]
+        return result
+
+
+def write_terminal(chunk):
+    if chunk:
+        sys.stdout.buffer.write(chunk)
+        sys.stdout.buffer.flush()
+
+
 def execute(command, project, env, logfile, prompt):
     renderer = (
         TextOutput() if prompt is not None and env.get("LOCAL_AI_OUTPUT_FORMAT") == "text" else None
@@ -67,6 +122,11 @@ def execute(command, project, env, logfile, prompt):
     atomic_json(path, record)
     timeout = float(env.get("LOCAL_AI_RUN_TIMEOUT", "0"))
     heartbeat = float(env.get("LOCAL_AI_HEARTBEAT", "15"))
+    hint = (
+        ResumeHint(context["resume_command"])
+        if prompt is None and context.get("resume_command")
+        else None
+    )
     if prompt is None:
         command = ["script", "-q", "-e", "-f", str(logfile), "-c", shlex.join(command)]
     started = last = time.monotonic()
@@ -84,7 +144,7 @@ def execute(command, project, env, logfile, prompt):
                 env=env,
                 start_new_session=True,
                 stdin=subprocess.DEVNULL if prompt is not None else None,
-                stdout=subprocess.PIPE if prompt is not None else None,
+                stdout=subprocess.PIPE if prompt is not None or hint else None,
                 stderr=subprocess.STDOUT if prompt is not None else None,
             )
             record.update(state="running", child_pid=child.pid)
@@ -109,13 +169,15 @@ def execute(command, project, env, logfile, prompt):
                         if not chunk:
                             selector.unregister(key.fileobj)
                             continue
-                        log.write(chunk)
-                        log.flush()
-                        if renderer is not None:
-                            renderer.feed(chunk)
+                        if hint:
+                            write_terminal(hint.feed(chunk))
                         else:
-                            sys.stdout.buffer.write(chunk)
-                            sys.stdout.buffer.flush()
+                            log.write(chunk)
+                            log.flush()
+                            if renderer is not None:
+                                renderer.feed(chunk)
+                            else:
+                                write_terminal(chunk)
                 else:
                     time.sleep(0.1)
             else:
@@ -130,6 +192,8 @@ def execute(command, project, env, logfile, prompt):
             stop(child)
         if child and child.stdout:
             child.stdout.close()
+        if hint:
+            write_terminal(hint.feed(b"", final=True))
         if renderer is not None:
             renderer.finish()
             if renderer.failed and code == 0:

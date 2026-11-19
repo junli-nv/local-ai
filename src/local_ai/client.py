@@ -12,11 +12,11 @@ from pathlib import Path
 
 from . import __version__, batch, history, native_cache, tasks, telemetry
 from .artifacts import validate
-from .common import atomic_json, fingerprint, private_dir
+from .common import arch, atomic_json, fingerprint, private_dir
 from .endpoint import endpoint_url, wait_endpoint
 from .operations import GUIDANCE
-from .paths import settings
-from .profiles import client_options
+from .paths import client_assets, settings
+from .profiles import catalog, client_options
 from .resume import register
 
 
@@ -153,7 +153,8 @@ def chat(options):
         raise RuntimeError("Client not installed; run local-ai client install on this headnode")
     manifest = validate(assets)
     state_root = private_dir(options.state_dir)
-    default_endpoint = settings().get("endpoint")
+    installed = settings()
+    default_endpoint = installed.get("endpoint")
     key = history.resolve(state_root, base, default_endpoint)
     state = private_dir(state_root / "services" / key)
     session = private_dir(state / "logs" / ("session-%d-%d" % (time.time_ns(), os.getpid())))
@@ -201,6 +202,15 @@ def chat(options):
         },
     )
     print("Log: " + str(session / "terminal.log"), file=sys.stderr)
+    launcher_path = Path(__file__).resolve().parents[2] / "local-ai"
+    launcher = str(launcher_path) if launcher_path.is_file() else "local-ai"
+    reconnect = [launcher, "chat", "--project", str(project), "--state-dir", str(state_root)]
+    if not default_endpoint or base != endpoint_url(default_endpoint):
+        reconnect += ["--endpoint", base]
+    if options.model != (installed.get("model") or catalog()["model"]["served_name"]):
+        reconnect += ["--model", options.model]
+    if assets != client_assets(arch()).resolve():
+        reconnect += ["--client-dir", str(assets)]
     env["LOCAL_AI_CONTEXT"] = json.dumps(
         {
             "endpoint": base,
@@ -212,9 +222,8 @@ def chat(options):
             "client_version": manifest.get("version"),
             "local_ai_version": __version__,
             "request_observer_enabled": not getattr(options, "direct_api", False),
-            "launcher": str(Path(__file__).resolve().parents[2] / "local-ai")
-            if (Path(__file__).resolve().parents[2] / "local-ai").is_file()
-            else "local-ai",
+            "launcher": launcher,
+            "resume_command": reconnect if options.run is None else None,
             "context_limit": client_options(options.model).get("limit", {}).get("context"),
         }
     )
