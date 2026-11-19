@@ -1,5 +1,16 @@
 # Validation record
 
+## Post-v2.0.0 main follow-up (2026-11-19)
+
+337 unit tests, Ruff lint/format, documentation CLI examples and current-version checks passed. Native OpenCode 1.19.5 enhanced/policy cases passed with automatic completion delivery and compound-command permissions preserved.
+
+The actual previously duplicated BCM AGENTS backup was migrated in isolated configuration: two exact copies removed, selected general+BCM content retained, repeat application unchanged. Tests also preserve edited rules, fenced examples, CRLF and private backups.
+
+scripts/check-recovery.py ran against HGX260 with a short CPU-only SSH command: kill local controller, inject a transport exception, recover concurrently, retain one monitor/original remote ID, execute once, confirm completion and read complete cached output with all SSH calls forbidden. Temporary test files were cleaned. Transport failure was injected in the client, not a physical network outage. Partial/gapped/changed cache, unknown submissions and cancellation before submission are separately covered by tests.
+
+Real-model batch text and JSON runs with options before the positional prompt passed in isolated state against the existing HGX260 API. No inference restart or new GPU allocation. Raw evidence remains private on BCM; strict air-gap, long-duration stress and cross-OpenCode-version history migration remain unverified.
+
+
 ## v2.0.0 client acceptance (2026-11-19)
 
 Environment: BCM Linux AMD64, Python 3.12, native OpenCode 1.19.5; existing HGX260 DeepSeek-V4.1-Flash API. Private isolated histories/projects were used; production sessions were not used as fixtures.

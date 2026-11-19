@@ -317,3 +317,6 @@ npm_config_offline=true ./local-ai chat --run 'Reply with exactly LOCAL_AI_OK. D
 ## v2.0.0 客户端状态与交付
 
 源码包携带 batch.py、portability.py、diagnostics.py、adapters.py 和 execution.mjs；基础 Python 不增加第三方依赖，不需独立 Node。仅选用对应后端时需要 SSH/Slurm/Docker 工具。公共离线包排除私有历史、执行状态和凭据；[私有历史迁移](automation.md)另行显式生成，含未脱敏对话。各主机分别更新程序，保持推理运行，重新进入聊天加载插件。批处理默认文本，旧事件消费者加 --format json。
+
+
+v2.0.0 之后主线的 result.log、恢复/控制器元数据属于私有执行状态，不进入公共导出或历史 ZIP。终态缓存读取不需联网，但不能据此宣称严格离线安装或所有后端已验收；源码同时携带 scripts/check-recovery.py，供显式授权的实际 SSH 验收。

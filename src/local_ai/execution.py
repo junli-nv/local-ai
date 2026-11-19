@@ -123,6 +123,15 @@ def view(root, job, include_command=True):
         result.pop("argv", None)
     log = directory(root, job["id"]) / "output.log"
     result["output_bytes"] = log.stat().st_size if log.exists() else job.get("output_bytes", 0)
+    if job.get("adapter"):
+        result["controller_running"] = False
+        pid = job.get("controller_pid")
+        if pid and stamp(pid) == job.get("controller_start"):
+            try:
+                fields = Path(f"/proc/{pid}/stat").read_text().rsplit(")", 1)[1].split()
+                result["controller_running"] = fields[0] not in {"Z", "X"}
+            except (OSError, IndexError):
+                pass
     result["terminal"] = job["state"] in TERMINAL
     if not result["terminal"] and job.get("worker_pid"):
         if stamp(job["worker_pid"]) != job.get("worker_start"):
@@ -313,7 +322,7 @@ def perform(root, action, session=None, project=None, job_id=None, offset=0, lim
     skip_adapter = args.pop("_adapter_skip", False)
     if (
         job_id
-        and action in {"status", "output", "pause", "resume", "stop", "remove", "input"}
+        and action in {"status", "output", "pause", "resume", "stop", "remove", "input", "recover"}
         and not skip_adapter
     ):
         candidate = load(root, job_id)

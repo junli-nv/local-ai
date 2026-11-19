@@ -404,3 +404,8 @@ Real-model control/notifications/history relocation and real SSH/Slurm/container
 
 
 v2.0.0 maintenance: retain each adapters.py controller copy with its task. Ship batch/portability modules in source and wheels. Recheck enhanced, policy and authorized live-model acceptance, including stable notice IDs, relocated project use, input idempotency and backend identity. Never upload private archives to CI or public packages.
+
+
+### Post-v2.0.0 follow-up
+
+Implemented on main: exact unmarked-template migration with backups, chat argument intermixing, explicit verified adapter recovery and bounded terminal output caches. Preserve v2.0.0 tags and document these as newer main behavior until a new version is explicitly requested. Actual SSH recovery on HGX260 and injected transport failure passed; this is not physical network-isolation or cross-version database migration acceptance. Those, long-duration stress and remote PTYs remain separate follow-ups.

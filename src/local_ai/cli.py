@@ -47,6 +47,17 @@ class CommandParser(argparse.ArgumentParser):
         kwargs.setdefault("formatter_class", argparse.ArgumentDefaultsHelpFormatter)
         super().__init__(*args, **kwargs)
 
+    def parse_known_args(self, args=None, namespace=None):
+        if getattr(self, "_intermixed_positionals", False) and not getattr(
+            self, "_in_intermixed", False
+        ):
+            self._in_intermixed = True
+            try:
+                return self.parse_known_intermixed_args(args, namespace)
+            finally:
+                self._in_intermixed = False
+        return super().parse_known_args(args, namespace)
+
 
 def instruction_options(command):
     command.add_argument(
@@ -477,6 +488,7 @@ def parser():
         "start",
         "adopt",
         "input",
+        "recover",
         "list",
         "status",
         "output",
@@ -745,6 +757,7 @@ def parser():
     b.add_argument(
         "--check", action="store_true", help="Check model API connectivity without chatting"
     )
+    b._intermixed_positionals = True
     b.add_argument(
         "chat_command", nargs="?", choices=["run"], help="run starts noninteractive batch chat"
     )

@@ -2,6 +2,8 @@
 
 v2.0.0 adds managed execution, completion notifications, SSH/Slurm/container controls, private history migration and combined diagnostics. Batch chat now defaults to readable text and accepts files/stdin. Existing JSON consumers must use --format json. See [release notes](docs/en/release-2.0.0.md).
 
+Post-v2.0.0 main additionally fixes chat option ordering, migrates exact legacy instruction copies, and adds client job recover with cached terminal results. These additions are newer than the v2.0.0 archive. See [execution](docs/en/execution.md) and [batch](docs/en/automation.md).
+
 [中文（默认）](README.md)
 
 **local-ai is an AI work assistant for local clusters, helping users perform system administration, software development and everyday file tasks through natural language.**

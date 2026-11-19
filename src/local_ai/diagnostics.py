@@ -48,12 +48,20 @@ def inspect(state_root, assets, endpoint=None, model=None, check_endpoint=False,
                         "session",
                         "project",
                         "adapter",
+                        "controller_running",
+                        "output_cache",
                         "exit_code",
                         "output_bytes",
                         "output_truncated",
                         "updated",
                     ]
                 }
+                if (
+                    value.get("adapter")
+                    and not value["terminal"]
+                    and not value.get("controller_running")
+                ):
+                    result["issues"].append({"kind": "controller_stopped", "job_id": value["id"]})
                 result["jobs"].append(row)
                 if value["state"] in {
                     "orphaned",

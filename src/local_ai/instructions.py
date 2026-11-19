@@ -31,10 +31,79 @@ def content(selection, language):
     return BEGIN + b"\n" + body + b"\n" + END
 
 
-def merge(previous, block):
+def legacy_copies(text, block):
+    """Remove only complete, exact template copies outside Markdown fences."""
+    body = block[len(BEGIN) + 1 : -len(END)].rstrip()
+    titles = (
+        "# 个人全局工作约定",
+        "# BCM 场景约定",
+        "# Personal work instructions",
+        "# BCM scenario instructions",
+    )
+    parts = []
+    current = []
+    for line in body.splitlines(keepends=True):
+        if line.startswith(b"# ") and current:
+            parts.append(b"".join(current).rstrip())
+            current = []
+        current.append(line)
+    if current:
+        parts.append(b"".join(current).rstrip())
+    candidates = [body, *parts]
+    candidates = sorted(
+        {
+            variant
+            for value in candidates
+            if value.splitlines()[0].decode() in titles
+            for variant in (value, value.replace(b"\n", b"\r\n"))
+        },
+        key=len,
+        reverse=True,
+    )
+
+    def fenced(prefix):
+        fence = None
+        for line in prefix.splitlines():
+            token = line.lstrip(b" ")
+            if len(line) - len(token) > 3:
+                continue
+            if token.startswith((bytes([96]) * 3, b"~~~")):
+                char = token[:1]
+                count = len(token) - len(token.lstrip(char))
+                if fence is None:
+                    fence = (char, count)
+                elif char == fence[0] and count >= fence[1] and not token[count:].strip():
+                    fence = None
+        return fence is not None
+
+    removed = 0
+    for candidate in candidates:
+        cursor = 0
+        while True:
+            pos = text.find(candidate, cursor)
+            if pos < 0:
+                break
+            end = pos + len(candidate)
+            left = pos == 0 or text[:pos].endswith((b"\n\n", b"\r\n\r\n"))
+            right = (
+                end == len(text)
+                or text[end:].startswith((b"\n\n", b"\r\n\r\n"))
+                or not text[end:].strip()
+            )
+            if left and right and not fenced(text[:pos]):
+                text = text[:pos] + text[end:]
+                removed += 1
+                cursor = pos
+            else:
+                cursor = end
+    return (text if text.strip() else b""), removed
+
+
+def merged(previous, block):
     if BEGIN not in previous and END not in previous:
+        previous, removed = legacy_copies(previous, block)
         separator = b"" if not previous else (b"\n" if previous.endswith(b"\n") else b"\n\n")
-        return previous + separator + block + b"\n"
+        return previous + separator + block + b"\n", removed
     if previous.count(BEGIN) != 1 or previous.count(END) != 1:
         raise ValueError(
             "Malformed local-ai instructions markers; repair AGENTS.md or use --instructions none"
@@ -44,7 +113,16 @@ def merge(previous, block):
         raise ValueError(
             "Reversed local-ai instructions markers; repair AGENTS.md or use --instructions none"
         )
-    return previous[:start] + block + previous[end + len(END) :]
+    prefix, first = legacy_copies(previous[:start], block)
+    suffix, last = legacy_copies(previous[end + len(END) :], block)
+    # Preserve the usual final newline when all suffix content was duplicate text.
+    if not suffix and previous[end + len(END) :]:
+        suffix = b"\n"
+    return prefix + block + suffix, first + last
+
+
+def merge(previous, block):
+    return merged(previous, block)[0]
 
 
 def apply(selection="general", language="zh"):
@@ -65,7 +143,7 @@ def apply(selection="general", language="zh"):
         if exists and (not target.is_file() or target.stat().st_uid != os.getuid()):
             raise ValueError("Personal AGENTS.md must be a regular file owned by the current user")
         previous = target.read_bytes() if exists else b""
-        updated = merge(previous, block)
+        updated, removed = merged(previous, block)
         result = {"path": str(target), "template": selection, "language": language}
         if updated == previous:
             return {**result, "status": "unchanged"}
@@ -92,4 +170,9 @@ def apply(selection="general", language="zh"):
         if backup:
             installlog.event("Personal instructions backup: " + backup)
         installlog.event("Exit and restart OpenCode to load the installed personal instructions")
-        return {**result, "status": "updated" if exists else "created", "backup": backup}
+        return {
+            **result,
+            "status": "updated" if exists else "created",
+            "backup": backup,
+            "legacy_copies_removed": removed,
+        }

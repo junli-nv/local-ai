@@ -67,6 +67,57 @@ class InstructionTests(unittest.TestCase):
             self.assertEqual(instructions.apply()["status"], "updated")
         self.assertIn(b"\nnew\n", self.target.read_bytes())
 
+    def test_exact_legacy_copies_are_migrated_with_backup_and_custom_bytes_preserved(self):
+        body = (
+            instructions.content("general", "zh")
+            .split(instructions.BEGIN + b"\n", 1)[1]
+            .split(b"\n" + instructions.END)[0]
+        )
+        original = (
+            b"MY PREFIX\r\n\r\n"
+            + body
+            + b"\n\n"
+            + body
+            + b"\n\n"
+            + instructions.content("bcm", "zh")
+            + b"\nMY SUFFIX\n"
+        )
+        self.existing(original)
+        result = instructions.apply("bcm", "zh")
+        self.assertEqual(result["legacy_copies_removed"], 2)
+        self.assertEqual(Path(result["backup"]).read_bytes(), original)
+        current = self.target.read_bytes()
+        self.assertTrue(current.startswith(b"MY PREFIX\r\n\r\n"))
+        self.assertTrue(current.endswith(b"\nMY SUFFIX\n"))
+        self.assertEqual(current.count("# 个人全局工作约定".encode()), 1)
+        self.assertEqual(instructions.apply("bcm", "zh")["status"], "unchanged")
+
+    def test_modified_and_fenced_legacy_rules_are_preserved(self):
+        block = instructions.content("general", "zh")
+        body = block[len(instructions.BEGIN) + 1 : -len(instructions.END)].strip()
+        fence = bytes([96]) * 3
+        original = (
+            fence
+            + b"markdown\n"
+            + body
+            + b"\n"
+            + fence
+            + b"\n\n"
+            + body.replace("回复语言".encode(), "我的回复语言".encode())
+            + b"\n"
+        )
+        self.existing(original)
+        instructions.apply()
+        self.assertTrue(self.target.read_bytes().startswith(original))
+
+    def test_unmarked_english_crlf_template_is_migrated(self):
+        block = instructions.content("bcm", "en")
+        body = block[len(instructions.BEGIN) + 1 : -len(instructions.END)].strip()
+        self.existing(body.replace(b"\n", b"\r\n") + b"\r\n")
+        result = instructions.apply("bcm", "en")
+        self.assertEqual(result["legacy_copies_removed"], 1)
+        self.assertEqual(self.target.read_bytes(), block + b"\n")
+
     def test_none_does_not_read_templates_or_create_configuration(self):
         with patch("local_ai.instructions.content", side_effect=AssertionError("no read")):
             self.assertEqual(instructions.apply("none"), {"status": "skipped"})

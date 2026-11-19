@@ -223,6 +223,7 @@ def submit_once(root, job):
             return
         if job.get("control") == "stop":
             job.update(state="cancelled", ended=time.time(), exit_code=None, control=None)
+            finish_unsubmitted(root, job)
             e.save(root, job)
             return
         held = (
@@ -565,6 +566,9 @@ def store(root, job, original_control=None, control_applied=False):
 def operate(root, action, job, offset=0, limit=16384, **args):
     import fcntl
 
+    if action == "recover":
+        return recover(root, job["id"])
+
     lock = e.directory(root, job["id"]) / ".adapter.lock"
     fd = os.open(lock, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
     with os.fdopen(fd, "a") as guard:
@@ -574,6 +578,14 @@ def operate(root, action, job, offset=0, limit=16384, **args):
             raise ValueError("Unsupported adapter operation")
         if action == "resume" and e.gate(root, job["session"], job["project"])["paused"]:
             raise ValueError("Resume the session before resuming this task")
+        confirmed = (
+            dict(job) if job.get("terminal_confirmed_at") and job["state"] in e.TERMINAL else None
+        )
+        if confirmed and not args.get("_refresh"):
+            if action == "status" or action in {"pause", "resume", "stop"}:
+                return {**e.view(root, job), "source": "cache", "control_requested": None}
+            if action == "output" and job.get("output_cache", {}).get("complete"):
+                return cached_output(root, job, offset, limit)
         original_control = job.get("control")
         requested = action if action in {"pause", "resume", "stop"} else original_control
         applied = False
@@ -632,6 +644,18 @@ def operate(root, action, job, offset=0, limit=16384, **args):
                     update_state(job)
                     applied = True
                 value = log_page(root, job, offset, limit) if action == "output" else None
+            if confirmed and (
+                job["state"] != confirmed["state"]
+                or job.get("exit_code") != confirmed.get("exit_code")
+            ):
+                raise RuntimeError(
+                    "Backend changed after confirmed completion; retaining recorded result"
+                )
+            if job["state"] in e.TERMINAL:
+                job.setdefault("terminal_confirmed_at", time.time())
+                if value is not None:
+                    remember_output(root, job, value)
+            job.pop("cache_error", None)
             job.update(updated=time.time(), uncertain=False)
             job.pop("error", None)
             if action == "remove":
@@ -660,6 +684,20 @@ def operate(root, action, job, offset=0, limit=16384, **args):
                 else {**e.view(root, job), "control_requested": requested}
             )
         except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as error:
+            if confirmed:
+                job.update(
+                    state=confirmed["state"],
+                    exit_code=confirmed.get("exit_code"),
+                    ended=confirmed.get("ended"),
+                    uncertain=False,
+                    cache_error=str(error),
+                )
+                store(root, job)
+                if action == "output":
+                    return cached_output(root, job, offset, limit)
+                if action == "remove":
+                    raise
+                return {**e.view(root, job), "source": "cache"}
             job.update(state="unreachable", error=str(error), uncertain=True, updated=time.time())
             store(root, job)
             if action in {"output", "remove"}:
@@ -670,6 +708,8 @@ def operate(root, action, job, offset=0, limit=16384, **args):
 def spawn_monitor(root, job):
     import threading
 
+    if controller_alive(e.load(root, job["id"])):
+        return False
     folder = e.directory(root, job["id"]) / "controller"
     package = e.private(folder / "local_ai")
     (package / "__init__.py").write_text("")
@@ -698,9 +738,10 @@ def spawn_monitor(root, job):
             child.wait()
             raise
         threading.Thread(target=child.wait, daemon=True).start()
+    return True
 
 
-def monitor(root, identity):
+def _monitor(root, identity):
     while True:
         with e.guard(root):
             job = e.load(root, identity)
@@ -715,6 +756,7 @@ def monitor(root, identity):
                         exit_code=None,
                         control=None,
                     )
+                    finish_unsubmitted(root, job)
                     e.save(root, job)
                     return
                 paused = e.gate(root, job["session"], job["project"])["paused"]
@@ -737,3 +779,171 @@ def monitor(root, identity):
         if value["terminal"] or time.time() - job["created"] > job["timeout"] + 30:
             return
         time.sleep(2)
+
+
+def controller_alive(job):
+    pid = job.get("controller_pid")
+    if not pid or e.stamp(pid) != job.get("controller_start"):
+        return False
+    try:
+        return Path(f"/proc/{pid}/stat").read_text().rsplit(")", 1)[1].split()[0] not in {"Z", "X"}
+    except (OSError, IndexError):
+        return False
+
+
+def remember_output(root, job, page):
+    """Retain a verified contiguous prefix; never fill an output gap with zeroes."""
+    offset, total = page["offset"], page["total_bytes"]
+    data = base64.b64decode(page["data_base64"], validate=True)
+    if offset < 0 or total < offset + len(data) or page["next_offset"] != offset + len(data):
+        raise ValueError("Invalid backend output coverage")
+    path = e.directory(root, job["id"]) / "result.log"
+    size = path.stat().st_size if path.exists() else 0
+    if offset > size:
+        return
+    with path.open("a+b") as stream:
+        path.chmod(0o600)
+        overlap = min(len(data), size - offset)
+        stream.seek(offset)
+        if stream.read(overlap) != data[:overlap]:
+            job["output_truncated"] = True
+            raise RuntimeError("Completed output changed; cached coverage is inconsistent")
+        remaining = max(0, (64 << 20) - size)
+        stream.seek(0, os.SEEK_END)
+        stream.write(data[overlap : overlap + remaining])
+        stream.flush()
+        os.fsync(stream.fileno())
+    size = path.stat().st_size
+    job["output_cache"] = {
+        "bytes": size,
+        "total_bytes": total,
+        "complete": size == total,
+        "truncated": page.get("truncated", False),
+        "updated": time.time(),
+    }
+
+
+def cached_output(root, job, offset, limit):
+    if (
+        not isinstance(offset, int)
+        or offset < 0
+        or not isinstance(limit, int)
+        or not 1 <= limit <= 65536
+    ):
+        raise ValueError("Output offset/limit are invalid")
+    cache = job.get("output_cache", {})
+    path = e.directory(root, job["id"]) / "result.log"
+    if not cache or not path.is_file():
+        raise RuntimeError("No cached output; reconnect and use output or recover")
+    size, total = path.stat().st_size, cache["total_bytes"]
+    if size != cache["bytes"] or size > total:
+        raise RuntimeError("Cached output size changed; coverage is incomplete")
+    if offset > size or (offset == size and size < total):
+        raise RuntimeError(f"Cached coverage ends at byte {size} of {total}; reconnect and recover")
+    with path.open("rb") as stream:
+        stream.seek(offset)
+        data = stream.read(limit)
+    return {
+        "id": job["id"],
+        "state": job["state"],
+        "source": "cache",
+        "offset": offset,
+        "next_offset": offset + len(data),
+        "total_bytes": total,
+        "cached_bytes": size,
+        "cached_output_complete": size == total,
+        "coverage_gap": size < total,
+        "text": data.decode(errors="replace"),
+        "data_base64": base64.b64encode(data).decode(),
+        "all_output_delivered": offset + len(data) == total and size == total,
+        "truncated": bool(job.get("output_truncated") or cache.get("truncated")),
+    }
+
+
+def cache_result(root, job):
+    """Best-effort bounded collection; a failed fetch never erases confirmed completion."""
+    end = time.monotonic() + 20
+    while time.monotonic() < end:
+        job = e.load(root, job["id"])
+        cache = job.get("output_cache", {})
+        if cache.get("complete") or cache.get("bytes", 0) >= 64 << 20:
+            return
+        offset = cache.get("bytes", 0)
+        try:
+            page = operate(root, "output", job, offset=offset, limit=65536, _refresh=True)
+            if page.get("source") == "cache" or page["next_offset"] <= offset:
+                return
+        except (OSError, ValueError, RuntimeError, subprocess.SubprocessError):
+            return
+
+
+def recover(root, identity):
+    """Reattach monitoring by recorded identity; never call submit_once."""
+    import fcntl
+
+    path = e.directory(root, identity) / ".recovery.lock"
+    fd = os.open(path, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
+    with os.fdopen(fd, "a") as lock:
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            return {**e.view(root, e.load(root, identity)), "recovery": "in_progress"}
+        job = e.load(root, identity)
+        if (
+            job.get("terminal_confirmed_at")
+            and job["state"] in e.TERMINAL
+            and job.get("output_cache", {}).get("complete")
+        ):
+            return {
+                **e.view(root, job),
+                "recovery": "already_complete",
+                "controller_restarted": False,
+            }
+        if not job.get("submission_attempted"):
+            raise ValueError("Submission was not recorded; recovery cannot submit a new command")
+        status = operate(root, "status", job)
+        job = e.load(root, identity)
+        if status.get("uncertain") or status["state"] in {"unknown", "unreachable"}:
+            return {**status, "recovery": "backend_unverified", "controller_restarted": False}
+        if job["state"] in e.TERMINAL and job.get("output_cache", {}).get("complete"):
+            return {**status, "recovery": "already_complete", "controller_restarted": False}
+        restarted = False
+        if not controller_alive(job):
+            restarted = bool(spawn_monitor(root, job))
+        return {
+            **e.view(root, e.load(root, identity)),
+            "recovery": "monitoring",
+            "controller_restarted": restarted,
+        }
+
+
+def monitor(root, identity):
+    import fcntl
+
+    path = e.directory(root, identity) / ".monitor.lock"
+    fd = os.open(path, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
+    with os.fdopen(fd, "a") as lock:
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            return
+        _monitor(root, identity)
+        job = e.load(root, identity)
+        if job["state"] in e.TERMINAL and job.get("terminal_confirmed_at"):
+            cache_result(root, job)
+
+
+def finish_unsubmitted(root, job):
+    """No external submission was attempted, so cancellation has known empty output."""
+    assert not job.get("submission_attempted")
+    job.update(terminal_confirmed_at=time.time(), uncertain=False)
+    remember_output(
+        root,
+        job,
+        {
+            "offset": 0,
+            "next_offset": 0,
+            "total_bytes": 0,
+            "data_base64": "",
+        },
+    )

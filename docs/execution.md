@@ -68,3 +68,20 @@ output 默认 16384 字节，--limit 范围 1..65536；复用 next_offset 直到
 默认超时 3600 秒（含暂停），最大 604800 秒；每状态根最多 32 个未结束任务。本机/SSH 合并输出超过 64 MiB 停止并标记缺口；容器只保留至多 64 MiB 快照，超量/轮转标记缺口，不因此停止容器。Slurm 日志按需分页。completed/failed/cancelled/timed_out 等状态与 exit_code 一起判断；控制命令退出 0 表示请求处理成功，不代表任务成功。
 
 [完整参数](commands.md#托管命令任务v200) · [测量与验收](client-steering.md) · [English](en/execution.md)
+
+
+## v2.0.0 之后主线：恢复与离线结果
+
+```bash
+./local-ai client job recover JOB_ID
+./local-ai client job status JOB_ID
+./local-ai client job output JOB_ID
+```
+
+recover 核验已记录的后端身份并恢复监控，不再次执行原命令；未经确认的提交绝不重放。暂停状态和原超时期限保留。未结束的适配任务 controller_running=false 时，doctor 也报告 controller_stopped。
+
+观察到终态后，即使 SSH 随后失败，status 仍保留已确认事实。控制器尝试收集连续输出前缀，单轮约 20 秒加最后一次有界后端调用，最多缓存 64 MiB。output_cache.complete=true 才表示已保留全部观察到的输出；输出过大/缓慢/缺失时，需再次 recover 或在线 output 补齐。缓存不扩大后端输出上限，也不掩盖 truncated=true。
+
+完整缓存可离线分页读取；部分缓存报告 coverage_gap=true，不会 all_output_delivered=true；越过现有前缀时明确报缺失字节范围，不伪造空输出。后端输出前缀变化会报告覆盖错误。旧安装中仍存活的控制器保留；它退出后可显式 recover，用新代码补收结果。remove 仍需后端核验和清理。
+
+这是恢复任务监控，不是跨 BCM 迁移任务、任意 TUI 重接或机器重启重放。

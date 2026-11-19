@@ -24,6 +24,23 @@ class BatchTests(unittest.TestCase):
                 prompt(parser().parse_args(["chat", "run", "--prompt-file", "-"])), "你好\n"
             )
 
+    def test_prompt_and_options_accept_both_orders_and_literal_delimiter(self):
+        for argv in [
+            ["chat", "run", "--format", "json", "hello"],
+            ["chat", "--project", "/tmp", "run", "hello", "--format", "json"],
+            ["chat", "run", "--project", "/tmp", "hello", "--format=json"],
+            ["chat", "run", "hello", "--format", "json"],
+        ]:
+            with self.subTest(argv=argv):
+                options = parser().parse_args(argv)
+                self.assertEqual(prompt(options), "hello")
+                self.assertEqual(options.output_format, "json")
+        self.assertEqual(prompt(parser().parse_args(["chat", "run", "--", "--format"])), "--format")
+        with self.assertRaises(SystemExit):
+            parser().parse_args(["chat", "run", "--unknown", "hello"])
+        with self.assertRaises(SystemExit):
+            parser().parse_args(["chat", "run", "hello", "extra"])
+
     def test_conflicting_empty_and_oversized_prompts_are_rejected(self):
         for args in [
             argparse.Namespace(run="one", prompt="two"),

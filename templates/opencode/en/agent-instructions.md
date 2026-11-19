@@ -47,7 +47,7 @@ JSON client.instructions (instructions for the lower-level command) reports path
 - Create a missing file; otherwise append one local-ai managed block while retaining existing content.
 - Reinstallation replaces only the block between `<!-- local-ai:instructions:begin -->` and `<!-- local-ai:instructions:end -->`. Identical contents cause no write or additional backup.
 - Before changing an existing file, save AGENTS.md.bak-RANDOM in the same directory with mode 0600, then replace the target atomically without granting other users read/write access.
-- Keep personal customizations outside the managed block. Edits inside it are replaced on reinstall. Previously hand-copied templates are not deleted automatically; resolve duplication/conflicts on first application as needed.
+- Keep personal customizations outside the managed block. Edits inside it are replaced on reinstall. Original v2.0.0 retains hand-copied templates. Newer main backs up and migrates exact selected-template copies; edited/unrecognized rules still need manual review.
 - --instructions none neither changes nor removes an existing block. Pass it on each installation if you maintain all rules yourself.
 - Symlinks, files owned by another user, malformed markers and write failures cause an installation error instead of a false success. Repair and retry, or use --instructions none for self-managed rules.
 
@@ -103,3 +103,6 @@ Old updaters may omit templates/: obtain the newer scripts/update.py from the sa
 Do not replace session XDG_CONFIG_HOME isolation with global configuration, or edit generated session configs as permanent settings.
 
 [README](../../../README.en.md) · [中文](../agent-instructions.md)
+
+
+Post-v2.0.0 main migrates exact unmarked copies of the selected template after a private full backup, supporting LF/CRLF. Custom text and fenced examples are retained. Edited/unrecognized legacy rules need manual review. Original v2.0.0 does not migrate these copies. Changed installation results report legacy_copies_removed; unchanged installs make no new backup.

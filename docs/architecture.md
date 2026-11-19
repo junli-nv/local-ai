@@ -149,3 +149,6 @@ execution.py 管理私有记录、锁、稳定操作/输入键、PTY 与核验�
 batch.py 读取单个 UTF-8 提示并把原生事件转换为文本，tasks.py 保留私有原始事件和退出语义；workflows.py 显式选择 JSON。portability.py 使用 SQLite 快照、哈希私有 ZIP、独立导入及目录映射，不改原生数据库结构、不迁移任务。diagnostics.py 汇总元数据与请求观测，不带对话正文。历史/执行状态按用户管理、独立于 endpoint，工作仍按项目路径隔离。
 
 详细边界和示例见[执行](execution.md)、[批处理与迁移](automation.md)。
+
+
+v2.0.0 之后主线增加逐任务恢复锁/监控锁，按身份重新接管且不重提；保留确认终态，以 result.log 缓存有界连续输出并明确完整/部分覆盖。独立控制器尽力收集结果，doctor 提示控制器缺失。仅 chat 叶解析器使用标准 argparse 混排；个人规则迁移仅删除精确模板副本，保留备份、代码块和定制文字。

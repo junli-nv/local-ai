@@ -57,3 +57,6 @@ By default this reads local metadata only: native assets, histories, managed tas
 
 
 Legacy clients without connection.json can be backed up when launch records still contain a selected provider, project and installed client. The archive marks legacy-launch-config metadata; a historical tunnel URL is never contacted. Restore always uses your explicit/configured destination endpoint. Missing metadata/assets still fail rather than guessing or skipping history.
+
+
+Post-v2.0.0 main fixes argument ordering: chat run --format json "Task" and chat run "Task" --format json are equivalent. The original v2.0.0 archive requires the positional prompt immediately after run. See [recovery](execution.md) for restoring lost task monitors and cached results.

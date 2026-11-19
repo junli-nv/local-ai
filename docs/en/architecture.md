@@ -157,3 +157,6 @@ The plugin leases completion notices, uses a deterministic native message ID, ve
 batch.py reads one UTF-8 prompt and converts native events to text; tasks.py retains raw private events and exit semantics. workflows.py explicitly selects JSON. portability.py uses SQLite snapshots, hashed private ZIPs and independent imports with path mappings, without native schema rewrites or task migration. diagnostics.py combines metadata/request observations without transcript bodies. Default history/execution state is per user and independent of endpoint; project paths scope work.
 
 Detailed limits and examples: [execution](execution.md), [automation and migration](automation.md).
+
+
+Post-v2.0.0 main adds per-task recovery/monitor locks and identity-based reattachment without resubmission. Confirmed terminal facts are retained; bounded contiguous result.log caches expose complete/partial coverage. The copied controller performs best-effort collection, and doctor reports missing controllers. Chat-only intermix parsing uses the standard argparse leaf parser. Rule migration removes only exact selected-template copies, with backups and fenced/custom text preservation.

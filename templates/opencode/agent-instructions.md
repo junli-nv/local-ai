@@ -42,9 +42,9 @@ install --role client/both 和低级 client install 都支持这两个参数；s
 安装后 JSON 的 client.instructions（低级命令为 instructions）返回 path、status（created/updated/unchanged/skipped）、template、language，修改已有文件时还有 backup；跳过时仅返回 status。进度和备份位置写 stderr 及 install.log。
 
 - 文件不存在时创建；已有文件在末尾添加一个 local-ai 管理区块，保留原内容。
-- 重复安装只替换 `<!-- local-ai:instructions:begin -->` 到 `<!-- local-ai:instructions:end -->` 之间的区块；内容相同时不写入、不重复备份。
+- 重复安装更新 `<!-- local-ai:instructions:begin -->` 到 `<!-- local-ai:instructions:end -->` 之间的区块；内容相同时不写入、不重复备份。
 - 每次改变已有文件前，先保存同目录 AGENTS.md.bak-随机后缀，备份权限 0600；再原子替换目标，文件不放宽到其他用户可读写。
-- 自定义规则放在管理区块外；区块内修改会在下次安装时被模板替换。以前手工复制的模板不会自动删除，首次应用时按需人工消除重复或冲突。
+- 自定义规则放在管理区块外；区块内修改会在下次安装时被模板替换。v2.0.0 之后主线会在完整私有备份后，清理能精确匹配所选模板的无标记副本，兼容 LF/CRLF；管理区块和代码示例之外的定制文字保留。修改过或无法确认的旧模板仍保留并需人工核对。原 v2.0.0 归档没有这项迁移。
 - --instructions none 既不修改也不移除现有管理区块。若长期自行维护规则，每次安装显式传入该参数。
 - 目标为符号链接、其他用户文件、标记损坏或写入失败时安装报错，不宣称配置完成；可修复后重试，或用 --instructions none 保留自管规则。
 

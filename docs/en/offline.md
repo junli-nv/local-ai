@@ -320,3 +320,6 @@ Ship execution.py and execution.mjs in source, wheels and program updates. Pytho
 ## v2.0.0 client state and delivery
 
 The source bundle includes batch.py, portability.py, diagnostics.py, adapters.py and execution.mjs; no new base Python packages or standalone Node are required. SSH/Slurm/container tools are only needed for the selected backend. Public offline exports exclude histories, execution state and credentials. Private [history migration](automation.md) is a separate explicit archive containing unredacted conversations. Update program code on each host separately; preserve running inference, and restart chat to load new plugins. Batch output defaults to text; add --format json for old event consumers.
+
+
+Post-v2.0.0 main result.log and recovery/controller metadata are private execution state, excluded from public exports and history ZIPs. Cached terminal reads do not require networking, but this does not establish strict air-gap installation or all-backend acceptance. Source must also carry scripts/check-recovery.py for explicitly authorized live SSH acceptance.

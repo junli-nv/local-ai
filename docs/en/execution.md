@@ -66,3 +66,20 @@ output defaults to 16384 bytes; --limit accepts 1..65536. Reuse next_offset unti
 Default timeout is 3600 wall seconds including pauses, maximum 604800, with at most 32 unfinished tasks per state root. Local/SSH output above 64 MiB stops the task and marks a gap. Container snapshots retain at most 64 MiB and flag overflow/rotation without stopping the container. Slurm logs are paged on demand. Evaluate completed/failed/cancelled/timed_out with exit_code. A management command exiting 0 means the request was processed, not that its task succeeded.
 
 [Parameters](commands.md#managed-command-tasks-v200) · [Measurements](client-steering.md) · [中文](../execution.md)
+
+
+## Recovery and offline results on post-v2.0.0 main
+
+```bash
+./local-ai client job recover JOB_ID
+./local-ai client job status JOB_ID
+./local-ai client job output JOB_ID
+```
+
+recover verifies the recorded backend identity and restores monitoring without executing the original command again. Unconfirmed submissions are never replayed. Paused tasks remain paused and existing deadlines remain in effect. controller_running=false on an unfinished adapter task is also reported by doctor as controller_stopped.
+
+Once terminal state is observed, status uses the recorded fact even if SSH later fails. The controller attempts to collect a contiguous output prefix for up to about 20 seconds plus the final bounded backend call, capped at 64 MiB. output_cache.complete=true means all observed output was retained; missing/large/slow output may require another recover or online output read. This cache does not expand backend capture limits or hide truncated=true.
+
+Complete cached pages can be read without the backend. Partial cache reports coverage_gap=true and never all_output_delivered=true; reading past its available prefix fails with the missing byte range. It does not synthesize empty output. A changed backend output prefix is a coverage error. An already running controller from an older installation is retained; after it exits, explicit recover can collect results using current code. Removal still requires backend validation/cleanup.
+
+This is task monitoring recovery, not cross-BCM task migration, arbitrary TUI reattachment or machine-reboot replay.

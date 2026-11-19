@@ -186,7 +186,7 @@ BCM 使用 install --role client --endpoint http://GPU001:18000/v1，替代上�
 
 初次安装的 install --endpoint 仅在安装成功后将地址写入安装根目录 installation.json 的 endpoint 字段。不传该参数时保留已有地址；首次安装不会自动发现服务端地址。未保存地址时，chat 必须传 --endpoint；chat --endpoint 只覆盖本次连接，不保存。GPU 安装与 BCM 客户端设置分开配置。
 
-v1.4.3 起 install --role client/both 和 client install 默认应用中文通用模板到运行用户的个人 AGENTS.md；server 角色不应用。--instructions 可选 general（默认）、bcm（通用加 BCM）、none（不创建、修改或删除规则）；--instructions-language 可选 zh（默认）或 en，不决定模型回复语言。使用 sudo 只配置实际运行用户；准备机只打包公共客户端可选 none。已有内容保留，修改前生成权限 0600 的备份；重装只更新 local-ai 管理区块，无变化则不写入。将自定义内容放在区块外；此前手工复制的模板不自动去重。符号链接、其他用户文件、损坏标记或写入失败会报错。JSON 的 client.instructions（低级命令为 instructions）报告 path/status/template/language/backup；skipped 仅含 status。退出并恢复 OpenCode 后使用新规则，详见[配置与恢复](../templates/opencode/agent-instructions.md)。
+v1.4.3 起 install --role client/both 和 client install 默认应用中文通用模板到运行用户的个人 AGENTS.md；server 角色不应用。--instructions 可选 general（默认）、bcm（通用加 BCM）、none（不创建、修改或删除规则）；--instructions-language 可选 zh（默认）或 en，不决定模型回复语言。使用 sudo 只配置实际运行用户；准备机只打包公共客户端可选 none。已有内容保留，修改前生成权限 0600 的备份；重装更新 local-ai 管理区块，较新主线另执行精确副本迁移，无变化则不写入。将自定义内容放在区块外；原 v2.0.0 不自动清理手工副本；较新主线可迁移精确匹配的所选模板，定制文字保留。符号链接、其他用户文件、损坏标记或写入失败会报错。JSON 的 client.instructions（低级命令为 instructions）报告 path/status/template/language/backup；skipped 仅含 status。退出并恢复 OpenCode 后使用新规则，详见[配置与恢复](../templates/opencode/agent-instructions.md)。
 
 ## 配置客户端默认值
 
@@ -606,3 +606,18 @@ v2.0.0 包含 client job；[最短示例与限制](execution.md)。在执行命�
 | client doctor | --state-dir 私有状态根、--client-dir 已安装资产、--endpoint/--model 默认配置；--check-endpoint 显式联网；--limit 默认 20、范围 1..1000 |
 
 管理结果为 JSON：退出 0 表示已处理，健康/成功看 issues/state；校验/启动错误 1，参数错误 2。任务失败并不使查询退出非零。local_ai_task 还接受 input/data、interactive、adapter/host/remote_project/image/submit_args，start 和 input 的 request_id 是稳定键。adopt 仅提供显式 CLI。SSH/Slurm/容器控制均需确认实际后端状态，见[限制](execution.md)。
+
+
+## v2.0.0 之后主线：恢复与兼容修正
+
+以下新增不在原 v2.0.0 归档中，测试时使用已验收的 main 确切提交。
+
+| 入口 | 行为 |
+|---|---|
+| client job recover JOB_ID | 仅已有 SSH/Slurm/容器任务；核验后端身份，控制器缺失时重启监控，不重新提交；支持原有 --state-dir |
+| client job status JOB_ID | controller_running 表示本地控制器是否存活；terminal_confirmed_at 是已观察终态的时间，不表示当前网络健康 |
+| client job output JOB_ID | 已确认终态可返回 source=cache；output_cache.complete、cached_output_complete 标明缓存覆盖范围；部分缓存不报告完整输出 |
+
+local_ai_task 同样支持 recover，仍需原生控制权限；不解除暂停、不重置超时、不重放未知提交。backend_unverified 表示需排查连接/身份后重试。存活的控制器保留，并发恢复最多新建一个监控进程。终态输出异步收集，必要时再次 recover 补齐。
+
+chat run 支持提示词前后放选项，如 chat run --format json "任务"；未知参数、多余位置提示词仍拒绝，-- 可分隔以减号开头的提示词。个人规则安装在修改结果中报告 legacy_copies_removed；只迁移管理区块和代码示例以外、能精确匹配所选模板的副本，并生成完整私有备份。
