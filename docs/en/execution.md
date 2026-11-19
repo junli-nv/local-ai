@@ -86,4 +86,4 @@ This is task monitoring recovery, not cross-BCM task migration, arbitrary TUI re
 
 Since v2.0.2, log read failures preserve confirmed terminal state and exit code. Retry when a missing Slurm log appears; older empty caches incorrectly marked complete are rechecked. When the terminal cache is incomplete, recover checks the backend first and returns backend_unverified on failure while retaining the terminal state.
 
-Development main after v2.0.2 validates the local cache file. If the file is missing or its length disagrees with the record, recover verifies the backend and rebuilds from byte zero. When output detects a conflicting backend prefix, it reports the error directly.
+v2.0.2 validates the local cache file. If the file is missing or its length disagrees with the record, recover verifies the backend and rebuilds from byte zero. When output detects a conflicting backend prefix, it reports the error directly.
