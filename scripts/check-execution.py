@@ -93,7 +93,9 @@ class Model(probe.Model):
         elif marker in {"BLOCKED", "AFTER"}:
             tool = "bash"
             args = {
-                "command": "printf checked > " + marker.lower(),
+                "command": ("sleep 1; " if marker == "AFTER" else "")
+                + "printf checked > "
+                + marker.lower(),
                 "description": "Harmless paused-session gate check",
             }
         else:
@@ -165,6 +167,10 @@ def run(assets, output, case):
                         probe.MODEL,
                         project,
                     )
+                if case == "controls":
+                    # Keep control sequencing isolated from unsolicited completion prompts.
+                    # The enhanced case independently verifies real notification delivery.
+                    env["LOCAL_AI_NOTIFICATIONS"] = "false"
                 cfg = json.loads(env["OPENCODE_CONFIG_CONTENT"])
                 cfg["permission"] = {"*": "allow"}
                 if case == "denied":
@@ -323,11 +329,36 @@ def run(assets, output, case):
                             lambda: (project / "heartbeat").stat().st_size > before,
                             "resumed heartbeat",
                         )
+                        after = step("AFTER")
+                        if after["status"] != "completed":
+                            raise RuntimeError(
+                                "Explicit resume did not release native tools: " + str(after)
+                            )
+                        after_job = json.loads(after["output"])["job_id"]
+                        completed_after = wait(
+                            lambda: (
+                                value
+                                if (
+                                    value := execution.perform(
+                                        task_root, "status", job_id=after_job
+                                    )
+                                )["terminal"]
+                                else None
+                            ),
+                            "resumed asynchronous native command completion",
+                        )
                         if (
-                            step("AFTER")["status"] != "completed"
-                            or not (project / "after").exists()
+                            completed_after["state"] != "completed"
+                            or completed_after["exit_code"] != 0
                         ):
-                            raise RuntimeError("Explicit resume did not release native tools")
+                            raise RuntimeError(
+                                "Resumed native command failed: " + str(completed_after)
+                            )
+                        if (project / "after").read_text() != "checked":
+                            raise RuntimeError(
+                                "Resumed native command did not produce expected content"
+                            )
+                        result["resumed_native_task_async"] = True
                         if step("STOP")["status"] != "completed":
                             raise RuntimeError("Session stop failed")
                         wait(

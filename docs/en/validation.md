@@ -2,6 +2,11 @@
 
 ## Post-v2.0.0 main follow-up (2026-11-19)
 
+CI caught a timing assumption in the controls probe: it checked the marker immediately after a Bash tool returned, although Bash can return an asynchronous job ID. The probe now deliberately backgrounds that resumed command, waits for its exact job ID to reach successful terminal state, and checks exact file content, retaining all pause/permission/single-execution assertions.
+
+
+The controls fixture disables unrelated automatic completion prompts using the supported setting; enhanced separately validates notification delivery. The forced asynchronous resume path passed repeated native runs.
+
 337 unit tests, Ruff lint/format, documentation CLI examples and current-version checks passed. Native OpenCode 1.19.5 enhanced/policy cases passed with automatic completion delivery and compound-command permissions preserved.
 
 The actual previously duplicated BCM AGENTS backup was migrated in isolated configuration: two exact copies removed, selected general+BCM content retained, repeat application unchanged. Tests also preserve edited rules, fenced examples, CRLF and private backups.
