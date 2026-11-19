@@ -25,6 +25,8 @@ git tag --list --sort=-version:refname
 
 ## 每次发布必须核对版本与下载包
 
+README 标题下保留中英文切换入口。README 介绍当前能力和用法，安装章节保留当前版本、下载命令和发布说明链接。逐版变更写入相应的发布说明。
+
 1. 从 src/local_ai/__init__.py 与 pyproject.toml 确认目标版本；逐份检查 README、命令、部署、离线、富文档、架构、开发、性能、更新、模板与验证材料的中英文版本。
 2. 当前安装、升级、离线准备的源码 URL、--version 参数、归档文件名和正文版本说明必须一致；不得只改 README。历史验收保留原版本和日期，明确“当时”，不能写成当前状态；已发布功能不能仍称“仅开发源码”。
 3. 运行 tests/test_doc_versions.py、scripts/check_release_docs.py --archive 实际源码包 及现有文档契约检查，核对 CLI 示例、Bash 语法、链接、章节锚点和中英文主流程；CI 会从 HEAD 生成源码归档并核对包内手册；再人工通读本次改动。

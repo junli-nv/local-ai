@@ -25,6 +25,8 @@ Review changes before committing and releasing. Exercise normal behavior and the
 
 ## Required version and artifact checks for every release
 
+Keep language navigation immediately below the README titles. Use the README for current capabilities and instructions, with the current version, download commands, and release notes link in the installation section. Record changes in the notes for each release.
+
 1. Confirm the target in src/local_ai/__init__.py and pyproject.toml. Review both languages of README, commands, deployment, offline, rich documents, architecture, development, performance, updates, templates and validation.
 2. Align current source URLs, --version arguments, archive filenames and prose; updating README alone is insufficient. Preserve dates/versions in historical acceptance, explicitly saying "at that time". Released features must not remain described as development-only.
 3. Run tests/test_doc_versions.py, scripts/check_release_docs.py --archive SOURCE_ARCHIVE and existing documentation contracts for CLI examples, Bash syntax, links, anchors and bilingual workflows, CI builds a source archive from HEAD and verifies its manuals; follow with manual review.

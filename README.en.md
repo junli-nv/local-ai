@@ -1,16 +1,6 @@
 # local-ai
 
-v2.0.3 prints a copyable session resume command on interactive exit. [Release notes](docs/en/release-2.0.3.md)
-
-v2.0.2 fixes terminal job status retention, Slurm log collection and backend checks during recovery. [v2.0.2](docs/en/release-2.0.2.md)
-
-v2.0.1 is a client reliability release; see [release notes](docs/en/release-2.0.1.md).
-
-v2.0.0 adds managed execution, completion notifications, SSH/Slurm/container controls, private history migration and combined diagnostics. Batch chat now defaults to readable text and accepts files/stdin. Existing JSON consumers must use --format json. See [release notes](docs/en/release-2.0.0.md).
-
-v2.0.1 additionally fixes chat option ordering, migrates exact legacy instruction copies, and adds client job recover with cached terminal results. These additions ship in v2.0.1; the original v2.0.0 archive excludes them. See [execution](docs/en/execution.md) and [batch](docs/en/automation.md).
-
-[中文（默认）](README.md)
+[中文](README.md)
 
 **local-ai is an AI work assistant for local clusters, helping users perform system administration, software development and everyday file tasks through natural language.**
 
@@ -41,7 +31,7 @@ The managed server currently uses the NVIDIA toolchain. See the profile table be
 
 ## Installation and usage
 
-The current version is v2.0.3. Examples download complete source from this tag; ./local-ai --version should report 2.0.3. See [validation](docs/en/validation.md) for acceptance scope and unvalidated platforms.
+The current version is v2.0.3. Examples download complete source from this tag; ./local-ai --version should report 2.0.3. See the [release notes](docs/en/release-2.0.3.md) and [validation record](docs/en/validation.md) for changes and acceptance coverage.
 
 ## Example conventions and documentation
 
@@ -61,16 +51,16 @@ Use appropriate sudo/Docker permissions; root may omit sudo. Data defaults follo
 | This page | First online installation, startup, chat, configuration and migration links |
 | [Deployment](docs/en/deployment.md) | CDI, storage recovery, instance replacement, DSpark/warmup and multiple instances |
 | [Command manual](docs/en/commands.md) | Options, defaults, exit codes, session resume and client versions |
-| [Persistent instructions](templates/opencode/en/agent-instructions.md) | Automatic general/BCM templates, personal-rule backups, managed blocks, loading checks and prompt references (since v1.4.3) |
+| [Persistent instructions](templates/opencode/en/agent-instructions.md) | Automatic general/BCM templates, personal-rule backups, managed blocks, loading checks and prompt references |
 | [Offline deployment](docs/en/offline.md) | Existing-installation migration or online preparation |
 | [Architecture](docs/en/architecture.md), [development](docs/en/development.md) | Design, extension and contributor handoff |
 | [Messages during execution](docs/en/client-steering.md), [managed tasks](docs/en/execution.md) | Synchronous baseline and v2 managed tasks, follow-ups and pause/stop |
 
 The [optimization and engine exploration record](docs/en/performance.md) preserves DSpark parameter choices, first-use compilation work, SGLang experiments and future comparison methods.
 
-v1.3.7 adds lightweight web text, local video subtitles and optional FFmpeg frame sampling without new base-client dependencies. See [web and video](docs/en/documents.md#web-pages-and-local-video-v137), including BMC/Redfish limits.
+Document tools support lightweight web text, local video subtitles and optional FFmpeg frame sampling without new base-client dependencies. See [web and video](docs/en/documents.md#web-pages-and-local-video-v137), including BMC/Redfish limits.
 
-v1.3.2 includes rich-document reading during ordinary chat. Read PDF, images, Word, Excel and PowerPoint by naming their directory during chat. Upgrade steps and optional client-side converters: [document guide](docs/en/documents.md).
+Read PDF, images, Word, Excel and PowerPoint by naming their directory during chat. See setup and optional client-side converters in the [document guide](docs/en/documents.md).
 
 ## Prerequisites
 
@@ -92,11 +82,11 @@ BCM: Linux AMD64/ARM64, Python 3.10+, Bash, curl, tar, Git, rg, util-linux scrip
 | rubin-tp2-framework | ARM64 / linux/arm64 | 2 Rubin/VR200 (planned) | CPU (planned) | Planning-only framework, deployment blocked |
 | gb300-tp2 | ARM64 / linux/arm64 | 2 GB300/B300 | CPU | Upstream recipe, unvalidated |
 
-See [B200 deployment](docs/en/deployment.md#b200-four-gpu-hardware-validated) for CPU/GPU Engram comparison. Both are hardware validated with separately recorded coverage and do not inherit B300 performance results. v1.3.2 includes both B200 recipes; confirm them with ./local-ai profiles.
+See [B200 deployment](docs/en/deployment.md#b200-four-gpu-hardware-validated) for CPU/GPU Engram comparison. Both are hardware validated with separately recorded coverage and do not inherit B300 performance results. Confirm both B200 recipes with ./local-ai profiles.
 
-Starting with v1.3.2, the independent `rtx6000d-tp8` profile requires at least 85000 MiB per GPU and 256 GiB available host RAM. It uses a separately pinned SM120 image, 32K context, one sequence and text input, without DSpark or CUDA graphs. See [RTX 6000D deployment](docs/en/rtx6000d.md) for installation, eight-GPU startup and BCM commands. Explicitly select served model `DeepSeek-V4.1-Flash-SM120` on the client. Full 32K boundaries, concurrency and sustained stability remain unvalidated. The main workflow below continues to use four B300 GPUs; follow the dedicated guide for RTX 6000D.
+The independent `rtx6000d-tp8` profile requires at least 85000 MiB per GPU and 256 GiB available host RAM. It uses a separately pinned SM120 image, 32K context, one sequence and text input, without DSpark or CUDA graphs. See [RTX 6000D deployment](docs/en/rtx6000d.md) for installation, eight-GPU startup and BCM commands. Explicitly select served model `DeepSeek-V4.1-Flash-SM120` on the client. Full 32K boundaries, concurrency and sustained stability remain unvalidated. The main workflow below continues to use four B300 GPUs; follow the dedicated guide for RTX 6000D.
 
-v1.3.4 adds the GB200 TP4 candidate and Rubin TP2 framework. See [GB200 and Rubin](docs/en/gb200-rubin.md)
+The catalog also includes a GB200 TP4 candidate and a Rubin TP2 framework. See [GB200 and Rubin](docs/en/gb200-rubin.md)
 for synthetic plans, Rubin blockers and future acceptance. Rubin's 288GB per GPU motivates
 two-GPU capacity evaluation with planned CPU Engram offload, not a claim of model readiness.
 
@@ -198,9 +188,9 @@ Add --wait-timeout 1200 for longer startup. Timeout exits 1; Ctrl+C returns 130;
 
 For single-user generation, optional b300-tp4-dspark and explicit --warmup are described in [deployment](docs/en/deployment.md#single-user-dspark-and-explicit-warmup). READY confirms API health; WARMUP COMPLETE confirms the bounded inference suite. Existing instances require explicit replacement to change recipes.
 
-### Optional: benchmark on the server (v1.4.0)
+### Optional: benchmark on the server
 
-v1.4.0 provides `server benchmark`.
+Use `server benchmark`.
 With source containing this feature, run on GPU001 from /raid/local-ai once instance a is ready and its GPU use is allocated:
 
 ```bash
@@ -259,7 +249,7 @@ All three commands use GPU001:18000. chat --endpoint URL overrides one invocatio
 
 ### Enable Tab completion (optional)
 
-v1.3.3 adds Bash Tab completion. In a Bash terminal on GPU001 or BCM, from the program directory, run:
+To enable Tab completion in Bash on GPU001 or BCM, from the program directory, run:
 
 ```bash
 eval "$(./local-ai completion bash)"
@@ -315,9 +305,9 @@ Tasks include hardware troubleshooting, scripts, services and Slurm/Kubernetes j
 
 ## Update an existing installation
 
-Use the [program update guide](docs/en/update.md) to update GPU and BCM installations separately while retaining resources, configuration and running instances. The standalone scripts/update.py supports explicit tags, local source archives and backup rollback, without install or resource preparation. v1.3.2 includes the updater; the guide also covers bootstrapping installations that lack it.
+Use the [program update guide](docs/en/update.md) to update GPU and BCM installations separately while retaining resources, configuration and running instances. The standalone scripts/update.py supports explicit tags, local source archives and backup rollback, without install or resource preparation. The guide also covers bootstrapping installations that lack the updater.
 
-The v2.0.0 updater offers --check and refuses detected client activity by default. Program backups include recovery tooling, not chat history; see [updates](docs/en/update.md#check-active-clients-before-updating).
+The updater offers --check and refuses detected client activity by default. Program backups include recovery tooling, not chat history; see [updates](docs/en/update.md#check-active-clients-before-updating).
 
 ## Export and offline installation
 

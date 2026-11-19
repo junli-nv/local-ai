@@ -1,14 +1,6 @@
 # local-ai
 
-v2.0.3 在交互聊天退出时显示可直接复制的会话恢复命令。[发布说明](docs/release-2.0.3.md)
-
-v2.0.2 修复任务终态保留、Slurm 日志补收和恢复前的后端检查。 [v2.0.2](docs/release-2.0.2.md)
-
-v2.0.1 为客户端可靠性修复版，见[本次发布说明](docs/release-2.0.1.md)。
-
-v2.0.0 增加任务托管与完成通知、SSH/Slurm/容器控制、私有会话迁移和汇总诊断。批处理默认返回可读文本，支持文件和 stdin；原 JSON 消费者需加 --format json。见[发布说明](docs/release-2.0.0.md)。
-
-v2.0.1 另补齐 chat 参数顺序、精确旧规则迁移，以及 client job recover 和终态输出缓存。这些新增已收入 v2.0.1，原 v2.0.0 下载包不包含它们，见[执行](docs/execution.md)与[批处理](docs/automation.md)。
+[English](README.en.md)
 
 **local-ai 是一个面向本地集群的 AI 工作助手，帮助用户通过自然语言完成系统运维、代码开发和日常文件处理。**
 
@@ -39,7 +31,7 @@ v2.0.1 另补齐 chat 参数顺序、精确旧规则迁移，以及 client job r
 
 ## 安装与使用
 
-当前版本为 v2.0.3，以下示例下载该标签的完整源码。./local-ai --version 应显示 2.0.3，实际验收范围与未覆盖平台见[验证记录](docs/validation.md)。
+当前版本为 v2.0.3，以下示例下载该标签的完整源码。./local-ai --version 应显示 2.0.3。[发布说明](docs/release-2.0.3.md)和[验证记录](docs/validation.md)列出本版变更和验收范围。
 
 ## 示例约定与文档入口
 
@@ -59,16 +51,16 @@ v2.0.1 另补齐 chat 参数顺序、精确旧规则迁移，以及 client job r
 | 本页 | 首次在线安装、启动、聊天、配置及迁移入口 |
 | [部署指南](docs/deployment.zh-CN.md) | CDI、存储故障、实例重建、DSpark/预热与双实例 |
 | [命令手册](docs/commands.md) | 参数、默认值、退出码、会话恢复与客户端版本 |
-| [持久工作指令](templates/opencode/agent-instructions.md) | 安装时自动应用通用/BCM 模板、个人规则备份、管理区块、生效检查及提示词参考来源（v1.4.3 起） |
+| [持久工作指令](templates/opencode/agent-instructions.md) | 安装时自动应用通用/BCM 模板、个人规则备份、管理区块、生效检查及提示词参考来源 |
 | [离线部署](docs/offline.md) | 已安装环境迁移，或联网准备后离线安装 |
 | [架构](docs/architecture.md)、[开发指南](docs/development.md) | 模块设计、扩展和接手开发 |
 | [执行期间新消息响应](docs/client-steering.md)、[后台任务](docs/execution.md) | 同步调用基线与 v2 托管任务、插话、暂停/停止 |
 
 [推理优化与引擎探索记录](docs/performance.md)保存 DSpark 参数依据、首次编译处理、SGLang 探索及后续复测方法，供继续开发参考。
 
-v1.3.7 新增轻量网页正文读取、本地视频字幕和可选 FFmpeg 抽帧；基础客户端无新增依赖。用法与 BMC/Redfish 边界见[网页与视频](docs/documents.md#网页与本地视频v137)。
+文档工具支持轻量网页正文读取、本地视频字幕和可选 FFmpeg 抽帧；基础客户端无新增依赖。用法与 BMC/Redfish 边界见[网页与视频](docs/documents.md#网页与本地视频v137)。
 
-v1.3.2 已包含聊天中按目录读取 PDF、图片、Word、Excel 和 PPT。使用方法、取得此更新及客户端转换依赖见[富文档指南](docs/documents.md)。
+在聊天中可按目录读取 PDF、图片、Word、Excel 和 PPT。使用方法及客户端转换依赖见[富文档指南](docs/documents.md)。
 
 ## 安装前提
 
@@ -90,11 +82,11 @@ BCM 需 Linux AMD64 或 ARM64、Python 3.10+、Bash、curl、tar、Git、rg 和 
 | rubin-tp2-framework | ARM64 / linux/arm64 | 2 张 Rubin/VR200（规划） | CPU（规划） | 仅规划框架，禁止部署 |
 | gb300-tp2 | ARM64 / linux/arm64 | 2 张 GB300/B300 | CPU | 上游配方，未实机验证 |
 
-B200 部署及同条件 CPU/GPU Engram 对照见[部署指南](docs/deployment.zh-CN.md#b200-四卡已实机验证)。两套配置均已实机验证，具体覆盖范围见独立验收记录，不继承 B300 性能结论。v1.3.2 已包含两套 B200 配方，可用 ./local-ai profiles 核对。
+B200 部署及同条件 CPU/GPU Engram 对照见[部署指南](docs/deployment.zh-CN.md#b200-四卡已实机验证)。两套配置均已实机验证，具体覆盖范围见独立验收记录，不继承 B300 性能结论。可用 ./local-ai profiles 核对。
 
-RTX 6000D 从 v1.3.2 起提供独立 `rtx6000d-tp8` 配方：每卡至少 85000 MiB、主存可用至少 256 GiB，32K 上下文、单序列、纯文本，使用独立固定的 SM120 镜像，不启用 DSpark 或 CUDA Graph。安装、八卡启动及 BCM 连接命令见 [RTX 6000D 部署](docs/rtx6000d.md)；服务模型名为 `DeepSeek-V4.1-Flash-SM120`，客户端必须显式选择该模型。完整 32K 边界、并发及长期稳定性仍未验收。下方主流程继续使用 B300 四卡；RTX 6000D 请按专项指南选择八卡配方。
+RTX 6000D 提供独立 `rtx6000d-tp8` 配方：每卡至少 85000 MiB、主存可用至少 256 GiB，32K 上下文、单序列、纯文本，使用独立固定的 SM120 镜像，不启用 DSpark 或 CUDA Graph。安装、八卡启动及 BCM 连接命令见 [RTX 6000D 部署](docs/rtx6000d.md)；服务模型名为 `DeepSeek-V4.1-Flash-SM120`，客户端必须显式选择该模型。完整 32K 边界、并发及长期稳定性仍未验收。下方主流程继续使用 B300 四卡；RTX 6000D 请按专项指南选择八卡配方。
 
-v1.3.4 新增 GB200 四卡候选和 Rubin 两卡框架。无硬件的模拟计划、Rubin 部署阻塞项和后续验收见
+另有 GB200 四卡候选和 Rubin 两卡框架。无硬件的模拟计划、Rubin 部署阻塞项和后续验收见
 [GB200 与 Rubin](docs/gb200-rubin.md)。Rubin 的 288GB/卡规格支持两卡容量评估，框架规划
 CPU Engram 卸载，不能据标称容量宣称模型可运行。
 
@@ -196,9 +188,9 @@ start 默认等待 600 秒，加载和编译期间显示 NOT READY 及日志位�
 
 偏向单用户生成速度时，可选 b300-tp4-dspark，并显式使用 --warmup 提前触发部分首次编译，操作见[部署指南](docs/deployment.zh-CN.md#单用户-dspark-与显式预热)。READY 只表示 API 健康，WARMUP COMPLETE 表示有限推理预热完成；已有实例更换配方须显式重建。
 
-### 可选：在服务端测试性能（v1.4.0）
+### 可选：在服务端测试性能
 
-v1.4.0 提供 `server benchmark`。
+使用 `server benchmark`。
 使用包含该功能的源码，在 GPU001 的 /raid/local-ai、实例 a 就绪且有 GPU 使用权时执行：
 
 ```bash
@@ -257,7 +249,7 @@ mkdir -p /home/alice/project
 
 ### 启用 Tab 补全（可选）
 
-v1.3.3 新增 Bash Tab 补全。
+可启用 Bash Tab 补全。
 在 GPU001 或 BCM 的 Bash 终端、程序目录中执行：
 
 ```bash
@@ -313,9 +305,9 @@ chat --endpoint 不改写 installation.json，也不要求重新安装。--check
 
 ## 更新已有安装
 
-按[程序更新指南](docs/update.md)分别更新 GPU 和 BCM 的实际程序目录，保留资源、配置与运行实例。独立 scripts/update.py 支持指定标签、本地源码包和备份回退，不执行 install 或资源准备。v1.3.2 已包含更新脚本；旧安装没有脚本时，指南给出首次获取方法。
+按[程序更新指南](docs/update.md)分别更新 GPU 和 BCM 的实际程序目录，保留资源、配置与运行实例。独立 scripts/update.py 支持指定标签、本地源码包和备份回退，不执行 install 或资源准备。旧安装没有脚本时，指南给出首次获取方法。
 
-v2.0.0 更新器可先用 --check 检测活动客户端，更新默认拒绝已检测到的活动进程；程序备份另带回退脚本，不包含聊天历史。见[更新指南](docs/update.md#升级前检查活动客户端)。
+更新前可先用 --check 检测活动客户端，更新默认拒绝已检测到的活动进程；程序备份另带回退脚本，不包含聊天历史。见[更新指南](docs/update.md#升级前检查活动客户端)。
 
 ## 导出与离线安装
 
@@ -331,7 +323,3 @@ airgap 环境启动聊天使用 `npm_config_offline=true ./local-ai chat`，避�
 - [从联网准备机备齐两端资源，再离线安装](docs/offline.md#场景二从联网环境下载并准备)。
 
 两条路线均注明执行主机、转移文件、校验、离线导入和验收，包含 BCM 客户端部署。目标机驱动和 Docker 仍需预装，原实例和个人历史不随包迁移。开发检查见[开发指南](docs/development.md)。
-
----
-
-[English README](README.en.md)
