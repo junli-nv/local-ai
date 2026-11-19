@@ -612,6 +612,25 @@ Chat tool local_ai_task exposes start/list/status/output/pause/resume/stop/remov
 Management output is JSON: exit 0 means processed (inspect issues/state), 1 validation/launch error, 2 argument error. Task failure does not change management exit 0. local_ai_task additionally accepts input/data, interactive, adapter/host/remote_project/image/submit_args; start request_id and input request_id are stable keys. Adoption is explicit CLI only. SSH/Slurm/container controls confirm actual backend state; see [limits](execution.md).
 
 
+## Check inference load from the client
+
+Run on BCM or another client that can reach the model service. The command reads vLLM's `/metrics` using the saved endpoint by default.
+
+```bash
+./local-ai client metrics
+./local-ai client metrics --interval 2 --count 5
+```
+
+Terminal output defaults to English. Use `--lang zh` for Chinese.
+
+The default is one sample. `--count` accepts a positive integer. `--interval` accepts a positive number of seconds (default 2). Sampling starts immediately and exits after the final attempt.
+Use `--endpoint http://GPU001:18000/v1` to select a service for this invocation. If the service uses a load balancer, target one backend directly to compare counters from the same instance.
+
+- Each row shows one snapshot. Waiting is the number of requests awaiting scheduling at that instant. KV usage measures the vLLM cache pool and shows the highest usage when multiple engines report it.
+- A sampling run summarizes how often requests were waiting and the highest observed counts. A queue that drains promptly can reflect a short burst. Sustained queueing and new preemptions alongside high KV usage warrant a check of cache capacity.
+- Queue time and server time to first token use new observations from the sampling window. The displayed bound comes from the histogram bucket containing the median. Each metric needs at least five observations. Prefix-cache hit rate uses new prefix-query tokens in the window.
+- `—` marks a missing metric. Window statistics may be unavailable after a failed sample or a counter reset. Exit codes are 0 for successful sampling, 1 for any failed attempt or invalid configuration, 2 for argument parsing errors, and 130 on Ctrl-C. The command only reads metrics.
+
 ## v2.0.1: recovery and compatibility
 
 These additions ship in v2.0.1 and are absent from the original v2.0.0 archive.

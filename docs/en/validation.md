@@ -1,5 +1,12 @@
 # Validation record
 
+## v2.1.0 client metrics sampling
+
+Five scrapes of the HGX260 vLLM metrics endpoint from BCM succeeded at two-second intervals. The command exited after about eight seconds.
+The service was idle during the live check, so latency was reported as having too few samples.
+Regression fixtures cover queueing, cache hits, preemptions, counter resets and failed scrapes.
+Tests also check the English default and explicit Chinese output.
+
 ## v2.0.3 interactive exit verification
 
 On BCM, OpenCode 1.19.5 passed a disposable PTY check for Ctrl-C, a project path with spaces, and replay of the displayed resume command. The installed client also opened and resumed an existing session twice without sending any messages. The message count was preserved. All 342 unit tests, Ruff and bilingual documentation contracts passed.

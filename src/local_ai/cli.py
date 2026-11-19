@@ -24,6 +24,7 @@ from . import (
     images,
     installlog,
     instructions,
+    metrics,
     portability,
     preparation,
     readiness,
@@ -619,6 +620,17 @@ def parser():
                 help="Optional local project directory for restored connection metadata",
             )
     b = clients.add_parser(
+        "metrics",
+        help="Read vLLM load and cache metrics from the model endpoint",
+        epilog="Example: ./local-ai client metrics --interval 2 --count 5",
+    )
+    b.add_argument(
+        "--endpoint", default=settings().get("endpoint"), help="HTTP(S) model API base URL"
+    )
+    b.add_argument("--interval", type=float, default=2, help="Seconds between sample starts")
+    b.add_argument("--count", type=int, default=1, help="Number of samples to take")
+    b.add_argument("--lang", choices=("en", "zh"), default="en", help="Metrics output language")
+    b = clients.add_parser(
         "doctor", help="Aggregate private client, history, task and request diagnostics"
     )
     b.add_argument(
@@ -925,6 +937,8 @@ def dispatch(q):
     if q.group == "model":
         return images.download_model(q.data_dir, profile(q.profile), force=q.force)
     if q.group == "client":
+        if q.action == "metrics":
+            return metrics.probe(q.endpoint, q.interval, q.count, q.lang)
         if q.action == "doctor":
             return diagnostics.inspect(
                 q.state_dir, q.client_dir, q.endpoint, q.model, q.check_endpoint, q.limit

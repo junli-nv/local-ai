@@ -4,7 +4,7 @@ v1.4.2 将本地历史与服务器、安装目录解耦，默认和临时 endpoi
 
 ## 任务诊断与工作流回归（v1.4.0）
 
-在 BCM 的 /raid/local-ai 使用 v2.0.3；这些功能自 v1.4.0 提供，更早归档不包含。
+在 BCM 的 /raid/local-ai 使用 v2.1.0；这些功能自 v1.4.0 提供，更早归档不包含。
 普通 chat 自动保存私有 run.json、events.jsonl 和 requests.jsonl；
 终端会提示本次日志目录。历史部署的旧记录不回填。
 
@@ -607,6 +607,25 @@ v2.0.0 包含 client job；[最短示例与限制](execution.md)。在执行命�
 
 管理结果为 JSON：退出 0 表示已处理，健康/成功看 issues/state；校验/启动错误 1，参数错误 2。任务失败并不使查询退出非零。local_ai_task 还接受 input/data、interactive、adapter/host/remote_project/image/submit_args，start 和 input 的 request_id 是稳定键。adopt 仅提供显式 CLI。SSH/Slurm/容器控制均需确认实际后端状态，见[限制](execution.md)。
 
+
+## 从客户端查看推理压力
+
+在 BCM 或其他能访问模型服务的客户端运行。默认使用已保存的 endpoint，读取 vLLM 的 `/metrics`。
+
+```bash
+./local-ai client metrics
+./local-ai client metrics --interval 2 --count 5
+```
+
+终端默认显示英文，可用 `--lang zh` 切换为中文。
+
+默认采一次。`--count` 为正整数，`--interval` 为正秒数（默认 2），首次立即采样，最后一次后退出。
+用 `--endpoint http://GPU001:18000/v1` 临时指定实例。经过负载均衡时，请用单个后端的地址采样，以便比较同一个实例的计数器。
+
+- 每行是一次快照。“排队中”是当时有几个请求等调度。“KV 缓存池使用率”是 vLLM 的缓存池占用；多引擎时显示最高值。
+- 多次采样后会汇总排队次数和采样峰值。偶尔看到排队但队列很快清空，通常是短时并发。KV 使用率高，同时持续排队和出现新增抢占时，可检查 KV 缓存容量。
+- 排队耗时和服务端首 token 耗时来自采样窗口内新增的请求观测。显示值是中位数所在直方图区间的边界；每项少于 5 个观测时显示“样本不足”。前缀缓存命中率按窗口内新增的前缀查询 token 计算。
+- `—` 表示单项指标缺失。采样失败或计数器重置时，无法计算的窗口指标显示“不可用”。采样成功退出 0，任一次采样失败或配置无效退出 1，参数解析错误退出 2，Ctrl-C 退出 130。查询只读取指标。
 
 ## v2.0.1：恢复与兼容修正
 
