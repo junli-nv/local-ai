@@ -19,6 +19,10 @@ git tag --list --sort=-version:refname
 4. Recheck implementation, documentation and tests on the updated baseline. Results from before the merge do not validate the combined code.
 5. Fetch again before committing, pushing or tagging. Check remote branches and existing tags, increment from the actual remote version, and integrate concurrent updates with another regression run. Never force-push main or reuse/move old tags.
 
+### Review and regression before pushing
+
+Review changes before committing and releasing. Exercise normal behavior and the full failure, retry, recovery, and subsequent query sequence through the affected entry points. For persisted state, check upgrades with old records and invalid caches, and compare CLI results, stored state, and both language guides. Fix reproduced findings and add regression coverage in the same batch before pushing the verified changes.
+
 ## Required version and artifact checks for every release
 
 1. Confirm the target in src/local_ai/__init__.py and pyproject.toml. Review both languages of README, commands, deployment, offline, rich documents, architecture, development, performance, updates, templates and validation.

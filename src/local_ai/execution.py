@@ -124,6 +124,11 @@ def view(root, job, include_command=True):
     log = directory(root, job["id"]) / "output.log"
     result["output_bytes"] = log.stat().st_size if log.exists() else job.get("output_bytes", 0)
     if job.get("adapter"):
+        if job.get("output_cache", {}).get("complete"):
+            from .adapters import output_cache_complete
+
+            if not output_cache_complete(root, job):
+                result["output_cache"] = {**job["output_cache"], "complete": False}
         result["controller_running"] = False
         pid = job.get("controller_pid")
         if pid and stamp(pid) == job.get("controller_start"):

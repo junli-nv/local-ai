@@ -460,6 +460,10 @@ def control_external(job, action):
         run(argv, job["host"])
 
 
+class OutputConflict(RuntimeError):
+    """The backend output cannot be joined with the saved prefix."""
+
+
 def log_page(root, job, offset, limit):
     if (
         not isinstance(offset, int)
@@ -493,7 +497,7 @@ def log_page(root, job, offset, limit):
         previous = log.read_bytes() if log.exists() else b""
         if not data.startswith(previous):
             job["output_truncated"] = True
-            raise RuntimeError("Container log rotation changed the output prefix; coverage gap")
+            raise OutputConflict("Container log rotation changed the output prefix; coverage gap")
         log.write_bytes(data)
         log.chmod(0o600)
         size = len(data)
@@ -558,8 +562,9 @@ def store(root, job, original_control=None, control_applied=False):
     with e.guard(root):
         current = e.load(root, job["id"])
         current.update({k: v for k, v in job.items() if k not in protected})
-        if "error" not in job:
-            current.pop("error", None)
+        for field in ("error", "cache_error"):
+            if field not in job:
+                current.pop(field, None)
         if control_applied and current.get("control") == original_control:
             current["control"] = None
         e.save(root, current)
@@ -587,7 +592,7 @@ def operate(root, action, job, offset=0, limit=16384, **args):
         if confirmed and not args.get("_refresh"):
             if action == "status" or action in {"pause", "resume", "stop"}:
                 return {**e.view(root, job), "source": "cache", "control_requested": None}
-            if action == "output" and output_cache_complete(job):
+            if action == "output" and output_cache_complete(root, job):
                 return cached_output(root, job, offset, limit)
         original_control = job.get("control")
         requested = action if action in {"pause", "resume", "stop"} else original_control
@@ -661,7 +666,8 @@ def operate(root, action, job, offset=0, limit=16384, **args):
                 value = log_page(root, job, offset, limit)
             if confirmed and value is not None:
                 remember_output(root, job, value)
-            job.pop("cache_error", None)
+            if value is not None:
+                job.pop("cache_error", None)
             job.update(updated=time.time(), uncertain=False)
             job.pop("error", None)
             if action == "remove":
@@ -702,7 +708,11 @@ def operate(root, action, job, offset=0, limit=16384, **args):
                 )
                 store(root, job)
                 if action == "output":
-                    if not job.get("output_cache") or legacy_missing_slurm_log(job):
+                    if (
+                        isinstance(error, OutputConflict)
+                        or not usable_output_cache(root, job)
+                        or legacy_missing_slurm_log(job)
+                    ):
                         raise
                     return cached_output(root, job, offset, limit)
                 if action == "remove":
@@ -808,16 +818,23 @@ def remember_output(root, job, page):
     if offset < 0 or total < offset + len(data) or page["next_offset"] != offset + len(data):
         raise ValueError("Invalid backend output coverage")
     path = e.directory(root, job["id"]) / "result.log"
-    size = path.stat().st_size if path.exists() else 0
+    cache = usable_output_cache(root, job)
+    size = cache["bytes"] if cache else 0
     if offset > size:
         return
+    if total < size:
+        job["output_truncated"] = True
+        raise OutputConflict("Completed output shrank; cached coverage is inconsistent")
+    if not cache:
+        # Start over from a verified page at byte zero after local cache loss.
+        path.unlink(missing_ok=True)
     with path.open("a+b") as stream:
         path.chmod(0o600)
         overlap = min(len(data), size - offset)
         stream.seek(offset)
         if stream.read(overlap) != data[:overlap]:
             job["output_truncated"] = True
-            raise RuntimeError("Completed output changed; cached coverage is inconsistent")
+            raise OutputConflict("Completed output changed; cached coverage is inconsistent")
         remaining = max(0, (64 << 20) - size)
         stream.seek(0, os.SEEK_END)
         stream.write(data[overlap : overlap + remaining])
@@ -838,8 +855,25 @@ def legacy_missing_slurm_log(job):
     return job["adapter"] == "slurm" and cache.get("bytes") == 0 and cache.get("truncated", False)
 
 
-def output_cache_complete(job):
-    return job.get("output_cache", {}).get("complete", False) and not legacy_missing_slurm_log(job)
+def usable_output_cache(root, job):
+    cache = job.get("output_cache", {})
+    if not cache:
+        return {}
+    path = e.directory(root, job["id"]) / "result.log"
+    try:
+        size = path.stat().st_size
+    except OSError:
+        return {}
+    return cache if size == cache["bytes"] <= cache["total_bytes"] else {}
+
+
+def output_cache_complete(root, job):
+    cache = usable_output_cache(root, job)
+    return bool(
+        cache.get("complete")
+        and cache["bytes"] == cache["total_bytes"]
+        and not legacy_missing_slurm_log(job)
+    )
 
 
 def cached_output(root, job, offset, limit):
@@ -884,8 +918,8 @@ def cache_result(root, job):
     end = time.monotonic() + 20
     while time.monotonic() < end:
         job = e.load(root, job["id"])
-        cache = job.get("output_cache", {})
-        if output_cache_complete(job) or cache.get("bytes", 0) >= 64 << 20:
+        cache = usable_output_cache(root, job)
+        if output_cache_complete(root, job) or cache.get("bytes", 0) >= 64 << 20:
             return
         offset = cache.get("bytes", 0)
         try:
@@ -911,7 +945,7 @@ def recover(root, identity):
         if (
             job.get("terminal_confirmed_at")
             and job["state"] in e.TERMINAL
-            and output_cache_complete(job)
+            and output_cache_complete(root, job)
         ):
             return {
                 **e.view(root, job),
@@ -928,7 +962,7 @@ def recover(root, identity):
             or status["state"] in {"unknown", "unreachable"}
         ):
             return {**status, "recovery": "backend_unverified", "controller_restarted": False}
-        if job["state"] in e.TERMINAL and output_cache_complete(job):
+        if job["state"] in e.TERMINAL and output_cache_complete(root, job):
             return {**status, "recovery": "already_complete", "controller_restarted": False}
         restarted = False
         if not controller_alive(job):

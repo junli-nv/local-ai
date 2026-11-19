@@ -336,6 +336,58 @@ class AdapterTests(unittest.TestCase):
             page = e.perform(self.root, "output", job_id=job["id"])
             self.assertEqual(page["source"], "cache")
             self.assertFalse(page["truncated"])
+            status = e.perform(self.root, "status", job_id=job["id"])
+            self.assertNotIn("cache_error", status)
+
+    def test_recover_rebuilds_missing_or_short_terminal_cache(self):
+        with patch.object(a, "spawn_monitor") as spawn:
+            job = self.reserve("slurm")
+            identity = job["id"]
+            saved = e.load(self.root, identity)
+            log = self.project / "slurm.log"
+            log.write_bytes(b"complete log")
+            saved.update(log_path=str(log), submission_attempted=True)
+            e.save(self.root, saved)
+            with patch.object(a, "slurm_info", return_value=("COMPLETED", "0:0")) as backend:
+                e.perform(self.root, "output", job_id=identity)
+                path = e.directory(self.root, identity) / "result.log"
+                for damage in ("missing", "short"):
+                    with self.subTest(damage=damage):
+                        if damage == "missing":
+                            path.unlink()
+                        else:
+                            path.write_bytes(b"short")
+                        status = e.perform(self.root, "status", job_id=identity)
+                        self.assertFalse(status["output_cache"]["complete"])
+                        spawn.reset_mock()
+                        backend.reset_mock()
+                        result = e.perform(self.root, "recover", job_id=identity)
+                        self.assertEqual(result["recovery"], "monitoring")
+                        backend.assert_called_once()
+                        spawn.assert_called_once()
+                        a.cache_result(self.root, e.load(self.root, identity))
+                        result = e.perform(self.root, "output", job_id=identity)
+                        self.assertEqual(result["source"], "cache")
+                        self.assertEqual(result["text"], "complete log")
+                        self.assertTrue(result["all_output_delivered"])
+
+    def test_output_surfaces_conflicting_backend_prefix(self):
+        with patch.object(a, "spawn_monitor"):
+            job = self.reserve("slurm")
+        saved = e.load(self.root, job["id"])
+        log = self.project / "slurm.log"
+        log.write_bytes(b"abcdef")
+        saved.update(log_path=str(log), submission_attempted=True)
+        e.save(self.root, saved)
+        with patch.object(a, "slurm_info", return_value=("COMPLETED", "0:0")):
+            e.perform(self.root, "output", job_id=job["id"], limit=3)
+            log.write_bytes(b"xyzdef")
+            with self.assertRaisesRegex(a.OutputConflict, "cached coverage is inconsistent"):
+                e.perform(self.root, "output", job_id=job["id"], limit=3)
+            status = e.perform(self.root, "status", job_id=job["id"])
+            self.assertEqual(status["state"], "completed")
+            self.assertFalse(status["output_cache"]["complete"])
+            self.assertIn("cached coverage is inconsistent", status["cache_error"])
 
     def test_partial_terminal_recovery_requires_live_backend(self):
         with patch.object(a, "spawn_monitor") as spawn:
