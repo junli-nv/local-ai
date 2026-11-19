@@ -66,7 +66,14 @@ def prepare(state, assets, session, base, model, project):
     instructions.write_text(GUIDANCE, encoding="utf-8")
     instructions.chmod(0o600)
     cfg = config(base, model)
-    cfg["plugin"] = [Path(__file__).with_name("observer.mjs").resolve().as_uri()]
+    execution_plugin = session / "config/opencode/execution.mjs"
+    execution_plugin.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    shutil.copyfile(Path(__file__).with_name("execution.mjs"), execution_plugin)
+    execution_plugin.chmod(0o600)
+    cfg["plugin"] = [
+        Path(__file__).with_name("observer.mjs").resolve().as_uri(),
+        execution_plugin.resolve().as_uri(),
+    ]
     cfg["compaction"] = {"auto": True, "prune": True}
     cfg["command"] = {
         "handoff": {
@@ -99,6 +106,11 @@ def prepare(state, assets, session, base, model, project):
     env = os.environ.copy()
     env.update(
         LOCAL_AI_RUN_DIR=str(session),
+        LOCAL_AI_EXECUTION_DIR=str(
+            (state.parent.parent if state.parent.name == "services" else state) / "execution"
+        ),
+        LOCAL_AI_EXECUTION_HELPER=str(Path(__file__).with_name("execution.py").resolve()),
+        LOCAL_AI_EXECUTION_PYTHON=sys.executable,
         LOCAL_AI_DEPENDENCIES_REUSED=str(reused_dependencies).lower(),
         OPENCODE_TUI_CONFIG=str(tui),
         OPENCODE_CONFIG=str(file),

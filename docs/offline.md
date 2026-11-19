@@ -308,3 +308,7 @@ npm_config_offline=true ./local-ai chat --run 'Reply with exactly LOCAL_AI_OK. D
 ---
 
 [English version](en/offline.md)
+
+## 开发主线的托管执行文件
+
+新增 execution.py 和 execution.mjs 必须随源码、wheel 与程序更新一起交付。Python 仅用标准库，插件复用客户端现有 SDK 缓存，不新增独立 Node.js 或 Python 包依赖；断网前仍需备齐原生客户端依赖。用户私有 state/execution 下的命令、输出、任务与暂停门不进入公共离线包，程序更新/回退不能当作任务恢复或取消。旧 v1.4.4 标签不包含此功能；详见[用法](execution.md)。

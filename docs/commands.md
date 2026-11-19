@@ -565,3 +565,23 @@ B300 与 GB300 的实际验收范围见[验证记录](validation.md)，不能用
 ---
 
 [English version](en/commands.md)
+
+## 托管命令任务（开发主线）
+
+v1.4.4 标签之后新增 client job；[最短示例与限制](execution.md)。在执行命令的 BCM 本机运行，不调用模型；默认私有用户状态根 ~/.local/state/local-ai，所有子命令可用 --state-dir 指定，实际写入其 execution/。JSON 输出；请求处理成功退出 0、校验/执行入口错误 1、参数错误 2。查询得到 failed/cancelled 等任务状态仍为退出 0；命令结果看 state/terminal/exit_code。
+
+| 子命令 | 参数与默认值 |
+|---|---|
+| client job start | --command 必填，显式交给 /bin/bash -lc；--project 默认当前目录；--session 默认 cli；--request-id 默认新操作键，重试应复用指定键；--timeout 默认 3600，正数且不超过 604800 秒，含暂停 |
+| client job list | 无必填参数，列出当前用户最多 100 条任务，按创建时间倒序，包含 session/project |
+| client job status JOB_ID | 必填任务 ID，返回状态、终态标志和退出码 |
+| client job output JOB_ID | --offset 默认 0 字节，--limit 默认 16384、范围 1..65536；按 next_offset 读到终态且 all_output_delivered=true |
+| client job pause JOB_ID | 必填任务 ID；异步控制后查询 status 确认；会话暂停时不能用单任务 resume 绕过 |
+| client job resume JOB_ID | 必填任务 ID；异步控制后查询 status 确认；会话暂停时不能用单任务 resume 绕过 |
+| client job stop JOB_ID | 必填任务 ID；异步控制后查询 status 确认；会话暂停时不能用单任务 resume 绕过 |
+| client job remove JOB_ID | 只删除终态任务及其日志，保留防重放键 |
+| client job pause-session | --session 必填；--project 默认当前目录，需匹配原路径；stop 保持工具入口关闭，继续需显式 resume-session |
+| client job resume-session | --session 必填；--project 默认当前目录，需匹配原路径；stop 保持工具入口关闭，继续需显式 resume-session |
+| client job stop-session | --session 必填；--project 默认当前目录，需匹配原路径；stop 保持工具入口关闭，继续需显式 resume-session |
+
+聊天工具名 local_ai_task，使用 start/list/status/output/pause/resume/stop/remove/pause_session/resume_session/stop_session。start 的 argv 为参数数组，没有隐式 Shell，request_id 必填；cwd 默认项目、timeout 同上。job_id 用于单任务动作；offset/limit 同 CLI。身份由客户端提供，拒绝跨会话/项目。启动仍调用原生 Bash 权限，外部目录需要原生授权。配置/状态恢复不自动重放命令。

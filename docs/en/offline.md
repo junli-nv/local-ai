@@ -311,3 +311,7 @@ npm_config_offline=true ./local-ai chat --run 'Reply with exactly LOCAL_AI_OK. D
 Success: an actual `LOCAL_AI_OK` response and exit code 0. The user reported completion in about nine seconds in an air-gapped environment; this single chat check does not establish that every dependency is available. If dependencies are still missing, prepare dependencies matching the client online and export again; the flag cannot supply missing files. For ongoing use, configure [persistent npm offline mode](#persistent-npm-offline-mode) to avoid typing the prefix each time.
 
 See [deployment](deployment.md), [commands](commands.md) and [validation](validation.md).
+
+## Managed execution files on development main
+
+Ship execution.py and execution.mjs in source, wheels and program updates. Python uses stdlib and the plugin reuses existing native SDK caches, with no additional standalone Node/Python package dependency. Prepare native dependencies before disconnecting. Private state/execution commands, outputs, jobs and pause gates are excluded from public exports. Program update/rollback is not job recovery/cancellation. Original v1.4.4 downloads lack this feature; see [usage](execution.md).

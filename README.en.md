@@ -8,6 +8,8 @@ v1.4.4 updates general OpenCode instructions, documents Claude Code prompt sourc
 
 It connects a locally hosted model with tools in the terminal. Users describe a task; the assistant examines project files and actual command results, then uses tools within the scope of the user’s authorization. The project uses vLLM for inference and OpenCode for interaction and tool execution, bringing installation, connectivity, configuration and offline delivery into a reusable workflow.
 
+Development main adds local_ai_task managed commands: return a task ID, remain conversational, pause/resume/stop. Short CLI example: ./local-ai client job start --command 'sleep 30; echo done'. This is newer than the original v1.4.4 archive; update the program and exit/resume chat. Ordinary synchronous Bash is unchanged. See [usage and limits](docs/en/execution.md).
+
 ## What it helps with
 
 - **System and cluster administration**: inspect system state, analyze logs, troubleshoot services and access remote hosts through SSH as needed.
@@ -54,7 +56,7 @@ Use appropriate sudo/Docker permissions; root may omit sudo. Data defaults follo
 | [Persistent instructions](templates/opencode/en/agent-instructions.md) | Automatic general/BCM templates, personal-rule backups, managed blocks, loading checks and prompt references (since v1.4.3) |
 | [Offline deployment](docs/en/offline.md) | Existing-installation migration or online preparation |
 | [Architecture](docs/en/architecture.md), [development](docs/en/development.md) | Design, extension and contributor handoff |
-| [Messages during execution](docs/en/client-steering.md) | Pending requirement, isolated API/TUI baseline probe and template version differences |
+| [Messages during execution](docs/en/client-steering.md), [managed tasks](docs/en/execution.md) | Synchronous baseline and development-main background tasks, follow-ups and pause/stop |
 
 The [optimization and engine exploration record](docs/en/performance.md) preserves DSpark parameter choices, first-use compilation work, SGLang experiments and future comparison methods.
 

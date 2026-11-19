@@ -570,3 +570,23 @@ Most management commands return JSON. chat returns the client's exit code; singl
 No automatic load balancing, user quotas, boot startup, cross-host TP or GPU scheduling is provided. Allocate dedicated, available GPU resources before startup. The application does not require a cluster scheduler. See [validation](validation.md) for B300/GB300 evidence and remaining acceptance work.
 
 Select external model recipes with LOCAL_AI_CATALOG; see [compatibility](development.md#model-and-client-compatibility).
+
+## Managed command tasks (development main)
+
+client job is newer than the v1.4.4 tag; see [short examples and limits](execution.md). Run on the BCM executing the command, without model requests. All subcommands accept --state-dir (default private user root ~/.local/state/local-ai); data is under execution/. Output is JSON. Exit 0 means the request was processed, 1 means validation/launch failure, 2 means argument error. Querying failed/cancelled jobs still exits 0: inspect state/terminal/exit_code for command success.
+
+| Subcommand | Options and defaults |
+|---|---|
+| client job start | Required --command passed explicitly to /bin/bash -lc; --project defaults to current directory; --session cli; --request-id creates a new key unless supplied for retries; --timeout 3600 positive wall seconds, maximum 604800, including pauses |
+| client job list | No required options; current user's newest 100 jobs, with session/project |
+| client job status JOB_ID | Required job ID; status, terminal flag and exit code |
+| client job output JOB_ID | --offset 0 bytes; --limit 16384, range 1..65536; reuse next_offset until terminal and all_output_delivered=true |
+| client job pause JOB_ID | Required ID; asynchronous, confirm with status; individual resume cannot bypass the session gate |
+| client job resume JOB_ID | Required ID; asynchronous, confirm with status; individual resume cannot bypass the session gate |
+| client job stop JOB_ID | Required ID; asynchronous, confirm with status; individual resume cannot bypass the session gate |
+| client job remove JOB_ID | Remove terminal files/logs, retaining the replay-prevention key |
+| client job pause-session | Required --session; --project defaults to current directory and must match the original; stop keeps the gate closed until explicit resume-session |
+| client job resume-session | Required --session; --project defaults to current directory and must match the original; stop keeps the gate closed until explicit resume-session |
+| client job stop-session | Required --session; --project defaults to current directory and must match the original; stop keeps the gate closed until explicit resume-session |
+
+Chat tool local_ai_task exposes start/list/status/output/pause/resume/stop/remove/pause_session/resume_session/stop_session. start requires argv (argument array, no implicit shell) and request_id; cwd defaults to project, timeout as above. job_id identifies task actions; offset/limit match CLI. Client-supplied identity rejects cross-session/project access. Starts still request native Bash permission and external-directory access where needed. Restoring state never automatically replays commands.

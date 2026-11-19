@@ -22,6 +22,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from unittest.mock import patch
 
+from local_ai import execution
 from local_ai.artifacts import validate
 from local_ai.client import prepare
 from local_ai.common import atomic_json, private_dir
@@ -91,7 +92,8 @@ def fixture_command(project, hold):
 
 
 class Model:
-    def __init__(self, project, hold):
+    def __init__(self, project, hold, managed=False):
+        self.managed = managed
         self.command = fixture_command(project, hold)
         self.lock = threading.Lock()
         self.calls = []
@@ -111,7 +113,8 @@ class Model:
             if tools and followup and self.delivered is None:
                 self.delivered = now
             if tools and not results and not followup and self.tool_calls == 0:
-                name = next((name for name in ("bash", "shell") if name in tools), None)
+                candidates = ("local_ai_task",) if self.managed else ("bash", "shell")
+                name = next((name for name in candidates if name in tools), None)
                 if name is None:
                     raise ValueError("Native client exposes no supported shell tool")
                 self.tool_calls += 1
@@ -124,10 +127,18 @@ class Model:
                             "function": {
                                 "name": name,
                                 "arguments": json.dumps(
-                                    {
-                                        "command": self.command,
-                                        "description": "Harmless bounded steering probe",
-                                    }
+                                    (
+                                        {
+                                            "action": "start",
+                                            "argv": shlex.split(self.command),
+                                            "request_id": "steering-probe",
+                                        }
+                                        if self.managed
+                                        else {
+                                            "command": self.command,
+                                            "description": "Harmless bounded steering probe",
+                                        }
+                                    )
                                 ),
                             },
                         }
@@ -182,11 +193,11 @@ class Model:
         return Handler
 
 
-def run_case(assets, root, mode, hold, timeout, evidence):
+def run_case(assets, root, mode, hold, timeout, evidence, managed=False):
     project = private_dir(root / "project")
     state = private_dir(root / "state")
     session = private_dir(root / "session")
-    model = Model(project, hold)
+    model = Model(project, hold, managed)
     api = ThreadingHTTPServer(("127.0.0.1", 0), model.handler())
     api.daemon_threads = True
     api.probe_errors = []
@@ -347,7 +358,25 @@ def run_case(assets, root, mode, hold, timeout, evidence):
                 )
             if (project / "tool-runs.txt").read_text().splitlines() != ["RUN"]:
                 raise RuntimeError("Shell command was not executed exactly once")
+            if managed:
+
+                def finished():
+                    jobs = execution.perform(
+                        Path(env["LOCAL_AI_EXECUTION_DIR"]),
+                        "list",
+                        session=session_id,
+                        project=str(project),
+                    )
+                    return (
+                        len(jobs) == 1 and jobs[0]["terminal"] and jobs[0]["state"] == "completed"
+                    )
+
+                wait(finished, "managed task flush and successful completion")
             phase = classify(events)
+            if managed and phase != "during_tool":
+                raise RuntimeError(
+                    "Managed task did not deliver follow-up before command completion"
+                )
             return {
                 "transport": mode,
                 "delivery_phase": phase,
@@ -376,6 +405,25 @@ def run_case(assets, root, mode, hold, timeout, evidence):
             if backend is not None and backend.poll() is None and session_id is not None:
                 with contextlib.suppress(OSError):
                     request(base + "/session/" + session_id + "/abort", {}, timeout=2)
+            managed_cleanup_error = None
+            try:
+                if managed and session_id is not None:
+                    task_root = Path(env["LOCAL_AI_EXECUTION_DIR"])
+                    execution.perform(
+                        task_root, "stop_session", session=session_id, project=str(project)
+                    )
+                    until = time.monotonic() + 5
+                    while time.monotonic() < until:
+                        jobs = execution.perform(
+                            task_root, "list", session=session_id, project=str(project)
+                        )
+                        if all(j["terminal"] for j in jobs):
+                            break
+                        time.sleep(0.05)
+                    else:
+                        raise RuntimeError("Managed fixture processes did not stop")
+            except Exception as cleanup_error:
+                managed_cleanup_error = cleanup_error
             for child in (tui, backend):
                 if child is not None:
                     stop(child)
@@ -386,9 +434,11 @@ def run_case(assets, root, mode, hold, timeout, evidence):
             api.shutdown()
             api.server_close()
             worker.join(timeout=3)
+            if managed_cleanup_error is not None:
+                raise managed_cleanup_error
 
 
-def check(assets, output, mode="both", hold=5.0, timeout=90.0):
+def check(assets, output, mode="both", hold=5.0, timeout=90.0, managed=False):
     if not math.isfinite(hold) or not 0 < hold <= 60:
         raise ValueError("--hold-seconds must be finite, positive and at most 60")
     if not math.isfinite(timeout) or timeout <= hold:
@@ -409,13 +459,17 @@ def check(assets, output, mode="both", hold=5.0, timeout=90.0):
     try:
         with tempfile.TemporaryDirectory(prefix="local-ai-steering-") as folder:
             for transport in ["api", "tui"] if mode == "both" else [mode]:
-                case = run_case(assets, Path(folder) / transport, transport, hold, timeout, output)
+                params = (assets, Path(folder) / transport, transport, hold, timeout, output)
+                case = run_case(*params, managed=True) if managed else run_case(*params)
                 result["cases"].append(case)
                 print(json.dumps(case), flush=True)
-        result["state"] = "measured"
+        result["state"] = "passed" if managed else "measured"
+        result["managed"] = managed
         result["immediate_delivery_in_all_cases"] = all(
             case["delivery_phase"] == "during_tool" for case in result["cases"]
         )
+        if managed and not result["immediate_delivery_in_all_cases"]:
+            raise RuntimeError("Managed delivery target was not met")
         return result
     except KeyboardInterrupt:
         result.update(state="interrupted", error="Probe interrupted")
@@ -433,6 +487,11 @@ if __name__ == "__main__":
     parser.add_argument("--output", type=Path, required=True, help="New private evidence directory")
     parser.add_argument("--mode", choices=["api", "tui", "both"], default="both")
     parser.add_argument(
+        "--managed",
+        action="store_true",
+        help="Use managed execution and require delivery before command completion",
+    )
+    parser.add_argument(
         "--hold-seconds", type=float, default=5, help="Mock shell duration, at most 60"
     )
     parser.add_argument("--timeout", type=float, default=90, help="Deadline per case in seconds")
@@ -445,6 +504,7 @@ if __name__ == "__main__":
                 args.mode,
                 args.hold_seconds,
                 args.timeout,
+                args.managed,
             )
         )
     )

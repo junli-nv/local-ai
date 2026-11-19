@@ -41,7 +41,7 @@ Additional decision (2026-11-17): keep general/BCM templates and setup guidance 
 
 ## Developer handoff: decisions and working order
 
-Pending requirement (2026-11-18): retain OpenCode and improve follow-ups, side questions, pause and stop handling during execution. Only isolated API/TUI timing measurements are currently authorized and implemented. See [new-message responsiveness](client-steering.md) for objectives, execution, interpretation and future acceptance; this does not initiate a general async system or Codex migration.
+Pending requirement (2026-11-18): retain OpenCode and improve follow-ups, side questions, pause and stop handling during execution. Isolated API/TUI measurements and the managed execution adapter are now authorized and implemented. See [new-message responsiveness](client-steering.md) for objectives, execution, interpretation and future acceptance; see [managed execution](execution.md) for local task usage; no Codex migration is made.
 
 Additional decision (2026-11-18): independently adapt task scope, actual verification, authorized continuity and outcome-first communication from a third-party Claude Code prompt collection and official best practices. Pin sources and map each adaptation in [prompt references](prompt-references.md). Do not import complete external prompts or Claude-specific mechanisms, change the general-assistant role/permission boundaries, or resume deferred async execution. Prompt installation/context checks do not establish better model performance.
 
@@ -106,8 +106,8 @@ this section records design reasons.
 ### Current backlog state (2026-11-19)
 
 - Implemented on development main: updater activity checks, explicit program-only continuation, standalone rollback helper and program/history backup boundaries; see [updates](update.md#development-main-check-active-clients-before-updating). Linux scanning is not a launch lock.
-- Measured, target unmet: same-host 1.19.5/1.19.6 API/TUI follow-ups still arrive after the long Shell returns. Retain the active client; execution adaptation needs task identity, pause/stop, descendant cleanup and duplicate-execution validation; see [steering](client-steering.md).
-- Later: private cross-BCM history backup/recovery, tasks hosted from launch, aggregate diagnostics. Program backup is not history backup; tasks/report logs are not background execution.
+- Execution adapter implemented: local_ai_task/client job provide identities, background lifetime, pause/resume/stop, output cursors and replay prevention. Managed API/TUI delivery and native controls/denial tests pass. Native synchronous Bash remains after_tool; retain 1.19.5. See [usage](execution.md) and [results](client-steering.md).
+- Later: private cross-BCM history backup/recovery, automatic completion notifications, remote-job adapters, aggregate diagnostics. Program backup is not history backup; tasks/report logs are not background execution.
 - KV offloading and tar extraction remain low priority. No inference recipe change or new tag/Release this round.
 
 ### Low-priority backlog: KV cache offloading
@@ -390,3 +390,11 @@ paths.py uses the launcher location, not cwd or a fixed /raid/local-ai. Explicit
 ## Rich-document development
 
 Keep ordinary chat as the entry point: users name a file or directory, and the assistant calls documents_read_document; do not add mandatory attachment flags. Keep parsing on BCM, preserve source labels, paginate explicitly, expose real errors and test native MCP image transport. Use random hidden codes for end-to-end PDF/image/Word/Excel/PPT checks. Record text versus rendering support separately; do not claim Codex parity from extension names.
+
+## Maintaining managed execution
+
+execution.py uses only Python stdlib; execution.mjs reuses the existing native SDK. Ship both in source, wheel and program updates without requiring a separate Node installation. Each running job uses a copied worker; upgrades retain that copy. Keep task schema/RPC backward compatible. Never delete private task state or treat program rollback as task cancellation.
+
+Beyond full tests/Ruff, run check-steering.py in default and --managed modes, plus check-execution.py controls/denied. Preserve the synchronous baseline and native permissions. Cover stable keys, replay prevention, process identity, failed startup checkpoints, pause gates, confirmed stop, worker loss, output truncation and terminal exit. Client-contract CI retains private fixture evidence.
+
+Live-model interpretation/tool selection, remote cancellation and strict airgap require separate acceptance; mock API results do not establish those. Synchronize [usage](execution.md), commands, architecture, offline and validation in both languages, explicitly distinguishing development main from old tagged downloads.

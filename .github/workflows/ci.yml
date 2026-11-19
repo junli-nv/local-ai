@@ -55,10 +55,20 @@ jobs:
       - run: python scripts/check-observer.py --client-dir /tmp/local-ai-client
       - name: Measure follow-up delivery during a shell call
         run: python scripts/check-steering.py --client-dir /tmp/local-ai-client --output /tmp/local-ai-steering-evidence
+      - name: Verify follow-up delivery during a managed task
+        run: python scripts/check-steering.py --client-dir /tmp/local-ai-client --managed --output /tmp/local-ai-managed-evidence
+      - name: Verify managed pause, resume and stop controls
+        run: python scripts/check-execution.py --client-dir /tmp/local-ai-client --case controls --output /tmp/local-ai-controls-evidence
+      - name: Verify managed tasks preserve native Bash denial
+        run: python scripts/check-execution.py --client-dir /tmp/local-ai-client --case denied --output /tmp/local-ai-denied-evidence
       - name: Preserve steering probe evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: steering-probe
-          path: /tmp/local-ai-steering-evidence
+          path: |
+            /tmp/local-ai-steering-evidence
+            /tmp/local-ai-managed-evidence
+            /tmp/local-ai-controls-evidence
+            /tmp/local-ai-denied-evidence
           if-no-files-found: ignore

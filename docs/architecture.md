@@ -137,3 +137,11 @@ preparation.py 编排目标镜像拉取、模型下载和镜像归档；hub.py �
 ---
 
 [English version](en/architecture.md)
+
+## 托管执行适配（开发主线）
+
+client.prepare 加载 observer.mjs 与 execution.mjs；后者复制到原生会话配置目录，复用已准备的 @opencode-ai/plugin SDK。工具 local_ai_task 通过 JSON/stdin 调用 execution.py RPC，不接受模型提供身份，以客户端会话和项目真实路径绑定。原生 Bash/external_directory 权限仍须通过；暂停钩子拒绝后续其他工具。
+
+execution.py 用标准库实现私有任务记录、文件锁/原子写、稳定操作键、输出字节游标与 Linux 进程组控制。启动返回 ID，独立 worker 副本管理非交互子进程组。按 PID/starttime 核实身份后才发信号；不收养外部进程或自动重试失败命令。worker 丢失显示未知/不完整状态，不报成功。
+
+任务状态位于用户 state/execution，与 endpoint、模型服务器和安装目录分离。会话/项目暂停门保留到显式恢复；普通同步 Bash 和已运行原生工具不会追溯接管。终端关闭不终止托管任务，机器重启不恢复任务执行。数据生命周期、远端作业与自动通知边界见[执行手册](execution.md)。

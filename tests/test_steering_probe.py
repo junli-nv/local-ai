@@ -137,3 +137,43 @@ class SteeringProbeTests(unittest.TestCase):
             report = probe.check(Path("/mock-client"), output, mode="api")
             self.assertEqual(report["state"], "measured")
             self.assertFalse(report["immediate_delivery_in_all_cases"])
+
+    def test_managed_model_uses_stable_task_key_and_argument_array(self):
+        with tempfile.TemporaryDirectory() as folder:
+            model = probe.Model(Path(folder), 0.01, managed=True)
+            delta, reason = model.reply(
+                {
+                    "messages": [{"role": "user", "content": probe.INITIAL}],
+                    "tools": [{"function": {"name": "local_ai_task"}}],
+                }
+            )
+            self.assertEqual(reason, "tool_calls")
+            call = delta["tool_calls"][0]["function"]
+            self.assertEqual(call["name"], "local_ai_task")
+            args = json.loads(call["arguments"])
+            self.assertEqual(args["action"], "start")
+            self.assertTrue(args["request_id"])
+            self.assertIsInstance(args["argv"], list)
+
+    def test_managed_mode_rejects_after_tool_delivery(self):
+        with (
+            tempfile.TemporaryDirectory() as folder,
+            patch.object(probe, "validate", return_value={"version": "test"}),
+            patch.object(probe, "run_case", return_value={"delivery_phase": "after_tool"}),
+        ):
+            output = Path(folder) / "evidence"
+            with self.assertRaisesRegex(RuntimeError, "delivery target"):
+                probe.check(Path("/mock-client"), output, mode="api", managed=True)
+            self.assertEqual(json.loads((output / "report.json").read_text())["state"], "failed")
+
+    def test_managed_mode_requires_during_tool_delivery(self):
+        with (
+            tempfile.TemporaryDirectory() as folder,
+            patch.object(probe, "validate", return_value={"version": "test"}),
+            patch.object(probe, "run_case", return_value={"delivery_phase": "during_tool"}),
+        ):
+            report = probe.check(
+                Path("/mock-client"), Path(folder) / "evidence", mode="api", managed=True
+            )
+            self.assertEqual(report["state"], "passed")
+            self.assertTrue(report["immediate_delivery_in_all_cases"])

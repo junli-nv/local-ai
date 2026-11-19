@@ -145,3 +145,11 @@ preparation.py coordinates target images, models and archives. hub.py uses stand
 ## Portable installation directory
 
 The unpacked root retains complete program, models, image archives and public clients. Defaults follow its location. install prepares assets; server start creates host-local instances. export writes dist/ with relative checksums; install --offline verifies/imports after extraction elsewhere. Exclude dist/ itself, old instances, histories and credentials. Public clients contain only binaries/public cache; personal state stays isolated.
+
+## Managed execution adapter (development main)
+
+client.prepare loads observer.mjs and execution.mjs, copying the latter into native session configuration to reuse the prepared @opencode-ai/plugin SDK. local_ai_task calls execution.py through JSON/stdin RPC. Identity comes from client session/resolved project, never model arguments. Native Bash/external_directory permission is still required. The pause hook gates subsequent other tools.
+
+Stdlib execution.py implements private records, file locking/atomic writes, stable operation keys, byte cursors and Linux process-group control. Start returns an ID; a detached copied worker owns a noninteractive command group. Signals require matching PID/starttime identities. No external-process adoption or automatic retry of failed commands; worker loss reports unknown/incomplete state, never success.
+
+User state/execution is independent of endpoint, model server and installation directory. Session/project gates persist until explicit resume. Existing synchronous Bash/native tools are not adopted. Jobs survive terminal exit, not reboot. See [execution](execution.md) for lifecycle, remote-job and notification boundaries.

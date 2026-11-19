@@ -653,3 +653,13 @@ Adds stdlib HTTP(S) text, source metadata and continuation; local sidecar/embedd
 Coverage includes local HTTP extraction/redirects/pagination, oversized/incomplete response rejection, local file reads after offline web errors, sidecars without FFmpeg and actual error propagation. BCM passed real duration, two-frame and embedded-subtitle extraction on a 2-second clip. These are tool-layer checks, not model visual-understanding, long-video, arbitrary-site or new GPU acceptance.
 
 Align bilingual entry, offline/update docs and metadata. Require full tests, Ruff and CI on the exact release commit before creating annotated v1.3.7. Delete other tags as requested; retain historical record labels.
+
+## Managed execution CPU validation (2026-11-19, development main)
+
+- Linux AMD64, OpenCode 1.19.5, loopback mock model and isolated configuration/project/history: managed API/TUI follow-ups reached the model before a five-second command finished, about 0.157/0.391 s in individual runs. Each command ran once and completed normally. Synchronous Bash remains after_tool. This is not a live-model latency guarantee.
+- check-execution.py controls passed: heartbeat freezes, new native/managed tools are blocked while paused, explicit resume proceeds, stop confirms no live owned group members, and one launch. denied passed: custom tooling cannot bypass native Bash denial.
+- Engine unit coverage includes byte/Unicode cursors, stable keys, replay prevention, survival after launcher exit, pause/resume/stop, unrelated-process preservation, descendant cleanup, timeout, overflow, nonzero exits, private paths, cross-session/stale PID refusal, worker loss and failed startup checkpoints/worker copies.
+- Native startup/resume, mouse mode and paste contracts passed. CI adds managed API/TUI, controls and denial checks, retaining private fixture artifacts.
+- Live-model interpretation, remote scheduler/container cancellation, adoption of running ordinary tools, deliberate process-group escape, disconnected dependency completeness, reboot and automatic completion notifications are not validated. See [steering](client-steering.md) and [usage](execution.md).
+
+All 313 Linux unittest cases passed, along with Ruff lint/format, patch checks and 50 packaged-document checks. Source and wheel include the new execution files. The first full run failed only because combined pause/resume/stop manual entries omitted complete command strings; separate entries fixed the contract, followed by a passing full run.

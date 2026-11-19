@@ -5,6 +5,7 @@ import json
 import shlex
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 from . import (
@@ -17,6 +18,7 @@ from . import (
     configuration,
     deployment,
     documents,
+    execution,
     history,
     images,
     installlog,
@@ -466,6 +468,53 @@ def parser():
                 required=True,
                 help="Destination archive path; companion checksum/lock files are created",
             )
+    jobs = clients.add_parser(
+        "job", help="Start, inspect, pause or stop durable local command tasks"
+    ).add_subparsers(dest="job_action", required=True)
+    for action in [
+        "start",
+        "list",
+        "status",
+        "output",
+        "pause",
+        "resume",
+        "stop",
+        "remove",
+        "pause-session",
+        "resume-session",
+        "stop-session",
+    ]:
+        b = jobs.add_parser(action, help="Managed command task: " + action)
+        b.add_argument(
+            "--state-dir", type=Path, default=client_home(), help="Private user state root"
+        )
+        if action == "start":
+            b.add_argument(
+                "--command", required=True, help="Noninteractive Bash command; runs on this host"
+            )
+            b.add_argument(
+                "--project", type=Path, default=Path.cwd(), help="Project working directory"
+            )
+            b.add_argument("--session", default="cli", help="Task session identity")
+            b.add_argument(
+                "--request-id", help="Stable idempotency key; default creates a new operation"
+            )
+            b.add_argument(
+                "--timeout",
+                type=float,
+                default=3600,
+                help="Positive wall seconds including pauses (default 3600; max 604800)",
+            )
+        elif action.endswith("-session"):
+            b.add_argument("--session", required=True, help="Exact OpenCode session ID to control")
+            b.add_argument(
+                "--project", type=Path, default=Path.cwd(), help="Original project directory"
+            )
+        elif action != "list":
+            b.add_argument("job_id", help="Managed task ID returned by start/list")
+        if action == "output":
+            b.add_argument("--offset", type=int, default=0, help="Byte cursor from next_offset")
+            b.add_argument("--limit", type=int, default=16384, help="Maximum bytes, 1..65536")
     histories = clients.add_parser(
         "history", help="Manage connections associated with saved session history"
     ).add_subparsers(dest="history_action", required=True)
@@ -734,6 +783,24 @@ def dispatch(q):
     if q.group == "model":
         return images.download_model(q.data_dir, profile(q.profile), force=q.force)
     if q.group == "client":
+        if q.action == "job":
+            action = q.job_action.replace("-", "_")
+            options = {}
+            if action == "start":
+                options = {
+                    "session": q.session,
+                    "project": str(q.project),
+                    "argv": ["/bin/bash", "-lc", q.command],
+                    "request_id": q.request_id or "cli_" + str(time.time_ns()),
+                    "timeout": q.timeout,
+                }
+            elif action.endswith("_session"):
+                options = {"session": q.session, "project": str(q.project)}
+            elif action != "list":
+                options["job_id"] = q.job_id
+            if action == "output":
+                options.update(offset=q.offset, limit=q.limit)
+            return execution.perform(q.state_dir / "execution", action, **options)
         if q.action == "history":
             if q.history_action == "list":
                 rows = history.list_histories(q.state_dir, settings().get("endpoint"))

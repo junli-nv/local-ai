@@ -6,6 +6,8 @@ v1.4.4 更新通用 OpenCode 工作指令，标注 Claude Code 提示词参考�
 
 它将本地大模型服务与终端中的工具执行结合起来：用户描述任务，助手结合工作目录中的文件和实际命令结果进行分析，并在用户授权范围内调用工具完成工作。项目使用 vLLM 提供模型推理、OpenCode 提供交互与工具能力，负责将两者的安装、连接、配置和离线交付组织成一套可复用流程。
 
+开发主线新增 local_ai_task 长命令托管：任务返回 ID 后可继续对话，支持暂停、恢复和停止。终端最短示例：./local-ai client job start --command 'sleep 30; echo done'。此能力不在原 v1.4.4 标签包内，更新程序并退出/恢复聊天后生效；普通同步 Bash 行为不变。见[用法与边界](docs/execution.md)。
+
 ## 能做什么
 
 - **系统与集群运维**：检查系统状态、分析日志、排查服务问题，按任务需要通过 SSH 操作远端主机。
@@ -52,7 +54,7 @@ v1.4.4 更新通用 OpenCode 工作指令，标注 Claude Code 提示词参考�
 | [持久工作指令](templates/opencode/agent-instructions.md) | 安装时自动应用通用/BCM 模板、个人规则备份、管理区块、生效检查及提示词参考来源（v1.4.3 起） |
 | [离线部署](docs/offline.md) | 已安装环境迁移，或联网准备后离线安装 |
 | [架构](docs/architecture.md)、[开发指南](docs/development.md) | 模块设计、扩展和接手开发 |
-| [执行期间新消息响应](docs/client-steering.md) | 待完善需求、隔离 API/TUI 基线检查与模板版本区别 |
+| [执行期间新消息响应](docs/client-steering.md)、[后台任务](docs/execution.md) | 同步调用基线与开发主线新增托管任务、插话、暂停/停止 |
 
 [推理优化与引擎探索记录](docs/performance.md)保存 DSpark 参数依据、首次编译处理、SGLang 探索及后续复测方法，供继续开发参考。
 

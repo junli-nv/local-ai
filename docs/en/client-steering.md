@@ -4,7 +4,7 @@
 
 User-confirmed objective on 2026-11-18: incorporate follow-up requirements, side questions, pause and stop requests while the original task is still progressing, without waiting for the entire task. Prefer the validated OpenCode route, retaining models, GPU services, sessions and airgap deployment. Codex is a later alternative, not part of this implementation.
 
-Only step one is implemented: an isolated baseline probe to locate delays at terminal input, native session persistence or tool/model-request boundaries. It changes no runtime configuration, native client, queue or execution tool and does not implement the deferred general background-task system.
+The baseline is complete. On 2026-11-19 development main adds local_ai_task: long commands return task IDs, leaving the main conversation available for follow-ups, with task/session pause, resume and stop. Native synchronous Bash remains the baseline. See [managed tasks](execution.md) for usage and boundaries. The original v1.4.4 tag does not contain this adapter.
 
 ## Running the isolated probe
 
@@ -53,12 +53,12 @@ The initial probe failed before measurement because first-workspace session crea
 
 ## Follow-up work
 
-- Compare current and isolated candidate clients to identify reusable native steering before considering a narrow execution-tool adapter. Preserve the validated client.
+- The validated client is retained with a local execution adapter. Compare future candidates in isolation before replacing it.
 - Separate streaming generation, short tools, long Shell calls and explicit queue mode. This probe measures one follow-up during a long Shell call only.
 - Verify new constraints affect subsequent actions, questions are answered before continuing, pauses prevent new steps and explicit stops are confirmed against process state.
 - Distinguish pausing the assistant from cancelling a command. Ordinary follow-ups must not implicitly kill work; clarify ambiguous targets when several tasks run.
 - Retain session recovery, exactly-once writes, permissions, cleanup, disconnected operation and existing client contracts in future acceptance.
-- Recording this requirement does not authorize a background system, client migration or remote-service changes.
+- Confirm scope before extending to remote jobs or automatic notifications; local acceptance does not validate untested capabilities.
 ## Same-host candidate comparison and first delivery (2026-11-19)
 
 The user authorized implementation, including stopping sessions or replacing clients when needed. This delivery implements updater activity checks/standalone program recovery and compares native client candidates.
@@ -74,7 +74,7 @@ On one Linux AMD64 host with a local mock model and five-second Shell call, exis
 
 Neither version delivered during execution. Millisecond differences are not speed evidence; keep active 1.19.5 and retain 1.19.6 separately. Raw reports/events/backend logs remain private; reproduce with the script above. This does not validate model understanding, pause/stop, airgap behavior or GPU performance.
 
-Next investigate a local execution-tool adapter: long commands return queryable task identities so the main session handles follow-ups. Pause prevents new steps; stop targets owned tasks and confirms descendant exit; resume avoids duplicate execution. This is not implemented; submission is not completion. General background hosting, cross-BCM history backup/recovery and aggregate diagnostics remain staged work.
+The local execution adapter is now implemented and tested; see below. Submission still is not completion. Cross-BCM history backup/recovery, aggregate diagnostics and remote-job adapters remain future work.
 
 
 ## Where the Claude-derived template changes live
@@ -84,3 +84,17 @@ Commit 8855c7d changes both general templates: authorized continuation and mid-t
 v1.4.4 contains these template changes and the baseline probe. Downloading/reinstalling the original v1.4.3 archive cannot provide them. Update to v1.4.4 source and rerun client installation as the actual chat user to update the personal managed block, then exit/resume chat. Existing tags are unchanged; the new responsiveness requirement is not presented as a capability already implemented by prompts.
 
 [Development](development.md) · [中文](../client-steering.md)
+
+## Managed execution results (2026-11-19, development main)
+
+OpenCode 1.19.5, loopback mock model, five-second command: API follow-up reached the model after about 0.157 s; real TUI input after 0.391 s. Both classified during_tool, with one command run and normal completion each. These are isolated functional timings, not live-model latency or an SLA.
+
+Add --managed to the baseline command to test the adapter. It requires all cases during_tool for exit 0/state=passed. Default baseline remains state=measured without requiring the target. Use a new private evidence directory; other options are unchanged.
+
+Reproduce native permission/control checks:
+```bash
+PYTHONPATH=src python3 scripts/check-execution.py --client-dir /raid/local-ai/clients/amd64 --case controls --output /tmp/local-ai-controls-evidence
+PYTHONPATH=src python3 scripts/check-execution.py --client-dir /raid/local-ai/clients/amd64 --case denied --output /tmp/local-ai-denied-evidence
+```
+
+controls confirms heartbeat suspension, rejection of new native tools/managed starts while paused, explicit resume, confirmed exit on stop and one command start. denied confirms that custom execution cannot bypass Bash denial. Both passed. CI retains synchronous baseline, managed API/TUI, controls and denial reports. Live-model natural-language control, follow-ups during other synchronous tools, disconnected operation, remote cancellation and reboot recovery remain unverified.
