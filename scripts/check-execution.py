@@ -33,15 +33,22 @@ class Model(probe.Model):
         super().__init__(project, 5)
         self.project = project
         self.issued = set()
+        self.notifications = 0
 
     def reply(self, payload):
         if not payload.get("tools"):
             return {"content": "Managed control probe"}, "stop"
+        if any(
+            "LOCAL_AI_TASK_EVENT:" in str(r.get("content", "")) for r in payload.get("messages", [])
+        ):
+            self.notifications += 1
+            return {"content": "NOTIFIED_OK"}, "stop"
         marker = ""
         for row in reversed(payload.get("messages", [])):
             if row.get("role") == "user":
                 match = re.search(
-                    r"CONTROL_(START|PAUSE|NEW|BLOCKED|RESUME|AFTER|STOP)", str(row.get("content"))
+                    r"CONTROL_(START|PAUSE|NEW|BLOCKED|RESUME|AFTER|STOP|AUTO|POLICY|ALLOWED)",
+                    str(row.get("content")),
                 )
                 if match:
                     marker = match.group(1)
@@ -50,9 +57,28 @@ class Model(probe.Model):
             return {"content": "CONTROL_ACK_" + marker}, "stop"
         self.issued.add(marker)
         tool = "local_ai_task"
-        if marker in {"START", "NEW"}:
+        if marker == "ALLOWED":
+            tool = "bash"
+            args = {
+                "command": "echo permitted > policy-allowed",
+                "description": "Native allowed command remains usable",
+            }
+        elif marker == "POLICY":
+            tool = "bash"
+            args = {
+                "command": "echo checking; printf forbidden > denied-policy",
+                "description": "Compound command denial test",
+            }
+        elif marker == "AUTO":
+            tool = "bash"
+            args = {
+                "command": "sleep 3; echo AUTO_FINISHED",
+                "description": "Automatic Bash background test",
+            }
+        elif marker in {"START", "NEW"}:
             code = (
                 "import time\nfrom pathlib import Path\n"
+                "Path('starts').open('a').write('x')\n"
                 "p=Path('heartbeat')\n"
                 "while True:\n"
                 " with p.open('a') as f: f.write('x')\n"
@@ -143,6 +169,9 @@ def run(assets, output, case):
                 cfg["permission"] = {"*": "allow"}
                 if case == "denied":
                     cfg["permission"]["bash"] = "deny"
+                if case == "policy":
+                    cfg["permission"]["bash"] = {"*": "allow", "printf *": "deny"}
+
                 atomic_json(Path(env["OPENCODE_CONFIG"]), cfg)
                 env["OPENCODE_CONFIG_CONTENT"] = json.dumps(cfg)
                 env["OPENCODE_DISABLE_CLAUDE_CODE"] = "true"
@@ -208,8 +237,58 @@ def run(assets, output, case):
                             raise RuntimeError("Missing native tool result for " + marker)
                         return parts[0]["state"]
 
-                    started = step("START")
-                    if case == "denied":
+                    started = step(
+                        "AUTO" if case == "enhanced" else "POLICY" if case == "policy" else "START"
+                    )
+                    if case == "policy":
+                        if (
+                            started["status"] != "error"
+                            or (project / "denied-policy").exists()
+                            or jobs()
+                        ):
+                            raise RuntimeError("Compound command bypassed native Bash denial")
+                        allowed = step("ALLOWED")
+                        if (
+                            allowed["status"] != "completed"
+                            or (project / "policy-allowed").read_text().strip() != "permitted"
+                            or jobs()
+                        ):
+                            raise RuntimeError(
+                                "Scoped Bash did not retain the usable native parser"
+                            )
+                        result["native_allowed_command_works"] = True
+                        result["compound_bash_denial_preserved"] = True
+                    elif case == "enhanced":
+                        if started["status"] != "completed":
+                            raise RuntimeError("Bash adapter did not return a managed result")
+                        launched = json.loads(started["output"])
+                        job_id = launched["job_id"]
+                        if launched["terminal"]:
+                            raise RuntimeError("Long Bash call blocked until completion")
+                        wait(
+                            lambda: model.notifications > 0,
+                            "automatic completion notification to model",
+                        )
+                        wait(
+                            lambda: execution.perform(task_root, "status", job_id=job_id)[
+                                "notification"
+                            ].get("delivered"),
+                            "durable notification acknowledgement",
+                        )
+                        final = execution.perform(task_root, "status", job_id=job_id)
+                        page = execution.perform(task_root, "output", job_id=job_id)
+                        if (
+                            final["state"] != "completed"
+                            or "AUTO_FINISHED" not in page["text"]
+                            or not page["all_output_delivered"]
+                        ):
+                            raise RuntimeError("Automatic Bash completion/output failed")
+                        result.update(
+                            auto_bash_background=True,
+                            completion_reached_model=True,
+                            output_verified=True,
+                        )
+                    elif case == "denied":
                         if started["status"] != "error":
                             raise RuntimeError(
                                 "Denied Bash permission did not reject managed execution"
@@ -224,7 +303,11 @@ def run(assets, output, case):
                         wait(lambda: (project / "heartbeat").exists(), "command heartbeat")
                         if step("PAUSE")["status"] != "completed":
                             raise RuntimeError("Session pause failed")
-                        wait(lambda: jobs()[0]["state"] == "paused", "process-group pause")
+                        wait(
+                            lambda: execution.perform(task_root, "status", job_id=job_id)["state"]
+                            == "paused",
+                            "process-group pause",
+                        )
                         before = (project / "heartbeat").stat().st_size
                         blocked = step("BLOCKED")
                         if blocked["status"] != "error" or (project / "blocked").exists():
@@ -247,7 +330,12 @@ def run(assets, output, case):
                             raise RuntimeError("Explicit resume did not release native tools")
                         if step("STOP")["status"] != "completed":
                             raise RuntimeError("Session stop failed")
-                        wait(lambda: jobs()[0]["terminal"], "confirmed process exit")
+                        wait(
+                            lambda: execution.perform(task_root, "status", job_id=job_id)[
+                                "terminal"
+                            ],
+                            "confirmed process exit",
+                        )
                         final = execution.perform(
                             task_root,
                             "status",
@@ -272,7 +360,7 @@ def run(assets, output, case):
                             paused_start_rejected=True,
                             explicit_resume=True,
                             stop_confirmed=True,
-                            task_runs_once=len(jobs()) == 1,
+                            task_runs_once=(project / "starts").read_text() == "x",
                         )
             finally:
                 cleanup_error = None
@@ -315,6 +403,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--client-dir", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--case", choices=["controls", "denied"], required=True)
+    parser.add_argument(
+        "--case", choices=["controls", "denied", "enhanced", "policy"], required=True
+    )
     args = parser.parse_args()
     print(json.dumps(run(args.client_dir.resolve(), args.output.absolute(), args.case)))

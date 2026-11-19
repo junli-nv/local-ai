@@ -1,60 +1,68 @@
 # Managed commands, follow-ups and pause/stop
 
-This development-main feature is newer than the v1.4.4 tag and absent from its original downloads. Update the client program, then exit/resume chat so a new OpenCode process loads local_ai_task. No model-server restart is required. Validated OpenCode 1.19.5 is retained.
+v2.0.0 includes automatic Bash backgrounding, completion messages, PTY input and SSH/Slurm/container adapters. Update the program, then exit/resume chat to load plugins. No model-server restart is required. The reference client remains OpenCode 1.19.5.
 
-## Short examples
+## Start here
 
-Ask in chat: "Run this long command as a background task, give me its ID, then answer my questions." The assistant should use local_ai_task start and promptly return a job_ ID. Continue asking questions, or request "pause this session's tasks", "resume", or "stop this session's tasks". Native permissions and account privileges still apply; model interpretation/tool selection require separate verification.
+In interactive chat, ordinary Bash waits about 400 ms for short commands, then returns a job_ ID for longer commands so you can send follow-ups. You may explicitly request a background task and completion report. The assistant uses local_ai_task to manage tasks. Submission is not completion.
 
-Direct terminal use on BCM does not depend on the model:
-
-```bash
-cd /home/alice/project
-/raid/local-ai/local-ai client job start --command 'sleep 30; echo done'
-/raid/local-ai/local-ai client job list
-```
-
-Replace JOB_ID with the returned job_ identifier:
+Command-scoped Bash permission rules retain the native parser and synchronous Bash; use local_ai_task explicitly. --sync-bash also retains native Bash. Other synchronous tools can still block messages; responsiveness is not universal. [Batch pipelines](automation.md) use synchronous Bash by default to return actual results.
 
 ```bash
-/raid/local-ai/local-ai client job status JOB_ID
-/raid/local-ai/local-ai client job pause JOB_ID
-/raid/local-ai/local-ai client job resume JOB_ID
-/raid/local-ai/local-ai client job stop JOB_ID
-/raid/local-ai/local-ai client job output JOB_ID
+./local-ai client job start --command 'sleep 30; echo done'
+./local-ai client job list
+./local-ai client job status JOB_ID
+./local-ai client job output JOB_ID
+./local-ai client job pause JOB_ID
+./local-ai client job resume JOB_ID
+./local-ai client job stop JOB_ID
+./local-ai client job remove JOB_ID
 ```
 
-start means submitted, not completed. control_requested from pause/stop is not confirmation of suspension/exit: inspect status for paused or terminal=true. Stop sends TERM and CONT so paused processes can exit; remaining group members receive KILL after one second. Only verified owned process groups are signalled.
+control_requested only records a pause/stop request. Query status to confirm paused or terminal=true. Local stop sends TERM, wakes paused processes, and uses KILL after one second if needed, only for verified owned process groups. remove requires a terminal task and retains its replay-prevention key; intentional reruns need a new request_id.
 
-Session controls require the exact OpenCode ses_ identity and original project path, both available in job list. CLI-created jobs default to session=cli:
+## Sessions, notifications and lifetime
 
 ```bash
-/raid/local-ai/local-ai client job pause-session --session SES_ID --project /home/alice/project
-/raid/local-ai/local-ai client job resume-session --session SES_ID --project /home/alice/project
-/raid/local-ai/local-ai client job stop-session --session SES_ID --project /home/alice/project
+./local-ai client job pause-session --session SES_ID --project /home/alice/project
+./local-ai client job resume-session --session SES_ID --project /home/alice/project
+./local-ai client job stop-session --session SES_ID --project /home/alice/project
 ```
 
-pause-session gates subsequent tools and requests suspension of managed jobs. Explicit resume-session releases the gate and resumes only jobs paused by the session; individually paused jobs need their own resume. stop-session cancels owned jobs and keeps the gate closed until explicit resume-session. Pausing does not undo writes, retract model requests or adopt native tools already executing.
+Use the exact ses_ ID from job list; CLI tasks default to session=cli. pause-session gates new tools and pauses owned tasks. resume-session releases the gate and only resumes tasks paused by the session action. Individually paused tasks need individual resume. stop-session keeps the gate closed until explicit resume-session. Pausing cannot undo completed writes or sent model requests.
 
-## Background and recovery boundaries
+While chat is running and idle, the plugin checks task completion and sends a stable-ID notification; the model reads output, reports results and continues only previously authorized work. Status events add no authorization. Delivery waits while the session is busy or paused. --no-task-notifications disables delivery for this invocation. Aborting/exiting chat holds notifications without implicitly stopping commands; resume the session and send a message to resume checking. There is no notification daemon outside a running chat.
 
-- Jobs are local noninteractive commands, with empty stdin and no PTY. They survive terminal/OpenCode exit. After reopening chat, use list/status/output to inspect them. Each job uses a private worker copy across program updates.
-- Existing ordinary Bash/TUI processes are not adopted. Synchronous native Bash may still delay new messages until it returns. During-command follow-ups apply when the long command uses local_ai_task and another synchronous tool is not blocking the main conversation.
-- No automatic model wake-up or periodic completion notification is provided. Return the task ID and stay conversational; the user or later tool calls inspect completion. Do not occupy the conversation with tight polling.
-- Control covers owned local process groups and descendants inheriting that group. Deliberate setsid/daemonization, remotely submitted SSH jobs, Slurm and container jobs require separate execution/cancellation adapters.
-- Reboot or worker loss never automatically replays a command. orphaned means the worker disappeared and a command may remain: inspect or request verified stop. lost means no live group members remain but final result/output is incomplete, never success.
-- Clarify ambiguous targets when multiple jobs run. Natural-language control depends on the model; use CLI for direct control. This is not an OS sandbox.
+Local workers and adapter controllers use private code copies and survive chat exit/program updates. Reboot does not automatically restore or replay commands. Uncertain states are not completion. orphaned means a lost worker with possibly live processes; lost means incomplete final results. Inspect identity before acting. Deliberately detached descendants may escape local group control. This is not an OS sandbox.
 
-## State, output and privacy
+## PTY input and adopting a process
 
-Private state/logs live under execution/ in the current user's state root, normally ~/.local/state/local-ai/execution, independent of endpoint. Directories are mode 0700, bound to resolved project paths and session identities. The tool rejects cross-session/project control; CLI can explicitly manage the current user's jobs by ID. This does not synchronize across users or BCM hosts.
+```bash
+./local-ai client job start --interactive --command 'read -r answer; echo "$answer"'
+./local-ai client job input JOB_ID --data $'hello\n' --request-id answer-1
+./local-ai client job adopt --pid 123456
+```
 
-start requires a stable request_id. Repeating the same operation in one session/project returns the original job; changed arguments are rejected. CLI creates a new key by default; supply --request-id when retrying. remove deletes terminal job files/logs but retains a replay-prevention tombstone. An intentional new run needs a new key.
+PTY is local/new-task only. input accepts 1..16384 UTF-8 bytes including explicit newlines, with stable request_id deduplication; at most 64 pending inputs and 4096 input keys. adopt requires a same-user independent process-group leader and rejects the caller's ancestry. It neither reruns the command nor reattaches stdout/terminal. Natural exit is exited with unknown exit code, not proven success. Arbitrary existing TUIs cannot automatically become interactive managed tasks.
 
-output uses byte offset/next_offset, with 16384 bytes per page by default and a range of 1..65536. Reuse next_offset until terminal and all_output_delivered=true. text is a readable UTF-8 preview and may replace characters split across pages; data_base64 preserves exact bytes. Explain any truncated=true gap instead of presenting the remainder as complete.
+## SSH, Slurm and containers
 
-Default timeout is 3600 wall seconds including pauses, maximum 604800. Each state root permits 32 unfinished jobs; combined stdout/stderr is limited to 64 MiB per job. Overflow stops the job as output_limit/truncated, never success. Other terminal states are completed, failed, cancelled, timed_out and lost; command exit status is exit_code. Existing tasks/report diagnostics remain distinct from client job execution.
+```bash
+./local-ai client job start --adapter ssh --host GPU001 --remote-project /raid/work --command 'sleep 30; echo done'
+./local-ai client job start --adapter slurm --project /home/alice/project --submit-arg=--mem=128M --command 'hostname'
+./local-ai client job start --adapter container --host GPU001 --image MY_PREPARED_IMAGE --command 'echo done'
+```
 
-Commands, arguments and output can contain secrets: keep them private. Public offline exports exclude these records. Execution asks for native Bash permission and external_directory permission for outside paths; explicit Bash denial prevents execution through the custom tool.
+Remote options require explicit --adapter. SSH requires Python 3 and noninteractive SSH on the target; the absolute target directory must exist. Slurm submits locally unless --host is supplied; the project/output directory must be shared between submit and compute hosts. One CPU is requested by default; memory uses site defaults unless explicitly supplied through --submit-arg. GPUs are not requested implicitly. --remote-project applies to SSH/Slurm.
 
-[Parameters and exit codes](commands.md#managed-command-tasks-development-main) · [Measurements](client-steering.md) · [中文](../execution.md)
+Containers use prepared images only (--pull=never), NVIDIA_VISIBLE_DEVICES=void by default, no GPU allocation, no automatic project mounts, and the image's working directory. Docker permissions are required on the target. Remote containers use --host; local clients otherwise need no Docker. Remote PTY is unsupported. The same job ID supports status/output/pause/resume/stop; verify actual backend state after cancellation. Container labels, Slurm owner/job name and remote process identity are checked. Unreachable/unknown backends are not resubmitted.
+
+## Output, limits and privacy
+
+State defaults to ~/.local/state/local-ai/execution, scoped by user, real project path and session, independently of endpoint. Tools reject cross-session/project management; the current user can explicitly manage their own job IDs through CLI. Directories are 0700 and files 0600. Commands/input/output can contain sensitive content and are excluded from public offline exports and history migration archives.
+
+output defaults to 16384 bytes; --limit accepts 1..65536. Reuse next_offset until terminal and all_output_delivered=true. text is a UTF-8 preview with possible replacement at page boundaries; data_base64 preserves bytes. Report any truncated=true coverage gap.
+
+Default timeout is 3600 wall seconds including pauses, maximum 604800, with at most 32 unfinished tasks per state root. Local/SSH output above 64 MiB stops the task and marks a gap. Container snapshots retain at most 64 MiB and flag overflow/rotation without stopping the container. Slurm logs are paged on demand. Evaluate completed/failed/cancelled/timed_out with exit_code. A management command exiting 0 means the request was processed, not that its task succeeded.
+
+[Parameters](commands.md#managed-command-tasks-v200) · [Measurements](client-steering.md) · [中文](../execution.md)

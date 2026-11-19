@@ -1,60 +1,70 @@
 # 长命令托管、插话与暂停/停止
 
-这是 v1.4.4 标签之后开发主线的新能力，原 v1.4.4 下载包不包含。更新客户端程序后退出并恢复聊天，新启动的 OpenCode 会加载 local_ai_task；不需要重启模型服务器。保留已验收 OpenCode 1.19.5。
+v2.0.0 包含自动 Bash 托管、完成通知、PTY 输入及 SSH/Slurm/容器适配。更新程序后退出并恢复聊天以加载插件，无需重启模型服务；参考客户端仍为 OpenCode 1.19.5。
 
 ## 最简单的用法
 
-在聊天里说：“把这条长命令作为后台任务执行，告诉我任务 ID，然后继续回答我的问题。”助手应使用 local_ai_task start，立即返回 job_ 开头的 ID。任务执行中可以继续提问，也可说“暂停当前会话的任务”“恢复”“停止当前会话的任务”。权限仍由原生客户端和账户控制；模型是否正确选择工具与理解要求需实际确认。
+聊天中直接要求执行长命令；默认交互模式下，普通 Bash 短命令等待约 400 ms，较长命令转为托管任务并返回 job_ ID，随后可以继续提问。也可明确要求“用后台任务执行，完成后告诉我结果”。助手通过 local_ai_task 操作任务。启动成功不代表任务完成。
 
-也可以在 BCM 上直接使用终端，不依赖模型：
+有按命令匹配的 Bash 权限规则时保留原生解析器，普通 Bash 仍同步；明确使用 local_ai_task 托管。--sync-bash 可手动保留原生 Bash。其他同步工具仍可能阻塞消息，不能保证任何场景都即时响应。[批处理](automation.md)默认使用同步 Bash，便于串联实际结果。
 
-```bash
-cd /home/alice/project
-/raid/local-ai/local-ai client job start --command 'sleep 30; echo done'
-/raid/local-ai/local-ai client job list
-```
-
-把以下 JOB_ID 换成返回的 job_ 标识：
+直接在当前项目运行：
 
 ```bash
-/raid/local-ai/local-ai client job status JOB_ID
-/raid/local-ai/local-ai client job pause JOB_ID
-/raid/local-ai/local-ai client job resume JOB_ID
-/raid/local-ai/local-ai client job stop JOB_ID
-/raid/local-ai/local-ai client job output JOB_ID
+./local-ai client job start --command 'sleep 30; echo done'
+./local-ai client job list
+./local-ai client job status JOB_ID
+./local-ai client job output JOB_ID
+./local-ai client job pause JOB_ID
+./local-ai client job resume JOB_ID
+./local-ai client job stop JOB_ID
+./local-ai client job remove JOB_ID
 ```
 
-start 表示已提交，不能当作完成。pause/stop 返回 control_requested 也不是已经暂停/退出；随后查看 status，分别确认 paused 或 terminal=true。停止先发送 TERM，并唤醒暂停进程以便退出，一秒后仍未退出则 KILL；只对核实身份的自有进程组操作。
+pause/stop 的 control_requested 仅表示请求已记录；随后 status 确认 paused 或 terminal=true。停止本机任务先 TERM，唤醒暂停进程，一秒后必要时 KILL，只作用于核验身份的自有进程组。remove 只接受终态，保留防重放键；有意重新执行使用新 request_id。
 
-会话级控制需要准确的 OpenCode ses_ 标识和原项目路径；两者可从 job list 返回值查到。CLI 自己创建的任务默认 session=cli：
+## 会话、通知与后台生命周期
 
 ```bash
-/raid/local-ai/local-ai client job pause-session --session SES_ID --project /home/alice/project
-/raid/local-ai/local-ai client job resume-session --session SES_ID --project /home/alice/project
-/raid/local-ai/local-ai client job stop-session --session SES_ID --project /home/alice/project
+./local-ai client job pause-session --session SES_ID --project /home/alice/project
+./local-ai client job resume-session --session SES_ID --project /home/alice/project
+./local-ai client job stop-session --session SES_ID --project /home/alice/project
 ```
 
-pause-session 关闭该会话的新工具入口，并请求暂停其托管任务；resume-session 显式放行，只恢复因会话暂停的任务，单独暂停的任务需单独恢复。stop-session 停止该会话自有任务且保持入口关闭，继续工作前必须显式 resume-session。暂停不撤销已经完成的写入，也不会撤回已发出的模型请求。已进入执行中的普通原生工具不能追溯托管。
+SES_ID 是 job list 中准确的 ses_ 标识；CLI 创建任务默认 session=cli。pause-session 关闭该会话新工具入口并暂停自有任务；resume-session 放行并恢复因会话暂停的任务。单独暂停的任务需单独恢复。stop-session 保持入口关闭，继续前显式 resume-session。暂停不会撤销已完成写入或已发出的模型请求。
 
-## 后台与恢复的边界
+聊天仍运行且空闲时，插件检查完成状态，发送带稳定消息 ID 的通知，模型读取输出后汇报、继续此前已授权工作。通知只代表状态，不增加授权；用户忙于其他消息或会话已暂停时推迟。--no-task-notifications 关闭本次聊天的通知。退出/中断聊天会暂缓通知，不隐式停止后台命令；恢复会话并发送消息后继续检查。没有常驻聊天之外的通知守护进程。
 
-- 任务是本机非交互命令，stdin 为空，无 PTY。可脱离终端和 OpenCode 生命周期；重新打开聊天后用 list/status/output 接续查看。程序升级时每个任务使用自己的 worker 副本。
-- 不把已运行的普通 Bash 或 TUI 自动移入后台；普通同步 Bash 仍可能让新消息等到命令返回。即时插话能力适用于长命令走 local_ai_task、主会话没有被其他同步工具阻塞的路径。
-- 没有自动唤醒模型或定时发送完成通知。助手返回任务 ID 后保持可对话，用户或后续工具调用查询结果；不要用紧密轮询占住会话。
-- 只管理当前用户、本机自有进程组及继承该组的子进程。不保证终止主动 setsid/守护化的后代、远端 SSH 已提交作业、Slurm 或容器内部作业；这些需要专门的执行适配和取消接口。
-- 机器重启、worker 异常退出不自动重放。orphaned 表示 worker 丢失且命令可能仍运行，应检查或请求身份核验后的 stop；lost 表示已无存活组成员但最终结果/输出不完整，不能报成功。
-- 多个任务指向不明时应先明确目标。自然语言指令由模型选择工具；要求直接控制时使用 CLI。这里没有加入操作系统沙箱。
+本机 worker 和适配控制器各有代码副本，可跨聊天退出、程序升级继续运行；机器重启不自动恢复或重放。未知/失联状态不能报告完成。orphaned 表示 worker 丢失且进程可能仍在，lost 表示结果不完整；应核验后处理。主动 setsid 的后代不保证被本机进程组控制。没有新增操作系统沙箱。
 
-## 状态、输出和隐私
+## PTY 输入与接管已有进程
 
-状态和日志位于当前用户私有状态根的 execution/，默认 ~/.local/state/local-ai/execution；不以 endpoint 分目录，按项目真实路径与会话标识绑定，目录 0700。工具拒绝跨会话/项目管理；当前用户可通过 CLI 明确 job ID 管理自己的任务。不是跨用户或跨 BCM 同步。
+```bash
+./local-ai client job start --interactive --command 'read -r answer; echo "$answer"'
+./local-ai client job input JOB_ID --data $'hello\n' --request-id answer-1
+./local-ai client job adopt --pid 123456
+```
 
-start 必须使用稳定 request_id；同一会话/项目重复提交同一操作返回原任务，参数不同则拒绝。CLI 默认每次生成新键，重试需要显式 --request-id。终态任务可 remove，删除日志和 worker，但保留防重放键；有意重新执行必须用新键。
+PTY 仅限本机新任务；input 每次 1..16384 UTF-8 字节，换行需显式传入。稳定 request_id 防止重复输入；最多 64 条排队、4096 个输入键。adopt 只接管同用户、独立进程组的组长 PID，拒绝当前调用链；不重新执行命令、不重接 stdout/终端。自然退出为 exited、退出码未知，不能当作成功。不能自动把任意已运行 TUI 改为可输入后台任务。
 
-output 的 offset/next_offset 按字节计，默认每页 16384、范围 1..65536。继续传回 next_offset，直到终态且 all_output_delivered=true。text 是便于阅读的 UTF-8 预览，跨页字符可能被替换；data_base64 可精确还原原始字节。truncated=true 必须说明缺口，不能将剩余输出当作完整结果。
+## SSH、Slurm 与容器
 
-默认每任务超时 3600 秒，含暂停时间，最大 604800 秒；每个状态根最多 32 个未结束任务，每任务最多保留 64 MiB 合并 stdout/stderr，超限停止并标记 output_limit/truncated，不能报成功。终态还包括 completed、failed、cancelled、timed_out、lost；业务退出码在 exit_code 中。诊断 tasks/report 仍只是运行记录，与 client job 分开。
+```bash
+./local-ai client job start --adapter ssh --host GPU001 --remote-project /raid/work --command 'sleep 30; echo done'
+./local-ai client job start --adapter slurm --project /home/alice/project --submit-arg=--mem=128M --command 'hostname'
+./local-ai client job start --adapter container --host GPU001 --image MY_PREPARED_IMAGE --command 'echo done'
+```
 
-命令、参数与输出可能包含敏感信息，仅留在用户私有目录；公共离线导出不包含这些记录。执行仍请求原生 Bash 权限，外部目录仍请求 external_directory 权限；Bash 明确拒绝时不会借新工具执行。
+明确 --adapter 才使用远端选项。SSH 需目标可用 Python 3、非交互 SSH；远端目录必须存在且为绝对路径。Slurm 默认本机提交，可 --host 指定提交机；项目及输出文件所在目录须在提交机与计算节点共享。默认一 CPU，内存沿用站点默认值，按需显式传 --submit-arg；不自动申请 GPU。--remote-project 适用于 SSH/Slurm。
 
-[完整参数与退出码](commands.md#托管命令任务开发主线) · [测量与复现](client-steering.md) · [English](en/execution.md)
+容器只使用已存在镜像，--pull=never；默认 NVIDIA_VISIBLE_DEVICES=void，不分配 GPU，不自动挂载项目，工作目录沿用镜像。容器需要目标 Docker 权限。本机无需 Docker，远端容器需 --host。没有远端 PTY。状态、输出及 pause/resume/stop 复用同一 job ID；取消后必须查询调度器/容器的实际状态。容器标签、Slurm 用户与作业名、远端进程身份均校验；后端失联为 unreachable/unknown，不重新提交未知作业。
+
+## 输出、限制与隐私
+
+状态根默认 ~/.local/state/local-ai，execution/ 按用户、项目真实路径、会话隔离，与 endpoint 无关。工具拒绝跨会话/项目控制；当前用户可在 CLI 明确 job ID 管理自己的任务。目录 0700、文件 0600。命令/输入/输出可能含敏感信息，不进入公共离线包或历史迁移包。
+
+output 默认 16384 字节，--limit 范围 1..65536；复用 next_offset 直到终态且 all_output_delivered=true。text 是 UTF-8 预览，跨页字符可能替换；data_base64 能还原原始字节。truncated=true 必须报告缺口。
+
+默认超时 3600 秒（含暂停），最大 604800 秒；每状态根最多 32 个未结束任务。本机/SSH 合并输出超过 64 MiB 停止并标记缺口；容器只保留至多 64 MiB 快照，超量/轮转标记缺口，不因此停止容器。Slurm 日志按需分页。completed/failed/cancelled/timed_out 等状态与 exit_code 一起判断；控制命令退出 0 表示请求处理成功，不代表任务成功。
+
+[完整参数](commands.md#托管命令任务v200) · [测量与验收](client-steering.md) · [English](en/execution.md)

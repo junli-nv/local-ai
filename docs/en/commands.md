@@ -20,7 +20,7 @@ Reports include original endpoint/model, status, resume argv, tools and unresolv
 Verify files, jobs and external effects before resuming; calls are never automatically replayed.
 Process exit does not establish completion of external jobs.
 
-chat --run-timeout defaults to 0 (unlimited), applies only to --run, in seconds.
+chat --run-timeout defaults to 0 (unlimited), applies to all batch entry points, in seconds.
 Timeout cleans the local client process group and exits 124; Ctrl+C exits 130 and SIGTERM exits 143 after cleanup.
 Neither undoes files or remote actions. --heartbeat defaults to 15 seconds; 0 disables batch stderr progress.
 --direct-api bypasses the temporary API observer while retaining native event/task records.
@@ -386,7 +386,7 @@ Choose [installed-environment migration](offline.md#scenario-1-export-an-install
 | --state-dir | Private history/cache/log root, default described above |
 | --model | Served API model ID; installed model first, otherwise the catalog default served_name |
 | --check | Check connection/model; report ready, actual endpoint, model and log path, then exit |
-| --run 'task' | Run one prompt, stream JSON events, save full logs and exit; omit for interactive use |
+| --run 'task' | Legacy single prompt, default text; --format json preserves native events; omit for interactive |
 
 On bcm-headnode as alice:
 
@@ -537,7 +537,7 @@ web_ready indicates stdlib reader availability, not network reachability; diagno
 
 ## Program updates
 
-The development-main updater adds --check (read-only activity scan; exit 3 when not ready) and --allow-active-clients (explicit program-only continuation without signals). Backups include a recovery script, not history. Obtain the new updater first; the original v1.4.4 script lacks these flags. See [activity checks](update.md#development-main-check-active-clients-before-updating).
+The v2.0.0 updater adds --check (read-only activity scan; exit 3 when not ready) and --allow-active-clients (explicit program-only continuation without signals). Backups include a recovery script, not history. Obtain the new updater first; older helpers may lack these flags. See [activity checks](update.md#check-active-clients-before-updating).
 
 The standalone Python helper scripts/update.py is independent of ./local-ai subcommands. For --root, --version, --archive, --sha256 and --rollback, complete examples, backups and exit codes, use the [update guide](update.md). It never installs images/models/clients or restarts inference. Model/image changes and native OpenCode upgrades remain separate operations.
 
@@ -565,19 +565,19 @@ docker rm local-ai-a
 
 Exit relevant clients before backing up their private state. Never commit history, credentials or raw logs. Server logs are DATA_DIR/instances/NAME/server.log; installation/preparation logs are DATA_DIR/install.log. Client logs live under private services/ID/logs/session-.../. Plan image, weight and user-state backups separately.
 
-Most management commands return JSON. chat returns the client's exit code; single-prompt runs stream JSON events. Invalid arguments and failures exit nonzero. For a traceback, use ./local-ai --debug GROUP COMMAND OPTIONS.
+Most management commands return JSON. chat returns the client's exit code; single-prompt runs default to readable text; --format json returns native events. Invalid arguments and failures exit nonzero. For a traceback, use ./local-ai --debug GROUP COMMAND OPTIONS.
 
 No automatic load balancing, user quotas, boot startup, cross-host TP or GPU scheduling is provided. Allocate dedicated, available GPU resources before startup. The application does not require a cluster scheduler. See [validation](validation.md) for B300/GB300 evidence and remaining acceptance work.
 
 Select external model recipes with LOCAL_AI_CATALOG; see [compatibility](development.md#model-and-client-compatibility).
 
-## Managed command tasks (development main)
+## Managed command tasks (v2.0.0)
 
-client job is newer than the v1.4.4 tag; see [short examples and limits](execution.md). Run on the BCM executing the command, without model requests. All subcommands accept --state-dir (default private user root ~/.local/state/local-ai); data is under execution/. Output is JSON. Exit 0 means the request was processed, 1 means validation/launch failure, 2 means argument error. Querying failed/cancelled jobs still exits 0: inspect state/terminal/exit_code for command success.
+v2.0.0 includes client job; see [short examples and limits](execution.md). Run on the BCM executing the command, without model requests. All subcommands accept --state-dir (default private user root ~/.local/state/local-ai); data is under execution/. Output is JSON. Exit 0 means the request was processed, 1 means validation/launch failure, 2 means argument error. Querying failed/cancelled jobs still exits 0: inspect state/terminal/exit_code for command success.
 
 | Subcommand | Options and defaults |
 |---|---|
-| client job start | Required --command passed explicitly to /bin/bash -lc; --project defaults to current directory; --session cli; --request-id creates a new key unless supplied for retries; --timeout 3600 positive wall seconds, maximum 604800, including pauses |
+| client job start | Required --command passed to /bin/bash -lc on the selected backend; --project defaults to current directory; --session cli; --request-id creates a new key unless supplied for retries; --timeout 3600 positive wall seconds, maximum 604800, including pauses |
 | client job list | No required options; current user's newest 100 jobs, with session/project |
 | client job status JOB_ID | Required job ID; status, terminal flag and exit code |
 | client job output JOB_ID | --offset 0 bytes; --limit 16384, range 1..65536; reuse next_offset until terminal and all_output_delivered=true |
@@ -590,3 +590,24 @@ client job is newer than the v1.4.4 tag; see [short examples and limits](executi
 | client job stop-session | Required --session; --project defaults to current directory and must match the original; stop keeps the gate closed until explicit resume-session |
 
 Chat tool local_ai_task exposes start/list/status/output/pause/resume/stop/remove/pause_session/resume_session/stop_session. start requires argv (argument array, no implicit shell) and request_id; cwd defaults to project, timeout as above. job_id identifies task actions; offset/limit match CLI. Client-supplied identity rejects cross-session/project access. Starts still request native Bash permission and external-directory access where needed. Restoring state never automatically replays commands.
+
+
+## Batch, history portability and doctor (v2.0.0)
+
+[Minimal examples and migration steps](automation.md).
+
+| Entry | Options and defaults |
+|---|---|
+| chat run [PROMPT] | Positional prompt or --prompt-file PATH; - reads stdin; no prompt plus nonterminal stdin also reads stdin. One UTF-8 source, nonempty, maximum 1 MiB |
+| chat --format | text (default) or json native events; applies to legacy --run too. Progress/errors use stderr |
+| chat --sync-bash | Keep synchronous native Bash in interactive chat; batch always does so |
+| chat --no-task-notifications | Disable completion messages for this invocation |
+| client job start | --adapter local (default), ssh, slurm or container; --host SSH target; --remote-project target cwd for SSH/Slurm; --image required for container; repeat --submit-arg for Slurm options; --interactive local PTY only |
+| client job adopt | Required --pid process-group leader; --project current directory, --session cli, --timeout 3600, optional --request-id; no stdout reattachment |
+| client job input JOB_ID | Required --data UTF-8 text, optional --request-id; explicit newline, 1..16384 bytes |
+| client history backup | Required --output new private ZIP; --state-dir private user root |
+| client history restore | Required --archive; --client-dir installed native assets, --endpoint saved default (required if unset), optional --select and --project; --state-dir destination private root |
+| client history select HISTORY_ID | Select populated imported/existing history; --state-dir private user root |
+| client doctor | --state-dir private user root, --client-dir installed assets, --endpoint/--model saved defaults; --check-endpoint opt-in; --limit 20 (1..1000) |
+
+Management output is JSON: exit 0 means processed (inspect issues/state), 1 validation/launch error, 2 argument error. Task failure does not change management exit 0. local_ai_task additionally accepts input/data, interactive, adapter/host/remote_project/image/submit_args; start request_id and input request_id are stable keys. Adoption is explicit CLI only. SSH/Slurm/container controls confirm actual backend state; see [limits](execution.md).

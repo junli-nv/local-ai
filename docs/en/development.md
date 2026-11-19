@@ -86,17 +86,17 @@ Chinese is primary; maintain English separately and synchronize both entry paths
 | Develop before GB200/Rubin hardware is available | Add only an ARM64 GB200 TP4 candidate. Evaluate Rubin TP2 with CPU Engram from its 288GB/GPU nominal capacity, retaining a planning-only framework and unresolved image/memory guards. Mark fixtures synthetic; pure plans must not probe hardware or write files. Preserve existing recipes and acceptance levels |
 | Pull failure appears to mean missing image | Separate expected inspect absence from pull failure; show actual error and full log path. Missing metadata.db concerns Docker/containerd storage |
 | Share image/model materials | Share weights/export archives separately from active databases. --data-dir does not move Docker/containerd storage. Validate new storage schemes |
-| BCM already reaches GPU | Use API endpoints; built-in model SSH tunnels/client doctor are removed. External frp/nginx handle forwarding; operational SSH remains available |
+| BCM already reaches GPU | Use API endpoints; built-in model SSH tunnels and their old doctor are removed; v2 doctor is local aggregate diagnostics. External frp/nginx handle forwarding; operational SSH remains available |
 | Connect via host IP | Explicit --host; 0.0.0.0 binds, while endpoints use a real host/IP. Preserve existing network/listener settings |
 | Container runs without visible progress | Show logs and startup/loading/readiness/failure. READY requires health, not docker ps, a port or blank curl output |
-| Unclear logs/status | install.log for preparation; instances/NAME/server.log for runtime. Clear messages, JSON stdout, progress stderr and meaningful exit codes |
+| Unclear logs/status | install.log for preparation; instances/NAME/server.log for runtime. Clear messages, management JSON stdout, batch text by default, progress stderr and meaningful exit codes |
 | Native resume loses context | opencode -s ID restores the associated endpoint and original project/private state using public metadata, handling empty lists and project scope without private database tables |
 | Application copying fails | Default terminal selection/copy/paste; disable application mouse/clipboard shortcuts. Explain disabled click/wheel behavior and verify terminal modes |
 | Fixed release blocks upgrades/offline use | Reference releases are validation records, not runtime allowlists. Reuse installs, detect imports, allow explicit releases/offline exports and test capabilities |
 | Models/revisions change | Configure recipe identities, directories, names, engine/client capabilities and separate locks; do not inherit hardware acceptance or DeepSeek-specific settings |
 | Directory installation and migration | The unpacked directory is the root, with ordinary src/. install prepares assets in place; export writes a complete dist/ bundle excluding dist/, instance state, histories and credentials. Reinstall/reconfigure after moving |
 | One BCM, multiple model services | Initial endpoint is optional; config saves defaults and chat --endpoint/--model override one invocation. User-private history is independent of server and installation paths, including ad-hoc routes. Preserve session project directories. Inspect legacy records with client history list and associate once if needed, without database copies, nonempty-history merging, model guessing or endpoint fallback |
-| Source-script delivery | Synchronize remote main and tags first. The user requested the v1.4.4 general-template and message-response baseline tag, preserving prior tags. Future tags still require explicit requests and a CI-passed commit; no automatic Release |
+| Source-script delivery | Synchronize remote main and tags first. The user requested the v2.0.0 managed execution, portability and batch tag, preserving prior tags. Future tags still require explicit requests and a CI-passed commit; no automatic Release |
 | Single-user speed and first-use compilation spikes | Keep the baseline unchanged; opt into DSpark and explicit bounded warmup. Separate API READY from WARMUP COMPLETE, persist compiler caches per recipe, invalidate completion on restart, and report actual coverage and concurrency tradeoffs |
 | Around 400 ms TTFT seems high | Record method, input size, cache/load and timing first. Separate compilation, generation delay and reasoning content; avoid one-number conclusions |
 
@@ -105,10 +105,13 @@ this section records design reasons.
 
 ### Current backlog state (2026-11-19)
 
-- Implemented on development main: updater activity checks, explicit program-only continuation, standalone rollback helper and program/history backup boundaries; see [updates](update.md#development-main-check-active-clients-before-updating). Linux scanning is not a launch lock.
-- Execution adapter implemented: local_ai_task/client job provide identities, background lifetime, pause/resume/stop, output cursors and replay prevention. Managed API/TUI delivery and native controls/denial tests pass. Native synchronous Bash remains after_tool; retain 1.19.5. See [usage](execution.md) and [results](client-steering.md).
-- Later: private cross-BCM history backup/recovery, automatic completion notifications, remote-job adapters, aggregate diagnostics. Program backup is not history backup; tasks/report logs are not background execution.
-- KV offloading and tar extraction remain low priority. No inference recipe change or new tag/Release this round.
+- v2.0.0 includes updater activity checks, explicit program-only continuation and standalone rollback; history backups remain separate.
+- Implemented: automatic interactive Bash backgrounding, owned task/session control, PTY/input/adoption, automatic completion messages, SSH/Slurm/container adapters, private history backup/restore/select and combined doctor.
+- Batch defaults to text, with explicit --format json compatibility. Files/stdin provide one prompt source. Keep these contracts in both languages and real source archives.
+- Actual-model controls, notifications and relocated-history continuation passed on BCM/HGX260. Native mock checks cover API/TUI timing and permission preservation; real CPU SSH/Docker/Slurm controls were verified. This is functional coverage, not a latency SLA or GPU performance acceptance.
+- KV offloading and tar extraction remain low priority. Remote PTY, reboot replay and arbitrary TUI reattachment are not implemented.
+- The user requested major tag v2.0.0. Fetch before edits and again before publication; tag the exact CI-passed commit, preserve old tags, and do not create a Release automatically.
+
 
 ### Low-priority backlog: KV cache offloading
 
@@ -167,7 +170,7 @@ through its client configuration.
 3. Keep GPU policy, server CPU/image platform and client architecture independent. Add profiles and inventory fixtures; never hardcode real hosts or GPU UUIDs.
 4. Generate engine arguments through profiles.py. Pin model revisions and image manifest/platform digests rather than mutable tags.
 5. Plans with supplied inventory must not spawn processes or write files. Validate live occupancy, CDI and platform at start.
-6. Route installation diagnostics through installlog.py, keeping JSON stdout separate from progress stderr. Expected missing-object probes are not installation failures.
+6. Route installation diagnostics through installlog.py, keeping management JSON stdout separate from progress stderr, with explicit JSON mode for batch. Expected missing-object probes are not installation failures.
 7. Validate local artifacts; distinguish verified and unverified provenance without fabricating locks. Preserve both archive checksums and imported-image content identity.
 8. Run the unittest, Ruff and diff checks below. Fix failures without deleting or weakening existing acceptance tests.
 9. Record hardware/version/method/results/limits for real GPU tests. CPU tests alone never promote a hardware validation level.
@@ -372,7 +375,7 @@ original backup when downgrading across incompatible database migrations.
 
 ## Delivery and version labels
 
-The user requested a new v1.4.4 tag for general-template updates, prompt-source documentation and the message-response baseline probe. The development baseline is 97a8e25 and the latest existing remote tag is v1.4.3; preserve prior versions. Offline tar extraction optimization remains a low-priority follow-up.
+Historical v1.4.4 work requested a new tag for general-template updates, prompt-source documentation and the message-response baseline probe. The development baseline is 97a8e25 and the latest existing remote tag is v1.4.3; preserve prior versions. Offline tar extraction optimization remains a low-priority follow-up.
 
 
 The user requested committing, pushing and adding the v1.4.1 annotated tag; this does not automatically create a GitHub Release. Retain the v1.4.0 and historical v1.3.7 tags and acceptance records. The v1.4.0 GitHub Release was withdrawn at the user's earlier request; withdrawn version tags are not reused. Development continues on main/exact commits, with support limited by the validation record. Tests and CI are basic requirements; future tags require an explicit user request and do not automatically create GitHub Releases.
@@ -397,4 +400,7 @@ execution.py uses only Python stdlib; execution.mjs reuses the existing native S
 
 Beyond full tests/Ruff, run check-steering.py in default and --managed modes, plus check-execution.py controls/denied. Preserve the synchronous baseline and native permissions. Cover stable keys, replay prevention, process identity, failed startup checkpoints, pause gates, confirmed stop, worker loss, output truncation and terminal exit. Client-contract CI retains private fixture evidence.
 
-Live-model interpretation/tool selection, remote cancellation and strict airgap require separate acceptance; mock API results do not establish those. Synchronize [usage](execution.md), commands, architecture, offline and validation in both languages, explicitly distinguishing development main from old tagged downloads.
+Real-model control/notifications/history relocation and real SSH/Slurm/container cancellation are recorded in v2.0.0 validation; strict airgap remains unverified. Mock API results alone do not establish live behavior. Synchronize [usage](execution.md), commands, architecture, offline and validation in both languages, explicitly distinguishing development main from old tagged downloads.
+
+
+v2.0.0 maintenance: retain each adapters.py controller copy with its task. Ship batch/portability modules in source and wheels. Recheck enhanced, policy and authorized live-model acceptance, including stable notice IDs, relocated project use, input idempotency and backend identity. Never upload private archives to CI or public packages.

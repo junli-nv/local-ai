@@ -91,6 +91,8 @@ def run(options):
                 str(output / "state"),
                 "--project",
                 str(workspace),
+                "--format",
+                "json",
                 "--run-timeout",
                 str(options.timeout),
                 "--run",

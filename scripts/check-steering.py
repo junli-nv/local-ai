@@ -265,6 +265,8 @@ def run_case(assets, root, mode, hold, timeout, evidence, managed=False):
                 state, assets, session, f"http://127.0.0.1:{api.server_port}/v1", MODEL, project
             )
         # All native config, cache and history paths are disposable; no personal rules are loaded.
+        env["LOCAL_AI_ASYNC_BASH"] = "false"
+        env["LOCAL_AI_NOTIFICATIONS"] = "false"
         cfg = json.loads(env["OPENCODE_CONFIG_CONTENT"])
         cfg["permission"] = {"*": "allow"}
         atomic_json(Path(env["OPENCODE_CONFIG"]), cfg)

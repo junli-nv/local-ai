@@ -249,3 +249,59 @@ class ExecutionTests(unittest.TestCase):
         records = e.perform(self.root, "list")
         self.assertEqual(len(records), 1)
         self.assertEqual(records[0]["state"], "failed")
+
+    def test_pty_input_completes_after_launcher_returns_and_deduplicates(self):
+        job = self.launch(
+            "import os; print('TTY',os.isatty(0),flush=True); print('VALUE='+input(),flush=True)",
+            interactive=True,
+        )
+        self.wait(job["id"], lambda x: x["output_bytes"] > 0)
+        args = dict(job_id=job["id"], data="hello\n", request_id="first")
+        e.perform(self.root, "input", **args)
+        repeated = e.perform(self.root, "input", **args)
+        self.assertTrue(repeated["reused"])
+        final = self.wait(job["id"], lambda x: x["terminal"])
+        self.assertEqual(final["state"], "completed")
+        output = e.perform(self.root, "output", job_id=job["id"])
+        self.assertIn("TTY True", output["text"])
+        self.assertEqual(output["text"].count("VALUE=hello"), 1)
+
+    def test_adopt_pause_stop_and_unknown_exit_status(self):
+        child = subprocess.Popen(
+            [sys.executable, "-c", "import time;time.sleep(30)"], start_new_session=True
+        )
+        try:
+            job = self.launch("not executed", key="adopt", adopt_pid=child.pid)
+            self.wait(job["id"], lambda x: x["state"] == "running")
+            e.perform(self.root, "pause", job_id=job["id"])
+            self.wait(job["id"], lambda x: x["state"] == "paused")
+            e.perform(self.root, "stop", job_id=job["id"])
+            final = self.wait(job["id"], lambda x: x["terminal"])
+            self.assertEqual(final["state"], "cancelled")
+            self.assertIsNone(final["exit_code"])
+            self.assertTrue(final["output_truncated"])
+            child.wait(timeout=3)
+            self.assertEqual(
+                self.launch("not executed", key="adopt", adopt_pid=child.pid)["id"], job["id"]
+            )
+            with self.assertRaises(ValueError):
+                self.launch("no", adopt_pid=os.getpid())
+        finally:
+            if child.poll() is None:
+                child.kill()
+            child.wait()
+
+    def test_notifications_are_leased_scoped_and_held_by_pause(self):
+        job = self.launch("print('finished')")
+        self.wait(job["id"], lambda x: x["terminal"])
+        args = dict(session="ses_test", project=str(self.project))
+        e.perform(self.root, "pause_session", **args)
+        self.assertIsNone(e.perform(self.root, "notice_claim", consumer="one", **args))
+        e.perform(self.root, "resume_session", **args)
+        claim = e.perform(self.root, "notice_claim", consumer="one", **args)
+        self.assertEqual(claim["id"], job["id"])
+        self.assertIsNone(e.perform(self.root, "notice_claim", consumer="two", **args))
+        with self.assertRaises(ValueError):
+            e.perform(self.root, "notice_ack", job_id=job["id"], consumer="two", **args)
+        e.perform(self.root, "notice_ack", job_id=job["id"], consumer="one", **args)
+        self.assertIsNone(e.perform(self.root, "notice_claim", consumer="one", **args))

@@ -29,6 +29,9 @@ class CompletionTests(unittest.TestCase):
         self.assertEqual(self.complete("document", "read", "a.pdf", "--mode", "r")[1], ["render"])
         self.assertEqual(self.complete("completion", ""), ("values", ["bash"]))
         self.assertIn("--project", self.complete("chat", "")[1])
+        self.assertIn("run", self.complete("chat", "")[1])
+        self.assertIn("--prompt-file", self.complete("chat", "run", "")[1])
+        self.assertEqual(self.complete("chat", "run", "--prompt-file", ""), ("files", []))
 
     def test_external_catalog_choices_are_live(self):
         data = catalog()

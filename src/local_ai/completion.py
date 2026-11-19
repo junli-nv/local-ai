@@ -71,7 +71,10 @@ def candidates(parser, words):
     if position < len(actions):
         action = actions[position]
         if action.choices is not None:
-            return "values", [str(v) for v in action.choices if str(v).startswith(prefix)]
+            values = [str(v) for v in action.choices if str(v).startswith(prefix)]
+            if not prefix and not positional_only and action.nargs in {"?", "*"}:
+                values.extend(sorted(parser._option_string_actions))
+            return "values", values
         if action.type is Path:
             return "files", []
     if not prefix and not positional_only:

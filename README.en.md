@@ -1,6 +1,6 @@
 # local-ai
 
-v1.4.4 updates general OpenCode instructions, documents Claude Code prompt sources, and adds an isolated probe for messages sent during execution. Measurements show the current client delivers follow-ups to the model after the command finishes; immediate responsiveness is not implemented. Automatic personal-rule installation is retained. See [release notes](docs/en/release-1.4.4.md).
+v2.0.0 adds managed execution, completion notifications, SSH/Slurm/container controls, private history migration and combined diagnostics. Batch chat now defaults to readable text and accepts files/stdin. Existing JSON consumers must use --format json. See [release notes](docs/en/release-2.0.0.md).
 
 [中文（默认）](README.md)
 
@@ -8,7 +8,7 @@ v1.4.4 updates general OpenCode instructions, documents Claude Code prompt sourc
 
 It connects a locally hosted model with tools in the terminal. Users describe a task; the assistant examines project files and actual command results, then uses tools within the scope of the user’s authorization. The project uses vLLM for inference and OpenCode for interaction and tool execution, bringing installation, connectivity, configuration and offline delivery into a reusable workflow.
 
-Development main adds local_ai_task managed commands: return a task ID, remain conversational, pause/resume/stop. Short CLI example: ./local-ai client job start --command 'sleep 30; echo done'. This is newer than the original v1.4.4 archive; update the program and exit/resume chat. Ordinary synchronous Bash is unchanged. See [usage and limits](docs/en/execution.md).
+[Managed execution](docs/en/execution.md) supports follow-ups, pause/resume/stop, PTY input and adopting owned groups. [Batch and migration](docs/en/automation.md) provides short examples: ./local-ai chat run "Task", ./local-ai chat run --prompt-file task.txt, or ./collect.sh | ./local-ai chat run --prompt-file -. Restart chat after updating to load the new plugins.
 
 ## What it helps with
 
@@ -33,7 +33,7 @@ The managed server currently uses the NVIDIA toolchain. See the profile table be
 
 ## Installation and usage
 
-The current version is v1.4.4. Examples download complete source from this tag; ./local-ai --version should report 1.4.4. See [validation](docs/en/validation.md) for acceptance scope and unvalidated platforms.
+The current version is v2.0.0. Examples download complete source from this tag; ./local-ai --version should report 2.0.0. See [validation](docs/en/validation.md) for acceptance scope and unvalidated platforms.
 
 ## Example conventions and documentation
 
@@ -56,7 +56,7 @@ Use appropriate sudo/Docker permissions; root may omit sudo. Data defaults follo
 | [Persistent instructions](templates/opencode/en/agent-instructions.md) | Automatic general/BCM templates, personal-rule backups, managed blocks, loading checks and prompt references (since v1.4.3) |
 | [Offline deployment](docs/en/offline.md) | Existing-installation migration or online preparation |
 | [Architecture](docs/en/architecture.md), [development](docs/en/development.md) | Design, extension and contributor handoff |
-| [Messages during execution](docs/en/client-steering.md), [managed tasks](docs/en/execution.md) | Synchronous baseline and development-main background tasks, follow-ups and pause/stop |
+| [Messages during execution](docs/en/client-steering.md), [managed tasks](docs/en/execution.md) | Synchronous baseline and v2 managed tasks, follow-ups and pause/stop |
 
 The [optimization and engine exploration record](docs/en/performance.md) preserves DSpark parameter choices, first-use compilation work, SGLang experiments and future comparison methods.
 
@@ -102,7 +102,7 @@ Download into an empty directory and check Docker, GPUs and CDI:
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.4.4.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v2.0.0.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ./local-ai --version
@@ -211,7 +211,7 @@ Log in as alice on bcm-headnode and use BCM's own empty directory:
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.4.4.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v2.0.0.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ```
@@ -309,7 +309,7 @@ Tasks include hardware troubleshooting, scripts, services and Slurm/Kubernetes j
 
 Use the [program update guide](docs/en/update.md) to update GPU and BCM installations separately while retaining resources, configuration and running instances. The standalone scripts/update.py supports explicit tags, local source archives and backup rollback, without install or resource preparation. v1.3.2 includes the updater; the guide also covers bootstrapping installations that lack it.
 
-The development-main updater offers --check and refuses detected client activity by default. Program backups include recovery tooling, not chat history; see [updates](docs/en/update.md#development-main-check-active-clients-before-updating).
+The v2.0.0 updater offers --check and refuses detected client activity by default. Program backups include recovery tooling, not chat history; see [updates](docs/en/update.md#check-active-clients-before-updating).
 
 ## Export and offline installation
 

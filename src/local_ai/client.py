@@ -10,7 +10,7 @@ import sys
 import time
 from pathlib import Path
 
-from . import __version__, history, native_cache, tasks, telemetry
+from . import __version__, batch, history, native_cache, tasks, telemetry
 from .artifacts import validate
 from .common import atomic_json, fingerprint, private_dir
 from .endpoint import endpoint_url, wait_endpoint
@@ -106,6 +106,7 @@ def prepare(state, assets, session, base, model, project):
     env = os.environ.copy()
     env.update(
         LOCAL_AI_RUN_DIR=str(session),
+        LOCAL_AI_PROJECT=str(project),
         LOCAL_AI_EXECUTION_DIR=str(
             (state.parent.parent if state.parent.name == "services" else state) / "execution"
         ),
@@ -138,6 +139,7 @@ def execute(command, project, env, logfile, prompt):
 
 
 def chat(options):
+    options.run = batch.prompt(options)
     timeout = getattr(options, "run_timeout", 0)
     heartbeat = getattr(options, "heartbeat", 15)
     if not all(math.isfinite(v) and v >= 0 for v in (timeout, heartbeat)):
@@ -216,6 +218,13 @@ def chat(options):
             "context_limit": client_options(options.model).get("limit", {}).get("context"),
         }
     )
+    env["LOCAL_AI_OUTPUT_FORMAT"] = getattr(options, "output_format", "json")
+    env["LOCAL_AI_BATCH"] = str(options.run is not None).lower()
+    if options.run is not None or getattr(options, "sync_bash", False):
+        # Batch pipelines require the command result, not a background submission ID.
+        env["LOCAL_AI_ASYNC_BASH"] = "false"
+    if getattr(options, "no_task_notifications", False):
+        env["LOCAL_AI_NOTIFICATIONS"] = "false"
     env["LOCAL_AI_RUN_TIMEOUT"] = str(timeout)
     env["LOCAL_AI_HEARTBEAT"] = str(heartbeat)
     observer = (

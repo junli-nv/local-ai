@@ -1,12 +1,12 @@
 # local-ai
 
-v1.4.4 更新通用 OpenCode 工作指令，标注 Claude Code 提示词参考来源，并增加执行期间补充消息的隔离测量。测量确认当前客户端仍会等待命令结束后才向模型交付补充消息，尚未实现即时响应。沿用客户端安装自动应用个人规则的功能，详见[发布说明](docs/release-1.4.4.md)。
+v2.0.0 增加任务托管与完成通知、SSH/Slurm/容器控制、私有会话迁移和汇总诊断。批处理默认返回可读文本，支持文件和 stdin；原 JSON 消费者需加 --format json。见[发布说明](docs/release-2.0.0.md)。
 
 **local-ai 是一个面向本地集群的 AI 工作助手，帮助用户通过自然语言完成系统运维、代码开发和日常文件处理。**
 
 它将本地大模型服务与终端中的工具执行结合起来：用户描述任务，助手结合工作目录中的文件和实际命令结果进行分析，并在用户授权范围内调用工具完成工作。项目使用 vLLM 提供模型推理、OpenCode 提供交互与工具能力，负责将两者的安装、连接、配置和离线交付组织成一套可复用流程。
 
-开发主线新增 local_ai_task 长命令托管：任务返回 ID 后可继续对话，支持暂停、恢复和停止。终端最短示例：./local-ai client job start --command 'sleep 30; echo done'。此能力不在原 v1.4.4 标签包内，更新程序并退出/恢复聊天后生效；普通同步 Bash 行为不变。见[用法与边界](docs/execution.md)。
+[托管执行](docs/execution.md)支持插话、暂停/恢复/停止、PTY 输入及接管自有进程组。[批处理与迁移](docs/automation.md)给出最短示例：./local-ai chat run "任务"、./local-ai chat run --prompt-file task.txt，以及 ./collect.sh | ./local-ai chat run --prompt-file -。更新程序后重新进入聊天以加载新插件。
 
 ## 能做什么
 
@@ -31,7 +31,7 @@ v1.4.4 更新通用 OpenCode 工作指令，标注 Claude Code 提示词参考�
 
 ## 安装与使用
 
-当前版本为 v1.4.4，以下示例下载该标签的完整源码。./local-ai --version 应显示 1.4.4，实际验收范围与未覆盖平台见[验证记录](docs/validation.md)。
+当前版本为 v2.0.0，以下示例下载该标签的完整源码。./local-ai --version 应显示 2.0.0，实际验收范围与未覆盖平台见[验证记录](docs/validation.md)。
 
 ## 示例约定与文档入口
 
@@ -54,7 +54,7 @@ v1.4.4 更新通用 OpenCode 工作指令，标注 Claude Code 提示词参考�
 | [持久工作指令](templates/opencode/agent-instructions.md) | 安装时自动应用通用/BCM 模板、个人规则备份、管理区块、生效检查及提示词参考来源（v1.4.3 起） |
 | [离线部署](docs/offline.md) | 已安装环境迁移，或联网准备后离线安装 |
 | [架构](docs/architecture.md)、[开发指南](docs/development.md) | 模块设计、扩展和接手开发 |
-| [执行期间新消息响应](docs/client-steering.md)、[后台任务](docs/execution.md) | 同步调用基线与开发主线新增托管任务、插话、暂停/停止 |
+| [执行期间新消息响应](docs/client-steering.md)、[后台任务](docs/execution.md) | 同步调用基线与 v2 托管任务、插话、暂停/停止 |
 
 [推理优化与引擎探索记录](docs/performance.md)保存 DSpark 参数依据、首次编译处理、SGLang 探索及后续复测方法，供继续开发参考。
 
@@ -100,7 +100,7 @@ BCM 架构独立选择。配置只使用同一 OS 可见的本地 GPU；GB300 TP
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.4.4.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v2.0.0.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ./local-ai --version
@@ -209,7 +209,7 @@ v1.4.0 提供 `server benchmark`。
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.4.4.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v2.0.0.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ```
@@ -307,7 +307,7 @@ chat --endpoint 不改写 installation.json，也不要求重新安装。--check
 
 按[程序更新指南](docs/update.md)分别更新 GPU 和 BCM 的实际程序目录，保留资源、配置与运行实例。独立 scripts/update.py 支持指定标签、本地源码包和备份回退，不执行 install 或资源准备。v1.3.2 已包含更新脚本；旧安装没有脚本时，指南给出首次获取方法。
 
-开发主线更新器可先用 --check 检测活动客户端，更新默认拒绝已检测到的活动进程；程序备份另带回退脚本，不包含聊天历史。见[更新指南](docs/update.md#开发主线升级前检查活动客户端)。
+v2.0.0 更新器可先用 --check 检测活动客户端，更新默认拒绝已检测到的活动进程；程序备份另带回退脚本，不包含聊天历史。见[更新指南](docs/update.md#升级前检查活动客户端)。
 
 ## 导出与离线安装
 

@@ -2,15 +2,15 @@
 
 Since v1.4.2, user-local history is decoupled from addresses and installation paths, including ad-hoc --endpoint. [Inspect and associate missing legacy records once](commands.md#replace-a-server-and-retain-sessions); ordinary server switching only selects an endpoint.
 
-v1.4.4 updates include templates/ as replaceable program files. Personal AGENTS.md lives in the user configuration directory and is not overwritten. If the old updater lacks templates in its allowlist, obtain the newer scripts/update.py from the same target archive first. The updater does not apply rules. After updating client source, run ./local-ai install --role client as the actual chat user (optionally --instructions bcm) to apply new templates without redownloading verified binaries. Use --instructions none for self-managed rules, then exit/resume OpenCode after applying. See [persistent instruction setup](../../templates/opencode/en/agent-instructions.md).
+v2.0.0 updates include templates/ as replaceable program files. Personal AGENTS.md lives in the user configuration directory and is not overwritten. If the old updater lacks templates in its allowlist, obtain the newer scripts/update.py from the same target archive first. The updater does not apply rules. After updating client source, run ./local-ai install --role client as the actual chat user (optionally --instructions bcm) to apply new templates without redownloading verified binaries. Use --instructions none for self-managed rules, then exit/resume OpenCode after applying. See [persistent instruction setup](../../templates/opencode/en/agent-instructions.md).
 
 Use this for program-only upgrades of an installed local-ai directory. See [README](../../README.en.md) for first installation and [offline deployment](offline.md) for complete resource migration. The updater downloads a small source archive and invokes no install, Docker, model download or OpenCode installation commands.
 
 Update the GPU001 and bcm-headnode program directories separately. Examples use /raid/local-ai; replace --root if the actual program lives elsewhere. It must contain local-ai and src/, not just model data. Python 3.10+ and write permission on the installation and its parent are required; online script retrieval needs curl.
 
-## Development main: check active clients before updating
+## Check active clients before updating
 
-These capabilities belong to the development-main updater, not the original v1.4.4 script. Obtain scripts/update.py from the target source first. Run on the machine containing the installation:
+These capabilities ship in v2.0.0. Obtain scripts/update.py from the target source when using an older helper. Run on the machine containing the installation:
 
     python3 scripts/update.py --root /raid/local-ai --check
 
@@ -24,30 +24,30 @@ New backups also contain backup/update.py. JSON returns rollback_command as argu
 
 ## Bootstrap and upgrade
 
-v1.4.4 includes scripts/update.py. For an older installation without the helper, obtain it separately using the commands below. Exit local chat and avoid launching management commands during replacement. GPU inference can remain running.
+v2.0.0 includes scripts/update.py. For an older installation without the helper, obtain it separately using the commands below. Exit local chat and avoid launching management commands during replacement. GPU inference can remain running.
 
 On GPU001, and separately on BCM for its own installation:
 
 ```bash
-curl -fL --retry 3 https://raw.githubusercontent.com/junli-nv/local-ai/v1.4.4/scripts/update.py -o /tmp/local-ai-update.py
-python3 /tmp/local-ai-update.py --root /raid/local-ai --version v1.4.4
+curl -fL --retry 3 https://raw.githubusercontent.com/junli-nv/local-ai/v2.0.0/scripts/update.py -o /tmp/local-ai-update.py
+python3 /tmp/local-ai-update.py --root /raid/local-ai --version v2.0.0
 /raid/local-ai/local-ai --version
 ```
 
---version explicitly selects a Git tag. Substitute the next target version when appropriate; the updater neither tracks main automatically nor treats v1.4.4 as an allowlist. Success exits 0 with state=updated, version=1.4.4, resources_changed=false, service_restarted=false and the actual backup path.
+--version explicitly selects a Git tag. Substitute the next target version when appropriate; the updater neither tracks main automatically nor treats v2.0.0 as an allowlist. Success exits 0 with state=updated, version=1.4.4, resources_changed=false, service_restarted=false and the actual backup path.
 
 The helper is retained at scripts/update.py inside the installation. Later updates can use it directly:
 
 ```bash
 cd /raid/local-ai
-python3 scripts/update.py --root /raid/local-ai --version v1.4.4
+python3 scripts/update.py --root /raid/local-ai --version v2.0.0
 ```
 
-This example still selects v1.4.4; replace the version for a later upgrade. Repeating it verifies source and creates another program backup without handling large resources. When an old tag lacks the updater, the currently running helper is retained for future updates and exports.
+This example still selects v2.0.0; replace the version for a later upgrade. Repeating it verifies source and creates another program backup without handling large resources. When an old tag lacks the updater, the currently running helper is retained for future updates and exports.
 
 ## Check the result
 
-v1.4.4 includes the GB200 TP4 candidate and Rubin TP2 framework. Retain custom catalogs and
+v2.0.0 includes the GB200 TP4 candidate and Rubin TP2 framework. Retain custom catalogs and
 explicitly merge new recipes. Updating does not clear Rubin's planning_only or supply an image;
 see the [dedicated guide](gb200-rubin.md).
 
@@ -67,7 +67,7 @@ cd /raid/local-ai
 
 Both should report ready=true. Program updates do not change running profiles, ports or launch arguments. Enable DSpark separately through [instance replacement and warmup](deployment.md#single-user-dspark-and-explicit-warmup). If a later version selects different weights/images, prepare those resources separately; the updater never downloads them.
 
-v1.4.4 includes server benchmarks and client diagnostics; update each host to use its new commands.
+v2.0.0 includes server benchmarks and client diagnostics; update each host to use its new commands.
 After deploying source containing the feature, run the [local performance benchmark](commands.md#local-performance-benchmark) on GPU001 only;
 no BCM update or model/image download is needed. Updating does not run a benchmark. Historical benchmark JSON under instances/ is retained;
 measure again after changes to program/image or other test conditions.
@@ -90,9 +90,9 @@ On an online preparation host, put the helper, small source archive and checksum
 ```bash
 mkdir -p /media/local-ai/update
 cd /media/local-ai/update
-curl -fL --retry 3 https://raw.githubusercontent.com/junli-nv/local-ai/v1.4.4/scripts/update.py -o update.py
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v1.4.4.tar.gz -o local-ai-v1.4.4-source.tar.gz
-sha256sum update.py local-ai-v1.4.4-source.tar.gz > SHA256SUMS
+curl -fL --retry 3 https://raw.githubusercontent.com/junli-nv/local-ai/v2.0.0/scripts/update.py -o update.py
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v2.0.0.tar.gz -o local-ai-v2.0.0-source.tar.gz
+sha256sum update.py local-ai-v2.0.0-source.tar.gz > SHA256SUMS
 ```
 
 Mount that media at /media/local-ai on the target, then run:
@@ -100,7 +100,7 @@ Mount that media at /media/local-ai on the target, then run:
 ```bash
 cd /media/local-ai/update
 sha256sum -c SHA256SUMS
-python3 update.py --root /raid/local-ai --archive local-ai-v1.4.4-source.tar.gz
+python3 update.py --root /raid/local-ai --archive local-ai-v2.0.0-source.tar.gz
 /raid/local-ai/local-ai --version
 ```
 
@@ -133,9 +133,12 @@ python3 /raid/local-ai/scripts/update.py --help
 | --archive | Local source tar archive; offline |
 | --rollback | Restore a backup created by the updater |
 | --sha256 | Optional expected source checksum; incompatible with --rollback/--check |
-| --check | Development main: read-only check, no download/replacement; exit 3 if not ready |
-| --allow-active-clients | Development main: explicitly allow detected activity for program-only update/rollback without stopping or upgrading native clients |
+| --check | v2.0.0: read-only check, no download/replacement; exit 3 if not ready |
+| --allow-active-clients | v2.0.0: explicitly allow detected activity for program-only update/rollback without stopping or upgrading native clients |
 
-For updates/rollbacks select one of --version, --archive and --rollback; development-main --check is a separate mutually exclusive read-only mode. This updates an unpacked source installation, not system drivers, container runtimes or Python environments.
+For updates/rollbacks select one of --version, --archive and --rollback; v2.0.0 --check is a separate mutually exclusive read-only mode. This updates an unpacked source installation, not system drivers, container runtimes or Python environments.
 
 [中文（默认）](../update.md)
+
+
+Private conversation backups are separate: [history backup/restore](automation.md). v2.0.0 keeps OpenCode 1.19.5; exit/resume chat to load changed plugins. No inference restart is needed.

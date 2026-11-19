@@ -64,6 +64,9 @@ def register(state_root, state, assets, base, model, project):
         "endpoint": base,
         "model": model,
     }
+    previous = state / "connection.json"
+    if previous.exists():
+        context["project_overrides"] = json.loads(previous.read_text()).get("project_overrides", {})
     atomic_json(state / "connection.json", context)
     directory = private_dir(client_home() / "connections")
     atomic_json(directory / (fingerprint(str(state)) + ".json"), {"state": str(state)})
@@ -155,12 +158,16 @@ def locate(session_id):
         if context is None:
             continue
         projects = {context.get("project")}
+        projects.update(context.get("project_overrides", {}).values())
         for path in (state / "logs").glob("*/invocation.json"):
             projects.add(json.loads(path.read_text()).get("project"))
         for project in sorted(p for p in projects if p and Path(p).is_dir()):
             for session in native_sessions(state, {**context, "project": project}):
                 if session["id"] == session_id:
-                    match = (context, session["directory"])
+                    target = context.get("project_overrides", {}).get(
+                        session["directory"], session["directory"]
+                    )
+                    match = (context, target)
                     if match not in matches:
                         matches.append(match)
     if len(matches) != 1:

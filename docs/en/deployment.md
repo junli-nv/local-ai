@@ -205,3 +205,8 @@ Without --endpoint, chat uses the saved 18000 address; config set endpoint URL c
 Use separate Linux accounts/private state, default ~/.local/state/local-ai/. Shared binaries do not share histories. Different directories under one account are not permission isolation; administrators can access user data. Exit clients before state backup.
 
 Four active sequences per engine is a scheduling limit, not a four-user limit; additional requests queue. No automatic balancing, quotas, boot startup or cross-host TP is provided. Measure concurrency separately; see [validation](validation.md).
+
+
+## v2.0.0 client state and delivery
+
+The source bundle includes batch.py, portability.py, diagnostics.py, adapters.py and execution.mjs; no new base Python packages or standalone Node are required. SSH/Slurm/container tools are only needed for the selected backend. Public offline exports exclude histories, execution state and credentials. Private [history migration](automation.md) is a separate explicit archive containing unredacted conversations. Update program code on each host separately; preserve running inference, and restart chat to load new plugins. Batch output defaults to text; add --format json for old event consumers.

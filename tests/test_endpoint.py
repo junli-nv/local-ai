@@ -87,8 +87,10 @@ class EndpointTests(unittest.TestCase):
                         ["chat", "--endpoint", "http://gpu-a:18000/v1", option, "22"]
                     )
                 self.assertEqual(error.exception.code, 2)
+        doctor = parser().parse_args(["client", "doctor"])
+        self.assertFalse(doctor.check_endpoint)
         with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
-            parser().parse_args(["client", "doctor"])
+            parser().parse_args(["client", "doctor", "--ssh-port", "22"])
 
     def test_model_api_retry(self):
         with model_api(statuses=(503, 200)) as (base, requests):

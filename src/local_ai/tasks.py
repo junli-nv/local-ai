@@ -11,6 +11,7 @@ import threading
 import time
 from pathlib import Path
 
+from .batch import TextOutput
 from .common import atomic_json
 from .telemetry import lines, report
 
@@ -48,6 +49,9 @@ def terminated(signum, frame):
 
 
 def execute(command, project, env, logfile, prompt):
+    renderer = (
+        TextOutput() if prompt is not None and env.get("LOCAL_AI_OUTPUT_FORMAT") == "text" else None
+    )
     directory = logfile.parent
     path = directory / "run.json"
     context = json.loads(env.get("LOCAL_AI_CONTEXT", "{}"))
@@ -79,6 +83,7 @@ def execute(command, project, env, logfile, prompt):
                 cwd=project,
                 env=env,
                 start_new_session=True,
+                stdin=subprocess.DEVNULL if prompt is not None else None,
                 stdout=subprocess.PIPE if prompt is not None else None,
                 stderr=subprocess.STDOUT if prompt is not None else None,
             )
@@ -106,8 +111,11 @@ def execute(command, project, env, logfile, prompt):
                             continue
                         log.write(chunk)
                         log.flush()
-                        sys.stdout.buffer.write(chunk)
-                        sys.stdout.buffer.flush()
+                        if renderer is not None:
+                            renderer.feed(chunk)
+                        else:
+                            sys.stdout.buffer.write(chunk)
+                            sys.stdout.buffer.flush()
                 else:
                     time.sleep(0.1)
             else:
@@ -122,6 +130,10 @@ def execute(command, project, env, logfile, prompt):
             stop(child)
         if child and child.stdout:
             child.stdout.close()
+        if renderer is not None:
+            renderer.finish()
+            if renderer.failed and code == 0:
+                state, code = "failed", 1
         if previous_term is not None:
             signal.signal(signal.SIGTERM, previous_term)
         events, malformed = lines(directory / "events.jsonl")

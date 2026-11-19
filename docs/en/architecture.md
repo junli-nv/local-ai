@@ -122,7 +122,7 @@ Warmup completion is bound to the spec fingerprint and container StartedAt. Rest
 
 cli.py establishes an installlog.py session only for installation/deployment actions. Within that session,
 common.run records actual subprocess commands and streams their output; outside it, execution remains ordinary.
-Progress uses stderr and JSON results use stdout, preserving automation contracts. Plans and queries create no
+Progress uses stderr and management JSON uses stdout; batch defaults to text (explicit --format json for events). Plans and queries create no
 journal, including when a journal path is supplied.
 
 Image/model preparation checks local completeness and identity before network work. Reusable artifacts skip
@@ -146,10 +146,14 @@ preparation.py coordinates target images, models and archives. hub.py uses stand
 
 The unpacked root retains complete program, models, image archives and public clients. Defaults follow its location. install prepares assets; server start creates host-local instances. export writes dist/ with relative checksums; install --offline verifies/imports after extraction elsewhere. Exclude dist/ itself, old instances, histories and credentials. Public clients contain only binaries/public cache; personal state stays isolated.
 
-## Managed execution adapter (development main)
+## Execution and portability (v2.0.0)
 
-client.prepare loads observer.mjs and execution.mjs, copying the latter into native session configuration to reuse the prepared @opencode-ai/plugin SDK. local_ai_task calls execution.py through JSON/stdin RPC. Identity comes from client session/resolved project, never model arguments. Native Bash/external_directory permission is still required. The pause hook gates subsequent other tools.
+client.prepare loads observer.mjs and a per-launch execution.mjs using the native SDK, without standalone Node. The plugin binds actual project/session identity, requests native permissions, gates new tools while paused, and supplies the current directory when resuming a relocated project. Ordinary interactive Bash backgrounds longer commands unless command-scoped rules require the native parser or --sync-bash is selected. Batch always keeps native Bash.
 
-Stdlib execution.py implements private records, file locking/atomic writes, stable operation keys, byte cursors and Linux process-group control. Start returns an ID; a detached copied worker owns a noninteractive command group. Signals require matching PID/starttime identities. No external-process adoption or automatic retry of failed commands; worker loss reports unknown/incomplete state, never success.
+execution.py owns private records, locks, stable operation/input keys, PTY and verified Linux process groups. Explicit adoption only accepts owned group leaders. adapters.py adds independent copied controllers for SSH, Slurm and labelled containers. Unknown submissions are reconciled by identity rather than resubmitted; confirmed backend state is required for cancellation.
 
-User state/execution is independent of endpoint, model server and installation directory. Session/project gates persist until explicit resume. Existing synchronous Bash/native tools are not adopted. Jobs survive terminal exit, not reboot. See [execution](execution.md) for lifecycle, remote-job and notification boundaries.
+The plugin leases completion notices, uses a deterministic native message ID, verifies persistence and acknowledges delivery. Busy/paused/held sessions defer notices; chat exit does not cancel tasks. Reboot does not replay tasks. Controls are not an OS sandbox and do not cover deliberately detached descendants.
+
+batch.py reads one UTF-8 prompt and converts native events to text; tasks.py retains raw private events and exit semantics. workflows.py explicitly selects JSON. portability.py uses SQLite snapshots, hashed private ZIPs and independent imports with path mappings, without native schema rewrites or task migration. diagnostics.py combines metadata/request observations without transcript bodies. Default history/execution state is per user and independent of endpoint; project paths scope work.
+
+Detailed limits and examples: [execution](execution.md), [automation and migration](automation.md).

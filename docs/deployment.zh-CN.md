@@ -212,3 +212,8 @@ cd /raid/local-ai
 ---
 
 [English version](en/deployment.md)
+
+
+## v2.0.0 客户端状态与交付
+
+源码包携带 batch.py、portability.py、diagnostics.py、adapters.py 和 execution.mjs；基础 Python 不增加第三方依赖，不需独立 Node。仅选用对应后端时需要 SSH/Slurm/Docker 工具。公共离线包排除私有历史、执行状态和凭据；[私有历史迁移](automation.md)另行显式生成，含未脱敏对话。各主机分别更新程序，保持推理运行，重新进入聊天加载插件。批处理默认文本，旧事件消费者加 --format json。

@@ -17,12 +17,14 @@ from . import (
     completion,
     configuration,
     deployment,
+    diagnostics,
     documents,
     execution,
     history,
     images,
     installlog,
     instructions,
+    portability,
     preparation,
     readiness,
     server,
@@ -473,6 +475,8 @@ def parser():
     ).add_subparsers(dest="job_action", required=True)
     for action in [
         "start",
+        "adopt",
+        "input",
         "list",
         "status",
         "output",
@@ -488,10 +492,37 @@ def parser():
         b.add_argument(
             "--state-dir", type=Path, default=client_home(), help="Private user state root"
         )
-        if action == "start":
-            b.add_argument(
-                "--command", required=True, help="Noninteractive Bash command; runs on this host"
-            )
+        if action in {"start", "adopt"}:
+            if action == "adopt":
+                b.add_argument(
+                    "--pid",
+                    type=int,
+                    required=True,
+                    help="Owned process-group leader PID; never the calling shell",
+                )
+            if action == "start":
+                b.add_argument(
+                    "--adapter",
+                    choices=["local", "ssh", "slurm", "container"],
+                    default="local",
+                    help="Execution backend",
+                )
+                b.add_argument("--host", help="SSH target for remote execution or control")
+                b.add_argument(
+                    "--remote-project", help="Absolute working directory on the target host"
+                )
+                b.add_argument("--image", help="Prepared container image; never pulled implicitly")
+                b.add_argument(
+                    "--submit-arg",
+                    action="append",
+                    default=[],
+                    help="Slurm resource option, e.g. --submit-arg=--partition=cpu",
+                )
+            if action == "start":
+                b.add_argument("--interactive", action="store_true", help="Start with a local PTY")
+                b.add_argument(
+                    "--command", required=True, help="Bash command on the selected backend"
+                )
             b.add_argument(
                 "--project", type=Path, default=Path.cwd(), help="Project working directory"
             )
@@ -512,6 +543,13 @@ def parser():
             )
         elif action != "list":
             b.add_argument("job_id", help="Managed task ID returned by start/list")
+        if action == "input":
+            b.add_argument(
+                "--data", required=True, help="UTF-8 PTY input, including newline if needed"
+            )
+            b.add_argument(
+                "--request-id", help="Stable input key; default creates a new input operation"
+            )
         if action == "output":
             b.add_argument("--offset", type=int, default=0, help="Byte cursor from next_offset")
             b.add_argument("--limit", type=int, default=16384, help="Maximum bytes, 1..65536")
@@ -527,6 +565,70 @@ def parser():
     b.add_argument(
         "--json", action="store_true", help="Print structured history metadata instead of a table"
     )
+    for action in ("backup", "restore", "select"):
+        b = histories.add_parser(
+            action, help="Private history " + action + "; never merges databases"
+        )
+        b.add_argument(
+            "--state-dir", type=Path, default=client_home(), help="Private client state root"
+        )
+        if action == "backup":
+            b.add_argument(
+                "--output",
+                type=Path,
+                required=True,
+                help="New private history ZIP; contains conversations",
+            )
+        elif action == "select":
+            b.add_argument("history_id", help="History identity from client history list")
+        else:
+            b.add_argument(
+                "--archive", type=Path, required=True, help="Private history ZIP from backup"
+            )
+            b.add_argument(
+                "--client-dir",
+                type=Path,
+                default=client_assets(arch()),
+                help="Native client matching the snapshot version",
+            )
+            b.add_argument(
+                "--endpoint",
+                default=settings().get("endpoint"),
+                help="New reachable endpoint; no request is made during restore",
+            )
+            b.add_argument(
+                "--select",
+                action="store_true",
+                help="Explicitly select the restored history for future chats",
+            )
+            b.add_argument(
+                "--project",
+                type=Path,
+                help="Optional local project directory for restored connection metadata",
+            )
+    b = clients.add_parser(
+        "doctor", help="Aggregate private client, history, task and request diagnostics"
+    )
+    b.add_argument(
+        "--state-dir", type=Path, default=client_home(), help="Private client state root"
+    )
+    b.add_argument(
+        "--client-dir", type=Path, default=client_assets(arch()), help="Native client assets"
+    )
+    b.add_argument(
+        "--endpoint",
+        default=settings().get("endpoint"),
+        help="Model API to check only with --check-endpoint",
+    )
+    b.add_argument(
+        "--model",
+        default=settings().get("model") or catalog()["model"]["served_name"],
+        help="Served model identity",
+    )
+    b.add_argument(
+        "--check-endpoint", action="store_true", help="Explicitly check API readiness; no inference"
+    )
+    b.add_argument("--limit", type=int, default=20, help="Recent runs to inspect, 1..1000")
     b = histories.add_parser(
         "update-endpoint",
         help="Update the server address associated with existing sessions",
@@ -643,7 +745,34 @@ def parser():
     b.add_argument(
         "--check", action="store_true", help="Check model API connectivity without chatting"
     )
-    b.add_argument("--run", help="One prompt; stream JSON events, save full logs, then exit")
+    b.add_argument(
+        "chat_command", nargs="?", choices=["run"], help="run starts noninteractive batch chat"
+    )
+    b.add_argument("prompt", nargs="?", help="Task prompt for chat run")
+    b.add_argument("--run", help="One task prompt; default plain text output, then exit")
+    b.add_argument(
+        "--sync-bash",
+        action="store_true",
+        help="Use native synchronous Bash, retaining its command parser",
+    )
+    b.add_argument(
+        "--no-task-notifications",
+        action="store_true",
+        help="Disable automatic managed-task messages for this chat",
+    )
+
+    b.add_argument(
+        "--prompt-file",
+        type=Path,
+        help="Read UTF-8 task instructions from a file or - for stdin; never executes the file implicitly",
+    )
+    b.add_argument(
+        "--format",
+        dest="output_format",
+        choices=["text", "json"],
+        default="text",
+        help="Batch answer format; JSON preserves native machine events",
+    )
     b.add_argument(
         "--run-timeout",
         type=float,
@@ -783,25 +912,59 @@ def dispatch(q):
     if q.group == "model":
         return images.download_model(q.data_dir, profile(q.profile), force=q.force)
     if q.group == "client":
+        if q.action == "doctor":
+            return diagnostics.inspect(
+                q.state_dir, q.client_dir, q.endpoint, q.model, q.check_endpoint, q.limit
+            )
         if q.action == "job":
             action = q.job_action.replace("-", "_")
             options = {}
-            if action == "start":
+            if action in {"start", "adopt"}:
                 options = {
                     "session": q.session,
                     "project": str(q.project),
-                    "argv": ["/bin/bash", "-lc", q.command],
+                    "argv": ["/bin/bash", "-lc", q.command]
+                    if action == "start"
+                    else ["<adopted>", str(q.pid)],
+                    "interactive": getattr(q, "interactive", False),
                     "request_id": q.request_id or "cli_" + str(time.time_ns()),
                     "timeout": q.timeout,
                 }
+                if (
+                    action == "start"
+                    and q.adapter == "local"
+                    and (q.host or q.remote_project or q.image or q.submit_arg)
+                ):
+                    raise ValueError("Remote options require an explicit --adapter")
+                if action == "start" and q.adapter != "local":
+                    options.update(
+                        adapter=q.adapter,
+                        host=q.host,
+                        remote_project=q.remote_project,
+                        image=q.image,
+                        submit_args=q.submit_arg,
+                    )
+                if action == "adopt":
+                    options["adopt_pid"] = q.pid
+                    action = "start"
             elif action.endswith("_session"):
                 options = {"session": q.session, "project": str(q.project)}
             elif action != "list":
                 options["job_id"] = q.job_id
+            if action == "input":
+                options.update(data=q.data, request_id=q.request_id or "cli_" + str(time.time_ns()))
             if action == "output":
                 options.update(offset=q.offset, limit=q.limit)
             return execution.perform(q.state_dir / "execution", action, **options)
         if q.action == "history":
+            if q.history_action == "backup":
+                return portability.backup(q.state_dir, q.output)
+            if q.history_action == "restore":
+                return portability.restore(
+                    q.state_dir, q.archive, q.client_dir, q.endpoint, q.select, q.project
+                )
+            if q.history_action == "select":
+                return portability.select(q.state_dir, q.history_id)
             if q.history_action == "list":
                 rows = history.list_histories(q.state_dir, settings().get("endpoint"))
                 if q.json:

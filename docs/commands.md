@@ -4,7 +4,7 @@ v1.4.2 将本地历史与服务器、安装目录解耦，默认和临时 endpoi
 
 ## 任务诊断与工作流回归（v1.4.0）
 
-在 BCM 的 /raid/local-ai 使用 v1.4.1；这些功能自 v1.4.0 提供，更早归档不包含。
+在 BCM 的 /raid/local-ai 使用 v2.0.0；这些功能自 v1.4.0 提供，更早归档不包含。
 普通 chat 自动保存私有 run.json、events.jsonl 和 requests.jsonl；
 终端会提示本次日志目录。历史部署的旧记录不回填。
 
@@ -19,7 +19,7 @@ v1.4.2 将本地历史与服务器、安装目录解耦，默认和临时 endpoi
 报告包含原 endpoint、模型、状态、恢复命令数组、工具调用和未完成调用。
 恢复前核实文件、作业和外部写操作是否已完成，不自动重放调用；进程退出不等于外部作业结束。
 
-chat 的 --run-timeout 默认 0（无限制），仅适用 --run，单位秒；超时清理本地客户端进程组并退出 124。
+chat 的 --run-timeout 默认 0（无限制），适用所有批处理入口，单位秒；超时清理本地客户端进程组并退出 124。
 Ctrl+C 清理该组并退出 130，SIGTERM 清理后退出 143，不撤销已发生的文件或远端操作。--heartbeat 默认 15 秒，0 关闭，仅批处理打印到 stderr。
 --direct-api 绕过临时本机 API 观测转发器，保留原生事件和任务记录，适合诊断兼容性；默认启用观测。
 转发器仅监听 127.0.0.1 随机端口，退出即关闭；观测地址不改变连接与历史身份，默认历史和临时连接规则见下文。
@@ -377,7 +377,7 @@ client install/export 均接受 `--client-dir`，默认是安装根目录下的 
 | `--state-dir` | 私有历史、缓存和会话日志根目录，默认见上节 |
 | `--model` | API 中的服务模型 ID，默认取安装记录，未配置时读取配方的 served_name |
 | `--check` | 只检查连接和模型可用性，输出 ready、实际 endpoint、model 与日志位置后退出 |
-| `--run '任务'` | 单次任务，流式输出 JSON 事件并保存完整日志后退出；不加则交互使用 |
+| `--run '任务'` | 旧入口，单次任务默认 text；--format json 保留原生事件；不加则交互 |
 
 在 bcm-headnode 上以 alice 执行：
 
@@ -525,7 +525,7 @@ web_ready 仅表示标准库网页读取可用，不代表当前网络连通；�
 
 ## 程序更新
 
-开发主线更新器新增 --check（只读活动检测，未就绪退出 3）与 --allow-active-clients（显式允许带活动会话更新程序，不停止进程）；程序备份含独立回退脚本，不包含聊天历史。原 v1.4.4 脚本无这些选项，先取得新版更新器。详见[活动检查](update.md#开发主线升级前检查活动客户端)。
+v2.0.0 更新器包含 --check（只读活动检测，未就绪退出 3）与 --allow-active-clients（显式允许带活动会话更新程序，不停止进程）；程序备份含独立回退脚本，不包含聊天历史。旧脚本若无这些选项，先取得目标版本更新器。详见[活动检查](update.md#升级前检查活动客户端)。
 
 独立 Python 脚本 scripts/update.py 不属于 ./local-ai 子命令。--root、--version、--archive、--sha256、--rollback 的含义、完整示例、备份和退出码统一见[更新指南](update.md)。它不准备镜像、模型或客户端，也不重启推理服务；更换模型/镜像与升级原生 OpenCode 是独立操作。
 
@@ -555,7 +555,7 @@ docker rm local-ai-a
 服务端完整日志在 `数据目录/instances/实例名/server.log`，安装与准备过程集中在 `数据目录/install.log`。
 客户端完整会话日志在私有 `services/服务ID/logs/session-.../`。镜像、模型权重和用户状态需要分别规划备份。
 
-多数管理命令输出 JSON；chat 单次运行输出 JSON 事件，通常沿用客户端退出码；超时 124、Ctrl+C 130、SIGTERM 143。
+多数管理命令输出 JSON；chat 单次运行默认可读文本，--format json 输出原生事件，通常沿用客户端退出码；超时 124、Ctrl+C 130、SIGTERM 143。
 参数错误或执行失败返回非零退出码。需要调用栈时，使用 `./local-ai --debug 命令组 子命令 ...`。
 
 本项目没有自动负载均衡、用户配额、开机自启、跨主机 TP 或自动 GPU 调度；启动前确认设备可用并取得使用权；项目不依赖集群调度系统。
@@ -566,13 +566,13 @@ B300 与 GB300 的实际验收范围见[验证记录](validation.md)，不能用
 
 [English version](en/commands.md)
 
-## 托管命令任务（开发主线）
+## 托管命令任务（v2.0.0）
 
-v1.4.4 标签之后新增 client job；[最短示例与限制](execution.md)。在执行命令的 BCM 本机运行，不调用模型；默认私有用户状态根 ~/.local/state/local-ai，所有子命令可用 --state-dir 指定，实际写入其 execution/。JSON 输出；请求处理成功退出 0、校验/执行入口错误 1、参数错误 2。查询得到 failed/cancelled 等任务状态仍为退出 0；命令结果看 state/terminal/exit_code。
+v2.0.0 包含 client job；[最短示例与限制](execution.md)。在执行命令的 BCM 本机运行，不调用模型；默认私有用户状态根 ~/.local/state/local-ai，所有子命令可用 --state-dir 指定，实际写入其 execution/。JSON 输出；请求处理成功退出 0、校验/执行入口错误 1、参数错误 2。查询得到 failed/cancelled 等任务状态仍为退出 0；命令结果看 state/terminal/exit_code。
 
 | 子命令 | 参数与默认值 |
 |---|---|
-| client job start | --command 必填，显式交给 /bin/bash -lc；--project 默认当前目录；--session 默认 cli；--request-id 默认新操作键，重试应复用指定键；--timeout 默认 3600，正数且不超过 604800 秒，含暂停 |
+| client job start | --command 必填，显式交给所选后端的 /bin/bash -lc；--project 默认当前目录；--session 默认 cli；--request-id 默认新操作键，重试应复用指定键；--timeout 默认 3600，正数且不超过 604800 秒，含暂停 |
 | client job list | 无必填参数，列出当前用户最多 100 条任务，按创建时间倒序，包含 session/project |
 | client job status JOB_ID | 必填任务 ID，返回状态、终态标志和退出码 |
 | client job output JOB_ID | --offset 默认 0 字节，--limit 默认 16384、范围 1..65536；按 next_offset 读到终态且 all_output_delivered=true |
@@ -585,3 +585,24 @@ v1.4.4 标签之后新增 client job；[最短示例与限制](execution.md)。�
 | client job stop-session | --session 必填；--project 默认当前目录，需匹配原路径；stop 保持工具入口关闭，继续需显式 resume-session |
 
 聊天工具名 local_ai_task，使用 start/list/status/output/pause/resume/stop/remove/pause_session/resume_session/stop_session。start 的 argv 为参数数组，没有隐式 Shell，request_id 必填；cwd 默认项目、timeout 同上。job_id 用于单任务动作；offset/limit 同 CLI。身份由客户端提供，拒绝跨会话/项目。启动仍调用原生 Bash 权限，外部目录需要原生授权。配置/状态恢复不自动重放命令。
+
+
+## 批处理、历史迁移与 doctor（v2.0.0）
+
+[最短示例与迁移步骤](automation.md)。
+
+| 入口 | 参数和默认值 |
+|---|---|
+| chat run [PROMPT] | 位置提示词或 --prompt-file PATH；- 读 stdin；无提示词且 stdin 非终端也读取；单个 UTF-8 来源，非空，最多 1 MiB |
+| chat --format | text（默认）或 json 原生事件；旧 --run 也适用；进度/错误写 stderr |
+| chat --sync-bash | 交互聊天保留原生同步 Bash；批处理始终如此 |
+| chat --no-task-notifications | 关闭本次聊天的完成通知 |
+| client job start | --adapter 默认 local，可选 ssh/slurm/container；--host 为 SSH 目标；--remote-project 是 SSH/Slurm 目标目录；容器必填 --image；Slurm 可重复 --submit-arg；--interactive 仅本机 PTY |
+| client job adopt | 必填 --pid 独立进程组组长；--project 当前目录、--session cli、--timeout 3600、可选 --request-id；不重接输出 |
+| client job input JOB_ID | 必填 --data UTF-8 文本，可选 --request-id；显式换行，每次 1..16384 字节 |
+| client history backup | 必填 --output 新私有 ZIP；--state-dir 私有用户状态根 |
+| client history restore | 必填 --archive；--client-dir 已安装客户端、--endpoint 默认配置地址（未配置则必填）、可选 --select/--project；--state-dir 目标状态根 |
+| client history select HISTORY_ID | 选择已有非空历史；--state-dir 私有状态根 |
+| client doctor | --state-dir 私有状态根、--client-dir 已安装资产、--endpoint/--model 默认配置；--check-endpoint 显式联网；--limit 默认 20、范围 1..1000 |
+
+管理结果为 JSON：退出 0 表示已处理，健康/成功看 issues/state；校验/启动错误 1，参数错误 2。任务失败并不使查询退出非零。local_ai_task 还接受 input/data、interactive、adapter/host/remote_project/image/submit_args，start 和 input 的 request_id 是稳定键。adopt 仅提供显式 CLI。SSH/Slurm/容器控制均需确认实际后端状态，见[限制](execution.md)。

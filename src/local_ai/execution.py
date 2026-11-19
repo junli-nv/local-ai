@@ -7,6 +7,7 @@ import hashlib
 import json
 import math
 import os
+import pty
 import re
 import selectors
 import shutil
@@ -14,12 +15,13 @@ import signal
 import subprocess
 import sys
 import tempfile
+import termios
 import threading
 import time
 import uuid
 from pathlib import Path
 
-TERMINAL = {"completed", "failed", "cancelled", "timed_out", "output_limit", "lost"}
+TERMINAL = {"completed", "failed", "cancelled", "timed_out", "output_limit", "lost", "exited"}
 ID = re.compile(r"job_[a-f0-9]{32}\Z")
 
 
@@ -120,7 +122,7 @@ def view(root, job, include_command=True):
     if not include_command:
         result.pop("argv", None)
     log = directory(root, job["id"]) / "output.log"
-    result["output_bytes"] = log.stat().st_size if log.exists() else 0
+    result["output_bytes"] = log.stat().st_size if log.exists() else job.get("output_bytes", 0)
     result["terminal"] = job["state"] in TERMINAL
     if not result["terminal"] and job.get("worker_pid"):
         if stamp(job["worker_pid"]) != job.get("worker_start"):
@@ -129,7 +131,19 @@ def view(root, job, include_command=True):
     return result
 
 
-def start(root, session, project, argv, request_id, timeout=3600, max_bytes=64 << 20, cwd=None):
+def start(
+    root,
+    session,
+    project,
+    argv,
+    request_id,
+    timeout=3600,
+    max_bytes=64 << 20,
+    cwd=None,
+    interactive=False,
+    adopt_pid=None,
+    notify=True,
+):
     if not isinstance(session, str) or not session or len(session) > 256:
         raise ValueError("A session identity is required")
     if not isinstance(request_id, str) or not 0 < len(request_id) <= 128:
@@ -146,6 +160,7 @@ def start(root, session, project, argv, request_id, timeout=3600, max_bytes=64 <
         raise ValueError("timeout must be positive and at most seven days")
     if not isinstance(max_bytes, int) or not 1024 <= max_bytes <= 1 << 30:
         raise ValueError("Output limit must be 1 KiB to 1 GiB")
+    adopted = None
     project = str(Path(project).resolve(strict=True))
     cwd = str((Path(project) / (cwd or ".")).resolve(strict=True))
     if not Path(cwd).is_dir():
@@ -165,6 +180,8 @@ def start(root, session, project, argv, request_id, timeout=3600, max_bytes=64 <
                 max_bytes,
             ):
                 raise ValueError("request_id already identifies a different operation")
+            if (job.get("interactive", False), job.get("adopt_pid")) != (interactive, adopt_pid):
+                raise ValueError("request_id already identifies a different operation")
             return {**view(root, job), "reused": True}
         if gate(root, session, project)["paused"]:
             raise ValueError("Session is paused; explicitly resume before starting new work")
@@ -175,6 +192,7 @@ def start(root, session, project, argv, request_id, timeout=3600, max_bytes=64 <
         ]
         if len(live) >= 32:
             raise ValueError("At most 32 unfinished managed tasks are allowed per state root")
+        adopted = adoption(adopt_pid, interactive, notify)
         job_id = "job_" + uuid.uuid4().hex
         folder = directory(root, job_id, create=True)
         job = {
@@ -192,8 +210,13 @@ def start(root, session, project, argv, request_id, timeout=3600, max_bytes=64 <
             "created": time.time(),
             "state": "queued",
             "control": None,
-            "members": {},
+            "members": adopted or {},
+            "interactive": interactive,
+            "adopt_pid": adopt_pid,
+            "notify": notify,
         }
+        if adopted:
+            job.update(pgid=adopt_pid, child_pid=adopt_pid, output_truncated=True)
         save(root, job)
         atomic(index, {"id": job_id})
         child = None
@@ -268,15 +291,73 @@ def reconcile(root, job):
     return job
 
 
+def adapter_module():
+    # This entry point is also launched as a standalone RPC script.
+    import importlib
+
+    parent = str(Path(__file__).resolve().parents[1])
+    if parent not in sys.path:
+        sys.path.insert(0, parent)
+    return importlib.import_module("local_ai.adapters")
+
+
 def perform(root, action, session=None, project=None, job_id=None, offset=0, limit=16384, **args):
     root = Path(root).absolute()
     if project is not None:
         project = str(Path(project).resolve(strict=True))
     if action == "start":
+        if args.get("adapter", "local") != "local":
+            return adapter_module().start(root, session, project, **args)
+        args.pop("adapter", None)
         return start(root, session, project, **args)
+    skip_adapter = args.pop("_adapter_skip", False)
+    if (
+        job_id
+        and action in {"status", "output", "pause", "resume", "stop", "remove", "input"}
+        and not skip_adapter
+    ):
+        candidate = load(root, job_id)
+        scoped(candidate, session, project)
+        if candidate.get("adapter"):
+            return adapter_module().operate(
+                root, action, candidate, offset=offset, limit=limit, **args
+            )
     with guard(root) as root:
         if action == "gate":
             return gate(root, session, project)
+        if action in {"notice_hold", "notice_release"}:
+            state = gate(root, session, project)
+            state["notifications_held"] = action == "notice_hold"
+            atomic(session_file(root, session, project), state)
+            return state
+        if action == "notice_claim":
+            if not session or not project or not args.get("consumer"):
+                raise ValueError("Notification claims require client identity")
+            state = gate(root, session, project)
+            if state["paused"] or state.get("notifications_held"):
+                return None
+            for path in sorted(private(root / "jobs").glob("*/job.json")):
+                candidate = reconcile(root, load(root, path.parent.name))
+                if candidate["session"] != session or candidate["project"] != project:
+                    continue
+                n = candidate.get("notification", {})
+                if (
+                    not candidate.get("notify")
+                    or candidate["state"] not in TERMINAL
+                    or n.get("delivered")
+                ):
+                    continue
+                if n.get("expires", 0) > time.time() and n.get("owner") != args["consumer"]:
+                    continue
+                n.update(owner=args["consumer"], expires=time.time() + 30)
+                n.setdefault(
+                    "message_id",
+                    "msg_" + format(int(time.time() * 1000), "013x") + uuid.uuid4().hex[:14],
+                )
+                candidate["notification"] = n
+                save(root, candidate)
+                return view(root, candidate)
+            return None
         if action in {"pause_session", "resume_session", "stop_session"}:
             if not session or not project:
                 raise ValueError("Session controls require an explicit session and project")
@@ -325,6 +406,49 @@ def perform(root, action, session=None, project=None, job_id=None, offset=0, lim
             return sorted(jobs, key=lambda x: x["created"], reverse=True)[:100]
         job = reconcile(root, load(root, job_id))
         scoped(job, session, project)
+        if action == "enable_notice":
+            job["notify"] = True
+            save(root, job)
+            return view(root, job)
+        if action == "notice_ack":
+            n = job.get("notification", {})
+            if n.get("owner") != args.get("consumer"):
+                raise ValueError("Notification lease belongs to another client")
+            n.update(delivered=time.time())
+            job["notification"] = n
+            save(root, job)
+            return {"id": job_id, "delivered": True}
+        if action == "input":
+            if (
+                not job.get("interactive")
+                or job["state"] in TERMINAL
+                or view(root, job)["state"] == "orphaned"
+            ):
+                raise ValueError("Input requires a live managed PTY")
+            data, key = args.get("data"), args.get("request_id")
+            if (
+                not isinstance(data, str)
+                or not data
+                or len(data.encode()) > 16384
+                or not isinstance(key, str)
+                or not 0 < len(key) <= 128
+            ):
+                raise ValueError("Input requires 1..16384 UTF-8 bytes and a stable request_id")
+            inputs = job.setdefault("input_keys", {})
+            h = hashlib.sha256(data.encode()).hexdigest()
+            if key in inputs:
+                if inputs[key] != h:
+                    raise ValueError("Input request_id identifies different data")
+                return {"id": job_id, "state": "input_queued", "reused": True}
+            folder = private(directory(root, job_id) / "input")
+            if len(list(folder.glob("*.json"))) >= 64 or len(inputs) >= 4096:
+                raise ValueError("PTY input queue limit reached")
+            seq = job.get("input_seq", 0) + 1
+            atomic(folder / (str(seq).zfill(8) + ".json"), {"data": data, "offset": 0})
+            inputs[key] = h
+            job["input_seq"] = seq
+            save(root, job)
+            return {"id": job_id, "state": "input_queued"}
         if action == "status":
             return view(root, job)
         if action == "output":
@@ -381,12 +505,134 @@ def perform(root, action, session=None, project=None, job_id=None, offset=0, lim
         return {**view(root, job), "control_requested": action}
 
 
+def adoption(pid, interactive, notify):
+    if not isinstance(interactive, bool) or not isinstance(notify, bool):
+        raise ValueError("interactive and notify must be booleans")
+    if pid is None:
+        return None
+    if not isinstance(pid, int) or pid <= 1 or interactive:
+        raise ValueError("Adoption needs a process-group leader and cannot attach a PTY")
+    proc = Path(f"/proc/{pid}")
+    if proc.stat().st_uid != os.getuid() or os.getpgid(pid) != pid:
+        raise ValueError("Only an owned process-group leader can be adopted")
+    ancestor = os.getpid()
+    while ancestor > 1:
+        if ancestor == pid or os.getpgid(ancestor) == pid:
+            raise ValueError("Refusing to adopt this command channel or an ancestor")
+        ancestor = int(Path(f"/proc/{ancestor}/stat").read_text().rsplit(")", 1)[1].split()[1])
+    group = members(pid)
+    if str(pid) not in group:
+        raise ValueError("Process identity disappeared")
+    return group
+
+
+def launch(job):
+    if not job.get("interactive"):
+        return subprocess.Popen(
+            job["argv"],
+            cwd=job["cwd"],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            start_new_session=True,
+        )
+    master, slave = pty.openpty()
+    try:
+        child = subprocess.Popen(
+            job["argv"],
+            cwd=job["cwd"],
+            stdin=slave,
+            stdout=slave,
+            stderr=slave,
+            start_new_session=True,
+            preexec_fn=lambda: fcntl.ioctl(slave, termios.TIOCSCTTY, 0),
+        )
+    except BaseException:
+        os.close(master)
+        raise
+    finally:
+        os.close(slave)
+    os.set_blocking(master, False)
+    child.stdout = os.fdopen(master, "rb", buffering=0)
+    return child
+
+
+def deliver_input(root, job, fd):
+    folder = directory(root, job["id"]) / "input"
+    for path in sorted(folder.glob("*.json")):
+        value = json.loads(path.read_text())
+        data = value["data"].encode()
+        try:
+            written = os.write(fd, data[value["offset"] :])
+        except BlockingIOError:
+            return
+        value["offset"] += written
+        if value["offset"] == len(data):
+            path.unlink()
+        else:
+            atomic(path, value)
+            return
+
+
+def watch_adopted(root, job_id):
+    began = time.monotonic()
+    ending = None
+    stopping = None
+    while True:
+        with guard(root):
+            job = load(root, job_id)
+            group = members(job["pgid"])
+            live = [v for v in group.values() if v["state"] not in {"Z", "X"}]
+            if not live:
+                job.update(
+                    state=ending or "exited",
+                    ended=time.time(),
+                    exit_code=None,
+                    output_truncated=True,
+                    members={},
+                )
+                save(root, job)
+                return
+            if not any(
+                pid in job["members"] and v["start"] == job["members"][pid]["start"]
+                for pid, v in group.items()
+            ):
+                raise RuntimeError("Adopted process identity changed")
+            job["members"] = group
+            control = job.pop("control", None)
+            if control == "stop":
+                ending = "cancelled"
+            if time.monotonic() - began >= job["timeout"]:
+                ending = ending or "timed_out"
+            if ending:
+                signal_group(job, signal.SIGCONT)
+                signal_group(job, signal.SIGTERM if stopping is None else signal.SIGKILL)
+                stopping = stopping or time.monotonic()
+                job["state"] = "stopping"
+            elif control == "pause":
+                signal_group(job, signal.SIGSTOP)
+                job["state"] = "pausing"
+            elif control == "resume":
+                signal_group(job, signal.SIGCONT)
+                job["state"] = "running"
+            elif all(v["state"] in {"T", "t"} for v in live):
+                job["state"] = "paused"
+            else:
+                job["state"] = "running"
+            save(root, job)
+        time.sleep(0.05)
+
+
 def worker(root, job_id):
     """Only this detached worker owns/waits for its command process group."""
     child = None
     ending = None
     stop_at = None
     try:
+        with guard(root):
+            initial = load(root, job_id)
+        if initial.get("adopt_pid"):
+            return watch_adopted(root, job_id)
         queued_deadline = time.monotonic()
         while True:
             with guard(root) as root:
@@ -414,14 +660,7 @@ def worker(root, job_id):
                     job.update(state="paused", control=None)
                     save(root, job)
                 else:
-                    child = subprocess.Popen(
-                        job["argv"],
-                        cwd=job["cwd"],
-                        stdin=subprocess.DEVNULL,
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.STDOUT,
-                        start_new_session=True,
-                    )
+                    child = launch(job)
                     # Retain a leader identity even if the first /proc group scan fails.
                     job.update(
                         pgid=child.pid,
@@ -445,8 +684,17 @@ def worker(root, job_id):
             with selectors.DefaultSelector() as selector:
                 selector.register(child.stdout, selectors.EVENT_READ)
                 while True:
+                    if job.get("interactive"):
+                        with guard(root):
+                            deliver_input(root, job, child.stdout.fileno())
                     for key, _ in selector.select(timeout=0.05):
-                        data = os.read(key.fileobj.fileno(), 65536)
+                        try:
+                            data = os.read(key.fileobj.fileno(), 65536)
+                        except OSError as error:
+                            if job.get("interactive") and error.errno == 5:
+                                data = b""
+                            else:
+                                raise
                         if not data:
                             selector.unregister(key.fileobj)
                             continue

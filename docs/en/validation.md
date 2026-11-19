@@ -1,5 +1,19 @@
 # Validation record
 
+## v2.0.0 client acceptance (2026-11-19)
+
+Environment: BCM Linux AMD64, Python 3.12, native OpenCode 1.19.5; existing HGX260 DeepSeek-V4.1-Flash API. Private isolated histories/projects were used; production sessions were not used as fixtures.
+
+- scripts/check-live-execution.py: actual model passed follow-up during task, heartbeat freeze on pause, explicit same-task resume, confirmed stop, command once, automatic completion summary, same-session history restore and relocated-project read. The current-project context correction was tested after reproducing old-directory access. Native permission confirmation remains required for new paths.
+- Actual SSH and CPU-only prepared Docker image on HGX260, plus a one-CPU/128-MiB Slurm job: start, pause, resume, stop from paused state, complete output and cleanup passed. No inference restart or GPU allocation.
+- Real-model workflow regression: edit-test, diagnose and resume passed; resume used the same session and appended exactly once.
+- Batch: UTF-8 file/text, stdin/text and stdin/native JSON passed with the real model; readable text fed another program.
+- Native mock cases controls, denied, enhanced and policy passed, including permitted commands and compound-command denial. API/TUI timing is functional evidence, not a real-model latency promise.
+- Unit coverage includes PTY/input idempotency, owned-group adoption, notice leases, private snapshot safety, backend identity checks and incomplete accounting. Packaging/docs checks compare actual source archives with current manuals.
+
+Private raw evidence is retained on BCM under the acceptance workspace, not published. Offline/air-gap behavior, other synchronous tools, arbitrary TUI reattachment and reboot replay are not established. GPU profiles and performance conclusions retain their earlier acceptance scope below.
+
+
 ## Development main: updater protection and candidate client (2026-11-19)
 
 All 298 local unit tests, Ruff lint/format and source-archive documentation checks pass. The 21 targeted updater tests pass, covering read-only checks, real Linux process detection/liveness, similar-path boundaries/environment privacy, clients starting during unpack, explicit continuation, active rollback refusal and standalone recovery with installed launcher/scripts removed. Resource contents/inodes are preserved; program backup is not called history backup.

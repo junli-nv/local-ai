@@ -4,7 +4,7 @@
 
 User-confirmed objective on 2026-11-18: incorporate follow-up requirements, side questions, pause and stop requests while the original task is still progressing, without waiting for the entire task. Prefer the validated OpenCode route, retaining models, GPU services, sessions and airgap deployment. Codex is a later alternative, not part of this implementation.
 
-The baseline is complete. On 2026-11-19 development main adds local_ai_task: long commands return task IDs, leaving the main conversation available for follow-ups, with task/session pause, resume and stop. Native synchronous Bash remains the baseline. See [managed tasks](execution.md) for usage and boundaries. The original v1.4.4 tag does not contain this adapter.
+v2.0.0 now includes managed commands, automatic interactive Bash backgrounding, completion messages and SSH/Slurm/container control. The dated native synchronous measurements below remain a historical baseline. See [execution](execution.md) and [batch/migration](automation.md).
 
 ## Running the isolated probe
 
@@ -81,11 +81,11 @@ The local execution adapter is now implemented and tested; see below. Submission
 
 Commit 8855c7d changes both general templates: authorized continuation and mid-task questions under task execution, a new Changes and verification section, and outcome-first final reporting. The BCM-specific template is unchanged. See [prompt references](prompt-references.md) for sources, fragment versions and mappings.
 
-v1.4.4 contains these template changes and the baseline probe. Downloading/reinstalling the original v1.4.3 archive cannot provide them. Update to v1.4.4 source and rerun client installation as the actual chat user to update the personal managed block, then exit/resume chat. Existing tags are unchanged; the new responsiveness requirement is not presented as a capability already implemented by prompts.
+v2.0.0 contains these template changes and the baseline probe. Downloading/reinstalling the original v1.4.3 archive cannot provide them. Update to v2.0.0 source and rerun client installation as the actual chat user to update the personal managed block, then exit/resume chat. Existing tags are unchanged; the new responsiveness requirement is not presented as a capability already implemented by prompts.
 
 [Development](development.md) · [中文](../client-steering.md)
 
-## Managed execution results (2026-11-19, development main)
+## Managed execution results (2026-11-19, v2.0.0)
 
 OpenCode 1.19.5, loopback mock model, five-second command: API follow-up reached the model after about 0.157 s; real TUI input after 0.391 s. Both classified during_tool, with one command run and normal completion each. These are isolated functional timings, not live-model latency or an SLA.
 
@@ -97,4 +97,7 @@ PYTHONPATH=src python3 scripts/check-execution.py --client-dir /raid/local-ai/cl
 PYTHONPATH=src python3 scripts/check-execution.py --client-dir /raid/local-ai/clients/amd64 --case denied --output /tmp/local-ai-denied-evidence
 ```
 
-controls confirms heartbeat suspension, rejection of new native tools/managed starts while paused, explicit resume, confirmed exit on stop and one command start. denied confirms that custom execution cannot bypass Bash denial. Both passed. CI retains synchronous baseline, managed API/TUI, controls and denial reports. Live-model natural-language control, follow-ups during other synchronous tools, disconnected operation, remote cancellation and reboot recovery remain unverified.
+controls confirms heartbeat suspension, rejection of new native tools/managed starts while paused, explicit resume, confirmed exit on stop and one command start. denied confirms that custom execution cannot bypass Bash denial. Both passed. CI retains synchronous baseline, managed API/TUI, controls and denial reports. v2.0.0 additionally passed real-model control/notification/history relocation and actual CPU SSH/Docker/Slurm cancellation. Follow-ups during other synchronous tools, disconnected operation and reboot recovery are not established.
+
+
+Additional native cases: --case enhanced verifies automatic Bash backgrounding and completion delivery; --case policy verifies compound-command denial and allowed commands. scripts/check-live-execution.py uses an explicitly selected real model in isolated private state; never run it against a production conversation. See [validation](validation.md).

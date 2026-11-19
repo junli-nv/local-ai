@@ -61,6 +61,10 @@ jobs:
         run: python scripts/check-execution.py --client-dir /tmp/local-ai-client --case controls --output /tmp/local-ai-controls-evidence
       - name: Verify managed tasks preserve native Bash denial
         run: python scripts/check-execution.py --client-dir /tmp/local-ai-client --case denied --output /tmp/local-ai-denied-evidence
+      - name: Verify automatic Bash backgrounding and completion messages
+        run: python scripts/check-execution.py --client-dir /tmp/local-ai-client --case enhanced --output /tmp/local-ai-enhanced-evidence
+      - name: Verify compound Bash rules and allowed native commands
+        run: python scripts/check-execution.py --client-dir /tmp/local-ai-client --case policy --output /tmp/local-ai-policy-evidence
       - name: Preserve steering probe evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -71,4 +75,6 @@ jobs:
             /tmp/local-ai-managed-evidence
             /tmp/local-ai-controls-evidence
             /tmp/local-ai-denied-evidence
+            /tmp/local-ai-enhanced-evidence
+            /tmp/local-ai-policy-evidence
           if-no-files-found: ignore
