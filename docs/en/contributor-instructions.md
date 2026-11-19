@@ -34,7 +34,7 @@ Read the [product decisions and working order](development.md#developer-handoff-
 - Only the implementation and pure-plan tests of `server plan --inventory FILE` must avoid extra hardware discovery, subprocesses and file writes. This does not restrict operations queries; inventory, live planning and startup inspect actual hardware.
 - Never infer client CPU architecture from a GPU profile.
 - Reject occupied GPUs, conflicting ports, wrong images and spec drift.
-- Preserve per-user state. Model connections use API endpoints only; do not manage network forwarding. Clean up client child processes on exit.
+- Preserve per-user state. Model connections use API endpoints only; do not manage network forwarding. Clean up client child processes on exit. Explicitly managed commands belong to detached workers and survive chat exit; cancel them through task controls and confirm terminal state. See [managed execution](execution.md).
 - Do not commit weights, binaries, caches, credentials or raw infrastructure logs.
 - Run unittest, Ruff check/format checks and git diff --check.
 - GPU validation requires an allocated device set; never launch it from CI.
