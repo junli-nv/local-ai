@@ -4,7 +4,7 @@ v1.4.2 将本地历史与服务器、安装目录解耦，默认和临时 endpoi
 
 ## 任务诊断与工作流回归（v1.4.0）
 
-在 BCM 的 /raid/local-ai 使用 v2.0.2；这些功能自 v1.4.0 提供，更早归档不包含。
+在 BCM 的 /raid/local-ai 使用 v2.0.3；这些功能自 v1.4.0 提供，更早归档不包含。
 普通 chat 自动保存私有 run.json、events.jsonl 和 requests.jsonl；
 终端会提示本次日志目录。历史部署的旧记录不回填。
 

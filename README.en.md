@@ -1,5 +1,7 @@
 # local-ai
 
+v2.0.3 prints a copyable session resume command on interactive exit. [Release notes](docs/en/release-2.0.3.md)
+
 v2.0.2 fixes terminal job status retention, Slurm log collection and backend checks during recovery. [v2.0.2](docs/en/release-2.0.2.md)
 
 v2.0.1 is a client reliability release; see [release notes](docs/en/release-2.0.1.md).
@@ -39,7 +41,7 @@ The managed server currently uses the NVIDIA toolchain. See the profile table be
 
 ## Installation and usage
 
-The current version is v2.0.2. Examples download complete source from this tag; ./local-ai --version should report 2.0.2. See [validation](docs/en/validation.md) for acceptance scope and unvalidated platforms.
+The current version is v2.0.3. Examples download complete source from this tag; ./local-ai --version should report 2.0.3. See [validation](docs/en/validation.md) for acceptance scope and unvalidated platforms.
 
 ## Example conventions and documentation
 
@@ -108,7 +110,7 @@ Download into an empty directory and check Docker, GPUs and CDI:
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v2.0.2.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v2.0.3.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ./local-ai --version
@@ -217,7 +219,7 @@ Log in as alice on bcm-headnode and use BCM's own empty directory:
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v2.0.2.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v2.0.3.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ```

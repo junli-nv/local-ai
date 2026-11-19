@@ -29,21 +29,21 @@ v2.0.0 includes scripts/update.py. For an older installation without the helper,
 On GPU001, and separately on BCM for its own installation:
 
 ```bash
-curl -fL --retry 3 https://raw.githubusercontent.com/junli-nv/local-ai/v2.0.2/scripts/update.py -o /tmp/local-ai-update.py
-python3 /tmp/local-ai-update.py --root /raid/local-ai --version v2.0.2
+curl -fL --retry 3 https://raw.githubusercontent.com/junli-nv/local-ai/v2.0.3/scripts/update.py -o /tmp/local-ai-update.py
+python3 /tmp/local-ai-update.py --root /raid/local-ai --version v2.0.3
 /raid/local-ai/local-ai --version
 ```
 
---version explicitly selects a Git tag. Substitute the next target version when appropriate; the updater neither tracks main automatically nor treats v2.0.0 as an allowlist. Success exits 0 with state=updated, version=2.0.2, resources_changed=false, service_restarted=false and the actual backup path.
+--version explicitly selects a Git tag. Substitute the next target version when appropriate; the updater neither tracks main automatically nor treats v2.0.0 as an allowlist. Success exits 0 with state=updated, version=2.0.3, resources_changed=false, service_restarted=false and the actual backup path.
 
 The helper is retained at scripts/update.py inside the installation. Later updates can use it directly:
 
 ```bash
 cd /raid/local-ai
-python3 scripts/update.py --root /raid/local-ai --version v2.0.2
+python3 scripts/update.py --root /raid/local-ai --version v2.0.3
 ```
 
-This example selects v2.0.2; replace the version for a later upgrade. Repeating it verifies source and creates another program backup without handling large resources. When an old tag lacks the updater, the currently running helper is retained for future updates and exports.
+This example selects v2.0.3; replace the version for a later upgrade. Repeating it verifies source and creates another program backup without handling large resources. When an old tag lacks the updater, the currently running helper is retained for future updates and exports.
 
 ## Check the result
 
@@ -90,9 +90,9 @@ On an online preparation host, put the helper, small source archive and checksum
 ```bash
 mkdir -p /media/local-ai/update
 cd /media/local-ai/update
-curl -fL --retry 3 https://raw.githubusercontent.com/junli-nv/local-ai/v2.0.2/scripts/update.py -o update.py
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v2.0.2.tar.gz -o local-ai-v2.0.2-source.tar.gz
-sha256sum update.py local-ai-v2.0.2-source.tar.gz > SHA256SUMS
+curl -fL --retry 3 https://raw.githubusercontent.com/junli-nv/local-ai/v2.0.3/scripts/update.py -o update.py
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v2.0.3.tar.gz -o local-ai-v2.0.3-source.tar.gz
+sha256sum update.py local-ai-v2.0.3-source.tar.gz > SHA256SUMS
 ```
 
 Mount that media at /media/local-ai on the target, then run:
@@ -100,7 +100,7 @@ Mount that media at /media/local-ai on the target, then run:
 ```bash
 cd /media/local-ai/update
 sha256sum -c SHA256SUMS
-python3 update.py --root /raid/local-ai --archive local-ai-v2.0.2-source.tar.gz
+python3 update.py --root /raid/local-ai --archive local-ai-v2.0.3-source.tar.gz
 /raid/local-ai/local-ai --version
 ```
 

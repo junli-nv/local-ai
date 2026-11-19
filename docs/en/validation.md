@@ -1,5 +1,9 @@
 # Validation record
 
+## v2.0.3 interactive exit verification
+
+On BCM, OpenCode 1.19.5 passed a disposable PTY check for Ctrl-C, a project path with spaces, and replay of the displayed resume command. The installed client also opened and resumed an existing session twice without sending any messages. The message count was preserved. All 342 unit tests, Ruff and bilingual documentation contracts passed.
+
 ## v2.0.1 tag preparation (2026-11-19)
 
 Based on remote main fef6db9, this delivery packages its verified fixes and changes only version/documentation, recording deferred work without new features. BCM Linux/Python 3.12 passed all 337 unit tests and Ruff checks/format. All 56 manuals and 30 current-version references agree; documentation contracts cover CLI examples, relative links and Bash syntax. The update guide's stale version=1.4.4 output text was also corrected.
