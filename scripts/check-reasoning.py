@@ -80,7 +80,8 @@ def check_keyboard(assets, base, session_id, project, env, captured, variants):
         return predicate()
 
     try:
-        assert drain_until(lambda: b"reasoning variant contract" in output, 20), output.decode(
+        # The window title can appear before TUI plugins and prompt input are ready.
+        assert drain_until(lambda: b"A short mock check." in output, 20), output.decode(
             errors="replace"
         )
         count = len(captured)
