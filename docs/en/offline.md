@@ -4,7 +4,7 @@ Replacing the GPU server while retaining BCM requires no database copy. Since v1
 
 In an air-gapped environment, use `npm_config_offline=true ./local-ai chat` when launching; add `--endpoint http://GPU001:18000/v1` if no default address is saved. `install --offline` controls installation only; it does not persist npm offline mode for subsequent OpenCode launches. This environment variable prevents native dependency initialization from waiting on the external npm registry; the model API remains accessible over the internal network. For a one-time setup that removes the need to type the prefix, see [persistent npm offline mode](#persistent-npm-offline-mode). The local observer imports built-in runtime modules only; tools, resume and compaction were validated with this offline flag.
 
-v2.0.0 exports observer.mjs with src/; native runtime dependency caches, diagnostics and workflow results are not public offline assets.
+Client exports include the version-matched `@opencode-ai/plugin` SDK and its locked transitive dependencies. If they are missing on the first export, use a connected preparation host with npm. Once prepared, the assets can be exported offline. Complete archives checksum the SDK files, and the target uses the bundled dependencies on its first chat without requiring npm. User runtime caches, diagnostics and workflow results stay on the original machine.
 
 v2.0.0 complete exports carry templates/, not personal AGENTS.md. Target client installation applies general rules offline by default; --instructions bcm and --instructions-language en are available. Add --instructions none when only packaging public clients on preparation hosts. Transfer private user rules separately and securely; content outside the managed template block is retained. See [persistent instruction setup](../../templates/opencode/en/agent-instructions.md).
 
@@ -18,7 +18,7 @@ Prerequisites: Python 3.10+, Bash, curl, tar, sha256sum (required for transfer v
 
 Archives contain top-level local-ai/ and bundle.json checksums. They exclude dist/, instance state, logs, temporary caches, Git metadata, private histories and credentials. Docker active databases and drivers remain host-managed.
 
-Both routes below are complete and independent; follow one route from start to finish. gpu-old/bcm-old are the existing source hosts; prep-host downloads assets without starting GPUs. New targets use GPU001/bcm-headnode as in README. Source downloads pin v2.1.1; record an exact commit when using main for development.
+Both routes below are complete and independent; follow one route from start to finish. gpu-old/bcm-old are the existing source hosts; prep-host downloads assets without starting GPUs. New targets use GPU001/bcm-headnode as in README. Source downloads pin v2.1.2; record an exact commit when using main for development.
 
 ## Prepare Docker before entering the air-gapped environment
 
@@ -154,8 +154,8 @@ v2.0.0 includes prepare. Download the complete tagged source; the unpacked direc
 remains the installation root:
 
 ```bash
-local_ai_source=/tmp/local-ai-v2.1.1-source.tar.gz
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v2.1.1.tar.gz -o "$local_ai_source"
+local_ai_source=/tmp/local-ai-v2.1.2-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v2.1.2.tar.gz -o "$local_ai_source"
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
 tar -xzf "$local_ai_source" --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
@@ -259,7 +259,7 @@ Preserve custom source edits first. Obtain the complete program from GitHub and 
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v2.1.1.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v2.1.2.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ./local-ai --version
@@ -314,7 +314,7 @@ See [deployment](deployment.md), [commands](commands.md) and [validation](valida
 
 ## Managed execution files in v2.0.0
 
-Ship execution.py and execution.mjs in source, wheels and program updates. Python uses stdlib and the plugin reuses existing native SDK caches, with no additional standalone Node/Python package dependency. Prepare native dependencies before disconnecting. Private state/execution commands, outputs, jobs and pause gates are excluded from public exports. Program update/rollback is not job recovery/cancellation. Original v1.4.4 downloads lack this feature; see [usage](execution.md).
+execution.py and execution.mjs ship in source, wheels and program updates. Offline clients load the SDK from the archive. For older offline packages without the SDK, use the updated program on a connected preparation host to export the client again. Validate with an empty user cache and `npm_config_offline=true` in an interactive chat. A long Bash command should return a managed task ID and send a completion notification. Private state/execution commands, output, jobs and pause gates stay out of public exports. See [managed execution](execution.md).
 
 
 ## v2.0.0 client state and delivery

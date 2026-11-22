@@ -13,7 +13,7 @@ import time
 import urllib.request
 from pathlib import Path
 
-from . import __version__, installlog
+from . import __version__, installlog, native_cache
 from .common import arch, atomic_json, private_dir, run, sha256, verify_elf
 
 VERSION = "1.19.5"
@@ -188,11 +188,14 @@ def validate(root):
 
 def export_client(root, output):
     root = Path(root)
-    validate(root)
+    manifest = validate(root)
+    dependencies = list(native_cache.public_files(root, manifest["version"]))
     output = Path(output)
     output.parent.mkdir(parents=True, exist_ok=True)
     with tarfile.open(output, "w:gz", compresslevel=1) as tar:
         for name in ["bin", "seed-cache", "manifest.json"]:
             tar.add(root / name, arcname="client/" + name)
+        for path in dependencies:
+            tar.add(path, arcname="client/" + path.relative_to(root).as_posix(), recursive=False)
     Path(str(output) + ".sha256").write_text(sha256(output) + "  " + output.name + "\n")
     return {"archive": str(output), "sha256_file": str(output) + ".sha256"}

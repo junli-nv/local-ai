@@ -9,7 +9,7 @@ import tempfile
 import time
 from pathlib import Path
 
-from . import __version__, installlog
+from . import __version__, installlog, native_cache
 from .common import arch, sha256, verify_elf
 from .deployment import ensure_archive
 from .paths import root, settings
@@ -22,6 +22,7 @@ def verify(base):
     manifest = json.loads((base / "bundle.json").read_text())
     if manifest.get("format") != 1 or not isinstance(manifest.get("files"), dict):
         raise ValueError("Unsupported or incomplete offline bundle manifest")
+    installlog.event("Verifying offline bundle files: " + str(len(manifest["files"])))
     for name, expected in manifest["files"].items():
         relative = Path(name)
         if relative.is_absolute() or ".." in relative.parts or name in {"", "."}:
@@ -29,7 +30,7 @@ def verify(base):
         path = base / relative
         if not path.resolve().is_relative_to(base) or not path.is_file():
             raise ValueError("Missing or unsafe offline file: " + name)
-        if sha256(path) != expected:
+        if sha256(path, progress=path.stat().st_size >= 1024 * 1024) != expected:
             raise ValueError("Offline file checksum mismatch: " + name)
     installlog.event("Offline bundle checksums verified")
     return manifest
@@ -137,6 +138,8 @@ def export(options):
         public_catalog = client / "seed-cache/opencode/models.json"
         if public_catalog.is_file():
             files["clients/" + cpu + "/seed-cache/opencode/models.json"] = public_catalog
+        for path in native_cache.public_files(client, value["version"]):
+            files["clients/" + cpu + "/" + path.relative_to(client).as_posix()] = path
     if not profiles and not clients:
         raise ValueError("Run install first, or select legacy --profile / --client-dir resources")
     catalog = os.environ.get("LOCAL_AI_CATALOG")

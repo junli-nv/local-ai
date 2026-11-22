@@ -4,7 +4,7 @@ import json
 import os
 from pathlib import Path
 
-from . import __version__, artifacts, images, installlog, instructions
+from . import __version__, artifacts, images, installlog, instructions, native_cache
 from .common import arch, atomic_json, sha256
 from .endpoint import endpoint_url
 from .paths import client_assets, root, settings
@@ -127,6 +127,14 @@ def install(options):
             local = artifacts.validate(assets)
             if options.client_version and options.client_version != local["version"]:
                 raise ValueError("Requested client version is not in this offline bundle")
+            sdk = native_cache.public_path(assets, local["version"])
+            if sdk.exists() and not native_cache.complete(sdk, local["version"]):
+                raise ValueError("Incomplete OpenCode plugin SDK: " + str(sdk))
+            if not sdk.exists():
+                installlog.event(
+                    "WARNING: Old offline bundle has no OpenCode plugin SDK; "
+                    "managed tools require these dependencies."
+                )
         (assets / "seed-cache").mkdir(parents=True, exist_ok=True)
         client_result = artifacts.install(assets, version=options.client_version)
         publish_client(assets)

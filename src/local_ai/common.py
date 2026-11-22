@@ -57,25 +57,26 @@ def fingerprint(value):
     ).hexdigest()
 
 
-def sha256(path):
+def sha256(path, *, progress=True):
     h = hashlib.sha256()
-    total = Path(path).stat().st_size
+    progress = progress and installlog.active()
+    total = Path(path).stat().st_size if progress else 0
     size = 0
     started = last = time.monotonic()
-    if installlog.active():
+    if progress:
         installlog.event("CHECKSUM START SHA256 path=%s total_bytes=%d" % (path, total))
     with Path(path).open("rb") as f:
         for chunk in iter(lambda: f.read(1024 * 1024), b""):
             h.update(chunk)
             size += len(chunk)
             now = time.monotonic()
-            if installlog.active() and now - last >= 15:
+            if progress and now - last >= 15:
                 installlog.event(
                     "CHECKSUM RUNNING bytes=%d/%d elapsed=%.1fs" % (size, total, now - started)
                 )
                 last = now
     value = h.hexdigest()
-    if installlog.active():
+    if progress:
         installlog.event(
             "CHECKSUM DONE SHA256=%s elapsed=%.2fs" % (value, time.monotonic() - started)
         )

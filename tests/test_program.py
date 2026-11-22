@@ -10,8 +10,9 @@ from pathlib import Path
 from unittest.mock import patch
 
 from test_installation import model_fixture
+from test_native_cache import fixture as sdk_fixture
 
-from local_ai import bundle, deployment
+from local_ai import bundle, deployment, native_cache
 from local_ai.cli import parser
 from local_ai.common import arch
 from local_ai.profiles import profile
@@ -59,6 +60,8 @@ class PortableTests(unittest.TestCase):
                 }
             )
         )
+
+        sdk_fixture(self.client / "plugin-dependencies/9.9.9", "9.9.9")
 
     def invoke(self, base, *args):
         return subprocess.run(
@@ -150,6 +153,17 @@ class PortableTests(unittest.TestCase):
         self.assertFalse((renamed / ".local-ai").exists())
         self.assertIn(str(renamed), self.invoke(renamed, "server", "stop", "--help").stdout)
         self.assertTrue((renamed / "src/local_ai/cli.py").is_file())
+        assets = renamed / "clients" / arch()
+        sdk_prefix = "clients/" + arch() + "/plugin-dependencies/9.9.9/"
+        manifest = bundle.verify(renamed)
+        self.assertIn(
+            sdk_prefix + "node_modules/@opencode-ai/plugin/package.json", manifest["files"]
+        )
+        self.assertNotIn(sdk_prefix + "opencode.json", manifest["files"])
+        state = self.work / "new-user-state"
+        session = state / "logs/new"
+        self.assertTrue(native_cache.prime(state, assets, session))
+        self.assertTrue(native_cache.complete(session / "config/opencode", "9.9.9"))
 
     def test_corruption_fails_before_resource_install(self):
         renamed = self.unpack(self.export())

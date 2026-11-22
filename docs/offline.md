@@ -4,7 +4,7 @@
 
 在 airgap 环境中，启动聊天时使用 `npm_config_offline=true ./local-ai chat`；尚未保存默认地址时加 `--endpoint http://GPU001:18000/v1`。`install --offline` 只控制安装阶段，不会为后续 OpenCode 启动持久设置 npm 离线模式。该环境变量避免原生依赖初始化等待外部 npm registry；模型 API 仍通过内网访问。不想每次输入前缀时，按下方[持久设置 npm 离线模式](#持久设置-npm-离线模式)配置一次。本地 observer 仅使用原生运行时内置模块；离线标志下的工具、恢复与压缩验收已通过。
 
-v2.0.0 的 observer.mjs 随 src/ 导出；原生依赖运行缓存、诊断和工作流结果不属于公共离线材料。
+客户端导出包含与 OpenCode 二进制版本匹配的 `@opencode-ai/plugin` 和锁定的传递依赖。首次导出缺少这些依赖时，准备机需要可联网的 npm。已备齐的依赖可离线重新导出。完整归档会校验依赖文件，目标机首次启动聊天时使用随包携带的依赖，无需安装 npm。用户运行缓存、诊断和工作流结果仍保存在本机。
 
 v2.0.0 的完整导出包含 templates/，不携带个人 AGENTS.md。目标机客户端安装默认离线应用通用模板，可选 --instructions bcm、--instructions-language en；准备机只打包公共客户端时加 --instructions none。用户私有规则仍需另行安全迁移，模板管理区块外的内容保留；详见[持久工作指令配置](../templates/opencode/agent-instructions.md)。
 
@@ -18,7 +18,7 @@ v2.0.0 的完整导出包含 templates/，不携带个人 AGENTS.md。目标机�
 
 包内含顶层 local-ai/ 和 bundle.json 校验清单。排除 dist/、实例状态、日志、临时缓存、Git 元数据、个人历史和凭据。Docker 活动数据库及驱动由宿主机管理。
 
-下面两条路线各自完整，选择一条从头执行。gpu-old/bcm-old 是原有来源主机；prep-host 只联网准备，不启动 GPU。新目标沿用 README 的 GPU001/bcm-headnode。源码下载固定 v2.1.1；开发测试使用 main 时另行记录确切提交。
+下面两条路线各自完整，选择一条从头执行。gpu-old/bcm-old 是原有来源主机；prep-host 只联网准备，不启动 GPU。新目标沿用 README 的 GPU001/bcm-headnode。源码下载固定 v2.1.2；开发测试使用 main 时另行记录确切提交。
 
 ## 进入 airgap 环境前准备 Docker
 
@@ -151,8 +151,8 @@ Hugging Face 模型；准备阶段无需 GPU、驱动、CDI、ARM 仿真或 QEMU
 v2.0.0 已包含 prepare。下载固定标签的完整源码；解压目录仍是安装根：
 
 ```bash
-local_ai_source=/tmp/local-ai-v2.1.1-source.tar.gz
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v2.1.1.tar.gz -o "$local_ai_source"
+local_ai_source=/tmp/local-ai-v2.1.2-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v2.1.2.tar.gz -o "$local_ai_source"
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
 tar -xzf "$local_ai_source" --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
@@ -253,7 +253,7 @@ cd /raid/ai-prod
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v2.1.1.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v2.1.2.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ./local-ai --version
@@ -311,7 +311,7 @@ npm_config_offline=true ./local-ai chat --run 'Reply with exactly LOCAL_AI_OK. D
 
 ## v2.0.0 托管执行文件
 
-新增 execution.py 和 execution.mjs 必须随源码、wheel 与程序更新一起交付。Python 仅用标准库，插件复用客户端现有 SDK 缓存，不新增独立 Node.js 或 Python 包依赖；断网前仍需备齐原生客户端依赖。用户私有 state/execution 下的命令、输出、任务与暂停门不进入公共离线包，程序更新/回退不能当作任务恢复或取消。旧 v1.4.4 标签不包含此功能；详见[用法](execution.md)。
+execution.py 和 execution.mjs 随源码、wheel 与程序更新交付。离线目标机从归档加载 SDK。遇到早期离线包缺少 SDK 的安装，可在联网准备机用新版程序重新导出客户端包。验收时用空用户缓存和 `npm_config_offline=true` 启动交互会话，确认长 Bash 命令返回托管任务 ID 并收到完成通知。用户私有 state/execution 下的命令、输出、任务与暂停门不进入公共离线包。详见[托管任务用法](execution.md)。
 
 
 ## v2.0.0 客户端状态与交付
