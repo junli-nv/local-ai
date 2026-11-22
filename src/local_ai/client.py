@@ -101,7 +101,14 @@ def prepare(state, assets, session, base, model, project):
         }
     }
     tui = session / "tui.json"
-    atomic_json(tui, {"mouse": False, "keybinds": {"messages_copy": "none", "input_paste": "none"}})
+    atomic_json(
+        tui,
+        {
+            "mouse": False,
+            "keybinds": {"messages_copy": "none", "input_paste": "none"},
+            "cursor": {"style": "line", "blinking": False},
+        },
+    )
     atomic_json(file, cfg)
     env = os.environ.copy()
     env.update(

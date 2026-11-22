@@ -129,5 +129,6 @@ class ResumeTests(unittest.TestCase):
                 self.assertEqual(env["OPENCODE_EXPERIMENTAL_DISABLE_COPY_ON_SELECT"], "true")
                 tui = json.loads(Path(env["OPENCODE_TUI_CONFIG"]).read_text())
                 self.assertFalse(tui["mouse"])
+                self.assertEqual(tui["cursor"], {"style": "line", "blinking": False})
                 self.assertEqual(tui["keybinds"]["messages_copy"], "none")
                 self.assertEqual(tui["keybinds"]["input_paste"], "none")

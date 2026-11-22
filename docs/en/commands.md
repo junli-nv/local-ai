@@ -495,7 +495,12 @@ An existing unrelated opencode executable is preserved; use the explicit entry i
 
 `--session` (`-s`) restores a session; `--continue` (`-c`) resumes the latest for
 this project. They are mutually exclusive. The launcher supports `opencode -s ID`,
-not the entire native CLI. OpenCode mouse capture, copy on selection and built-in
+not the entire native CLI.
+
+The OpenCode prompt uses a steady vertical cursor by default to make the insertion
+point easier to see when typing Chinese.
+
+OpenCode mouse capture, copy on selection and built-in
 clipboard copy/read shortcuts are disabled by default. Use terminal selection,
 copy and paste, and keyboard navigation; UI mouse clicks and wheel scrolling
 are disabled. tmux selection settings remain user-managed. Use `/export` for

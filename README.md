@@ -31,7 +31,7 @@
 
 ## 安装与使用
 
-当前版本为 v2.1.0，以下示例下载该标签的完整源码。./local-ai --version 应显示 2.1.0。[发布说明](docs/release-2.1.0.md)和[验证记录](docs/validation.md)列出本版变更和验收范围。
+当前版本为 v2.1.1，以下示例下载该标签的完整源码。./local-ai --version 应显示 2.1.1。[发布说明](docs/release-2.1.1.md)和[验证记录](docs/validation.md)列出本版变更和验收范围。
 
 ## 示例约定与文档入口
 
@@ -100,7 +100,7 @@ BCM 架构独立选择。配置只使用同一 OS 可见的本地 GPU；GB300 TP
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v2.1.0.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v2.1.1.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ./local-ai --version
@@ -209,7 +209,7 @@ start 默认等待 600 秒，加载和编译期间显示 NOT READY 及日志位�
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v2.1.0.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v2.1.1.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ```

@@ -1,5 +1,9 @@
 # Validation record
 
+## v2.1.1 OpenCode input cursor
+
+The session resume test checks that the generated `tui.json` selects a vertical cursor and disables blinking. Visual behavior during Chinese IME composition has yet to be tested.
+
 ## v2.1.0 client metrics sampling
 
 Five scrapes of the HGX260 vLLM metrics endpoint from BCM succeeded at two-second intervals. The command exited after about eight seconds.
