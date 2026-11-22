@@ -498,7 +498,8 @@ this project. They are mutually exclusive. The launcher supports `opencode -s ID
 not the entire native CLI.
 
 The OpenCode prompt uses a steady vertical cursor by default to make the insertion
-point easier to see when typing Chinese.
+point easier to see when typing Chinese. The generated `tui.json` sets expanded model reasoning as the default. OpenCode
+remembers display choices after applying the default for the first time. Use `/thinking` or press `Ctrl+X` followed by `I` to toggle it.
 
 OpenCode mouse capture, copy on selection and built-in
 clipboard copy/read shortcuts are disabled by default. Use terminal selection,

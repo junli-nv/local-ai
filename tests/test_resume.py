@@ -132,3 +132,9 @@ class ResumeTests(unittest.TestCase):
                 self.assertEqual(tui["cursor"], {"style": "line", "blinking": False})
                 self.assertEqual(tui["keybinds"]["messages_copy"], "none")
                 self.assertEqual(tui["keybinds"]["input_paste"], "none")
+                self.assertEqual(tui["keybinds"]["display_thinking"], "<leader>i")
+                plugin, settings = tui["plugin"][0]
+                self.assertEqual(
+                    plugin, Path(client.__file__).with_name("tui_defaults.mjs").as_uri()
+                )
+                self.assertEqual(settings, {"thinking_mode": "show"})

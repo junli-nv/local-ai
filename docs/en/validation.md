@@ -4,6 +4,8 @@
 
 On ARM64 BCM, 3,621 SDK files in the exported bundle were verified against their SHA256 checksums. A fresh-cache OpenCode 1.19.5 test with npm offline verified automatic Bash backgrounding, command output, and completion notification. The offline retest from the full archive exited with code 0. The SSH output limit prevented collection of the full final report.
 
+An isolated OpenCode 1.19.5 TUI on macOS ARM64 loaded the generated `tui.json`, expanded thinking on first launch, and preserved a later collapsed preference on restart.
+
 ## v2.1.1 OpenCode input cursor
 
 The session resume test checks that the generated `tui.json` selects a vertical cursor and disables blinking. Visual behavior during Chinese IME composition has yet to be tested.

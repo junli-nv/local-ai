@@ -105,8 +105,18 @@ def prepare(state, assets, session, base, model, project):
         tui,
         {
             "mouse": False,
-            "keybinds": {"messages_copy": "none", "input_paste": "none"},
+            "keybinds": {
+                "messages_copy": "none",
+                "input_paste": "none",
+                "display_thinking": "<leader>i",
+            },
             "cursor": {"style": "line", "blinking": False},
+            "plugin": [
+                [
+                    Path(__file__).with_name("tui_defaults.mjs").resolve().as_uri(),
+                    {"thinking_mode": "show"},
+                ],
+            ],
         },
     )
     atomic_json(file, cfg)
