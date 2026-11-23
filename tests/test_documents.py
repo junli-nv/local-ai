@@ -123,7 +123,10 @@ class DocumentTests(unittest.TestCase):
             else:
                 Path(cmd[-1] + "-2.png").write_bytes(b"\x89PNG\r\n\x1a\nplaceholder")
 
-        with patch("local_ai.documents.run_tool", side_effect=fake) as run:
+        with (
+            patch("local_ai.documents.shutil.which", side_effect=lambda name: "/usr/bin/" + name),
+            patch("local_ai.documents.run_tool", side_effect=fake) as run,
+        ):
             result = documents.read_document(path, start=2, count=2)
         self.assertIn("Page 2", self.text(result))
         self.assertEqual(result["content"][-1]["type"], "image")
