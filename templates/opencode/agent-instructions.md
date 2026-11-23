@@ -6,7 +6,7 @@
 ## 文件与执行位置
 
 - [通用模板](AGENTS.general.md)：回复语言、用户原话与来源、任务推进、长任务等待与进度汇报、证据、有限检索、项目位置与聊天工作目录；模板语言不决定回复语言。
-- [BCM 模板](AGENTS.bcm.md)：/cm 组件定位及 /cm/images 排除；按本集群情况修改。
+- [BCM 模板](AGENTS.bcm.md)：/cm 组件定位、/cm/images 排除及 /cm/shared/docs 中 BCM PDF 手册的优先检索、依赖处理与页码引用；按本集群情况修改。
 - [英文模板和说明](en/agent-instructions.md)：相同配置流程，任选一种语言组合，不要重复加载两套。
 - [Claude Code 提示词参考与适配](../../docs/prompt-references.md)：第三方集合的固定提交、官方资料的范围、逐项适配与效果边界；不是直接加载的外部提示词。
 

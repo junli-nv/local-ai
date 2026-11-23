@@ -424,6 +424,43 @@ def perform(root, action, session=None, project=None, job_id=None, offset=0, lim
             job["notify"] = True
             save(root, job)
             return view(root, job)
+        if action == "notice_read":
+            # Only the chat adapter records output actually returned to the model.
+            # CLI inspection must not silently consume the assistant's follow-up.
+            page = args.get("page", {})
+            size = view(root, job)["output_bytes"]
+            begin, end = page.get("offset"), page.get("next_offset")
+            if (
+                page.get("id") != job_id
+                or page.get("state") != job["state"]
+                or page.get("total_bytes") != size
+                or not isinstance(begin, int)
+                or not isinstance(end, int)
+                or not 0 <= begin <= end <= size
+            ):
+                return {"observed": False}
+            signature = [job["state"], job.get("exit_code"), size, page.get("truncated", False)]
+            notice = job.setdefault("notification", {})
+            read = notice.get("read", {})
+            if read.get("signature") != signature:
+                previous = read.get("signature", [])
+                cursor = (
+                    read.get("cursor", 0)
+                    if len(previous) == 4 and previous[0] not in TERMINAL and previous[2] <= size
+                    else 0
+                )
+                read = {"signature": signature, "cursor": cursor}
+            if begin <= read["cursor"]:
+                read["cursor"] = max(read["cursor"], end)
+            if (
+                job["state"] in TERMINAL
+                and page.get("all_output_delivered")
+                and read["cursor"] == size
+            ):
+                read["observed"] = True
+            notice["read"] = read
+            save(root, job)
+            return {"observed": read.get("observed", False)}
         if action == "notice_ack":
             n = job.get("notification", {})
             if n.get("owner") != args.get("consumer"):

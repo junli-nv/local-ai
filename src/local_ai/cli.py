@@ -116,6 +116,12 @@ def parser():
         "document", help="Client host: read rich documents or check conversion tools"
     ).add_subparsers(dest="action", required=True)
     document.add_parser("doctor", help="Show local document converters; no downloads")
+    pdf_setup = document.add_parser(
+        "setup-pdf", help="Install optional pypdf text backend in a private user venv"
+    )
+    pdf_setup.add_argument(
+        "--wheel-dir", type=Path, help="Offline wheel directory; disables package-index access"
+    )
     doc = document.add_parser("read", help="Extract document text and/or page images as MCP JSON")
     doc.add_argument("path", type=Path, help="Local file on this client host")
     doc.add_argument(
@@ -836,6 +842,8 @@ def dispatch(q):
     if q.group == "document":
         if q.action == "doctor":
             return documents.dependencies()
+        if q.action == "setup-pdf":
+            return documents.setup_pdf(q.wheel_dir)
         if q.action == "web":
             return webpage.read_webpage(q.url, q.offset)
         if q.action == "video":

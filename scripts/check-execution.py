@@ -38,16 +38,17 @@ class Model(probe.Model):
     def reply(self, payload):
         if not payload.get("tools"):
             return {"content": "Managed control probe"}, "stop"
-        if any(
-            "LOCAL_AI_TASK_EVENT:" in str(r.get("content", "")) for r in payload.get("messages", [])
-        ):
+        latest_user = next(
+            (r for r in reversed(payload.get("messages", [])) if r.get("role") == "user"), {}
+        )
+        if "LOCAL_AI_TASK_EVENT:" in str(latest_user.get("content", "")):
             self.notifications += 1
             return {"content": "NOTIFIED_OK"}, "stop"
         marker = ""
         for row in reversed(payload.get("messages", [])):
             if row.get("role") == "user":
                 match = re.search(
-                    r"CONTROL_(START|PAUSE|NEW|BLOCKED|RESUME|AFTER|STOP|AUTO|POLICY|ALLOWED)",
+                    r"CONTROL_(START|PAUSE|NEW|BLOCKED|RESUME|AFTER|STOP|AUTO|POLICY|ALLOWED|READ)",
                     str(row.get("content")),
                 )
                 if match:
@@ -75,6 +76,8 @@ class Model(probe.Model):
                 "command": "sleep 3; echo AUTO_FINISHED",
                 "description": "Automatic Bash background test",
             }
+        elif marker == "READ":
+            args = {"action": "output", "job_id": self.read_job_id}
         elif marker in {"START", "NEW"}:
             code = (
                 "import time\nfrom pathlib import Path\n"
@@ -294,6 +297,51 @@ def run(assets, output, case):
                             completion_reached_model=True,
                             output_verified=True,
                         )
+                        observed = execution.perform(
+                            task_root,
+                            "start",
+                            session=session,
+                            project=str(project),
+                            argv=[sys.executable, "-c", "print('OBSERVED_FINISHED')"],
+                            request_id="already-read-result",
+                            notify=False,
+                        )["id"]
+                        wait(
+                            lambda: execution.perform(task_root, "status", job_id=observed)[
+                                "terminal"
+                            ],
+                            "second task terminal result",
+                        )
+                        model.read_job_id = observed
+                        read = step("READ")
+                        if (
+                            read["status"] != "completed"
+                            or "OBSERVED_FINISHED" not in read["output"]
+                        ):
+                            raise RuntimeError("Terminal output did not reach the native model")
+                        before = model.notifications
+                        execution.perform(task_root, "enable_notice", job_id=observed)
+                        # A CLI mutation emits no native event. Re-arm the session watcher
+                        # after enabling delivery, even if an earlier idle tick removed it.
+                        probe.request(
+                            base + "/session/" + session + "/message",
+                            {
+                                "model": {"providerID": "local-deepseek", "modelID": probe.MODEL},
+                                "parts": [{"type": "text", "text": "CONTROL_READ"}],
+                            },
+                            timeout=max(0.1, deadline - time.monotonic()),
+                        )
+                        wait(
+                            lambda: execution.perform(task_root, "status", job_id=observed)[
+                                "notification"
+                            ].get("delivered"),
+                            "already-read toast acknowledgement",
+                        )
+                        if model.notifications != before:
+                            raise RuntimeError(
+                                "Already-read output triggered a redundant model reply"
+                            )
+                        result["already_read_toast_only"] = True
                     elif case == "denied":
                         if started["status"] != "error":
                             raise RuntimeError(

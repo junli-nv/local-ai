@@ -406,7 +406,7 @@ execution.py uses only Python stdlib; execution.mjs reuses the existing native S
 
 Beyond full tests/Ruff, run check-steering.py in default and --managed modes, plus check-execution.py controls/denied. Preserve the synchronous baseline and native permissions. Cover stable keys, replay prevention, process identity, failed startup checkpoints, pause gates, confirmed stop, worker loss, output truncation and terminal exit. Client-contract CI retains private fixture evidence.
 
-Real-model control/notifications/history relocation and real SSH/Slurm/container cancellation are recorded in v2.0.0 validation; strict airgap remains unverified. Mock API results alone do not establish live behavior. Synchronize [usage](execution.md), commands, architecture, offline and validation in both languages, explicitly distinguishing development main from old tagged downloads.
+Real-model control/notifications/history relocation and real SSH/Slurm/container cancellation are recorded in v2.0.0 validation; strict airgap remains unverified. Mock API results alone do not establish live behavior. Synchronize [usage](execution.md), commands, architecture, offline and validation in both languages, explicitly distinguishing v2.1.3 from old tagged downloads.
 
 
 v2.0.0 maintenance: retain each adapters.py controller copy with its task. Ship batch/portability modules in source and wheels. Recheck enhanced, policy and authorized live-model acceptance, including stable notice IDs, relocated project use, input idempotency and backend identity. Never upload private archives to CI or public packages.
@@ -432,3 +432,7 @@ The user considers these non-urgent. Record them for later work; none blocks v2.
 | tar extraction time | Low priority: retain tar and measure verification, extraction and import separately before optimizing |
 
 This delivery packages verified fixes as v2.0.1, pushes a new tag and updates BCM. Preserve old tags; do not create a GitHub Release automatically. See [release notes](release-2.0.1.md).
+
+## v2.1.3: completion deduplication and BCM PDFs (2026-11-23)
+
+Retain automatic continuation. Once complete task output reaches the model, only show a completion/warning toast; never insert an event that prompts a redundant reply. Persist contiguous read cursors per private task; inspect the latest 100 real tool messages for older state. The BCM template prioritizes /cm/shared/docs while excluding /cm/images. Poppler remains the PDF default; optional pypdf runs as an external text backend in a separate environment, keeping the application stdlib-only. Explicit document setup-pdf prepares a private user venv, with --wheel-dir for offline installation. Reading/doctor never installs or accesses package indexes. Without a renderer, auto warns that it returns text only; this does not validate scans or diagrams. Setup logs use private document-tools/install.log, progress stderr and result JSON stdout. These development changes are absent from the original v2.1.2 tag; this release is explicitly requested, with a new tag and GitHub Release while preserving older tags.

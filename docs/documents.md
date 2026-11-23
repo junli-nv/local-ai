@@ -2,7 +2,7 @@
 
 在 **BCM 客户端**使用普通聊天，文件必须能被当前账户读取。GPU 节点只接收模型请求；仅把文件放在 GPU 节点上不会让客户端自动看到它。目录可以是当前项目，也可以是你明确指定的其他本地目录。
 
-v1.3.0 已包含本功能。已有安装按[程序更新指南](update.md)选择 --version v2.1.2，无需重新下载模型或镜像。
+v1.3.0 已包含本功能。已有安装按[程序更新指南](update.md)选择 --version v2.1.3，无需重新下载模型或镜像。
 
 ## 准备与使用
 
@@ -99,3 +99,22 @@ doctor 显示 pdf_ready 和 office_render_ready。缺少依赖时按错误提示
 local-ai export 会携带源码中的文档工具，但不会携带宿主机的 Poppler/LibreOffice。目标 BCM 必须通过适配其发行版和架构的系统软件源、离线仓库或管理员预置安装这些依赖，并运行 document doctor 确认。不能把另一台主机的 /usr/bin 程序直接复制当作完整离线安装。
 
 [English version](en/documents.md)
+
+## v2.1.3：PDF 文字备用后端
+
+BCM 问题优先查询 `/cm/shared/docs` 中与版本及组件匹配的手册，标注实际文件和 PDF 页码。BCM 模板还提供 `/cm/node-installer` 的 nodeinstaller 位置；节点启动问题只定向检查关联 `/cm/images` 镜像。应用模板的方法见[个人规则](../templates/opencode/agent-instructions.md)。
+
+内置工具优先用 `pdftotext`；缺少时复用当前 Python 或用户私有环境中的可选 `pypdf`。无需自行编写 Python 解析脚本。没有文字后端时，在 BCM 安装目录运行：
+
+```bash
+./local-ai document setup-pdf
+# 离线时，替换为已准备 pypdf 及所需依赖 wheel 的本机目录
+./local-ai document setup-pdf --wheel-dir /home/alice/pdf-wheels
+./local-ai document doctor
+```
+
+两条 setup-pdf 是在线和离线的替代用法。助手可为已请求的 PDF 阅读执行该准备步骤，再重试内置读取工具。在线通过 pip 准备可选依赖；`--wheel-dir` 使用 `--no-index`，不会访问包索引。目标是当前用户 `~/.local/state/local-ai/document-tools/pypdf`（遵循 XDG_STATE_HOME），不修改系统 Python。依赖已有且可用时直接复用；进度写 stderr，完整日志在同级 `document-tools/install.log`，结果 JSON 写 stdout。需要 Python venv/ensurepip；缺少时报告真实错误，不使用系统 pip 兜底。
+
+读取及 doctor 不自动安装或联网。doctor 分别报告 `pdf_text_ready`、`pdf_render_ready`、`pdf_text_backend`；`pdf_ready` 表示文字和渲染均可用。auto 缺渲染器时返回文字及未查看图片/版面的警告；只有渲染器时返回页面图片及文字后端缺失说明。显式 text/render 不悄悄降级。pypdf 不提供 OCR；扫描件、图表仍需 Poppler 渲染和支持图片的模型，空文字不等于全文已读。
+
+该后端与模板改动在v2.1.3，原 v2.1.2 标签未包含。程序升级后重新进入聊天；个人 BCM 模板需重新运行 `./local-ai install --role client --instructions bcm` 应用并重启客户端。独立虚拟环境不随公共 export 或历史迁移携带，离线目标机需预备 wheel 后运行上述命令。

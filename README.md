@@ -6,7 +6,7 @@
 
 它将本地大模型服务与终端中的工具执行结合起来：用户描述任务，助手结合工作目录中的文件和实际命令结果进行分析，并在用户授权范围内调用工具完成工作。项目使用 vLLM 提供模型推理、OpenCode 提供交互与工具能力，负责将两者的安装、连接、配置和离线交付组织成一套可复用流程。
 
-[托管执行](docs/execution.md)支持插话、暂停/恢复/停止、PTY 输入及接管自有进程组。[批处理与迁移](docs/automation.md)给出最短示例：./local-ai chat run "任务"、./local-ai chat run --prompt-file task.txt，以及 ./collect.sh | ./local-ai chat run --prompt-file -。更新程序后重新进入聊天以加载新插件。
+[托管执行](docs/execution.md)支持插话、暂停/恢复/停止、PTY 输入及接管自有进程组。[批处理与迁移](docs/automation.md)给出最短示例：./local-ai chat run "任务"、./local-ai chat run --prompt-file task.txt，以及 ./collect.sh | ./local-ai chat run --prompt-file -。更新程序后重新进入聊天以加载新插件。 v2.1.3 已对完成通知去重：已完整读取的任务只弹提示，未处理的结果仍自动续做；原 v2.1.2 标签不包含此修复。
 
 ## 能做什么
 
@@ -31,7 +31,7 @@
 
 ## 安装与使用
 
-当前版本为 v2.1.2，以下示例下载该标签的完整源码。./local-ai --version 应显示 2.1.2。[发布说明](docs/release-2.1.2.md)和[验证记录](docs/validation.md)列出本版变更和验收范围。
+当前版本为 v2.1.3，以下示例下载该标签的完整源码。./local-ai --version 应显示 2.1.3。[发布说明](docs/release-2.1.3.md)和[验证记录](docs/validation.md)列出本版变更和验收范围。
 
 ## 示例约定与文档入口
 
@@ -100,7 +100,7 @@ BCM 架构独立选择。配置只使用同一 OS 可见的本地 GPU；GB300 TP
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v2.1.2.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v2.1.3.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ./local-ai --version
@@ -209,7 +209,7 @@ start 默认等待 600 秒，加载和编译期间显示 NOT READY 及日志位�
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v2.1.2.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v2.1.3.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ```

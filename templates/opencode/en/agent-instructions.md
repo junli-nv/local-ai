@@ -9,7 +9,7 @@ Combine the [general template](AGENTS.general.md) with the [BCM template](AGENTS
 The general template covers response language, user-source attribution, and waiting/progress updates for long tasks without imposing a default language.
 It also includes project locations and chat working-directory constraints, so copying it carries those rules into personal instructions.
 The template's own language does not determine the response language.
-Adapt cluster paths, especially /cm and /cm/images. Use either language, not both copies.
+Adapt cluster paths, especially /cm and /cm/images. The BCM template prioritizes manuals in /cm/shared/docs, built-in PDF reading, optional private pypdf setup and page citations. Use either language, not both copies.
 See [Claude Code prompt references and adaptations](../../../docs/en/prompt-references.md) for pinned third-party sources, official-source scope, the change mapping and evaluation limits; external prompts are not loaded directly.
 [中文](../agent-instructions.md).
 

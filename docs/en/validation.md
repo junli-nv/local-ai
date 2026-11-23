@@ -1,5 +1,13 @@
 # Validation record
 
+## v2.1.3 Completion notices and BCM PDFs (2026-11-23)
+
+Baseline: remote main / v2.1.2 commit 5c3018c. On macOS ARM64 / Python 3.14, 355 unittest cases completed successfully with 30 Linux-process or optional-environment skips. Ruff lint/format, whitespace and bilingual documentation contracts passed. Linux native control, permission, message and notification flows are checked separately by CI for the release commit.
+
+The real execution.mjs plugin and Python RPC verify toast-only delivery with zero model requests for multiple already-read tasks, while unread output still wakes the model. Coverage includes failures, contiguous pages, prefixes read while running, empty output, changed terminal output, older tool-message lookup and restart persistence. SDK schemas and the client are mocked; this does not establish actual TUI appearance. The native enhanced probe separately asserts that returning output to the model prevents a second completion event.
+
+A temporary private environment installed pypdf 7.1.1 from local wheels; repeated setup-pdf returned already-present. With Poppler absence simulated, the built-in reader correctly read pages 2 and 3 of a three-page test PDF and explicitly warned that no images were returned. Coverage includes offline --no-index, installation failure/retry, avoiding system Python changes, no installation during reading and explicit render dependency errors. No real BCM was connected, no cluster manuals were read and scan OCR was not validated; paths were user-provided. Chinese/English README, command, deployment, offline, architecture, development, update, performance, document and validation guides were individually reviewed; server workflows required no changes.
+
 ## v2.1.2 Offline client dependencies
 
 On ARM64 BCM, 3,621 SDK files in the exported bundle were verified against their SHA256 checksums. A fresh-cache OpenCode 1.19.5 test with npm offline verified automatic Bash backgrounding, command output, and completion notification. The offline retest from the full archive exited with code 0. The SSH output limit prevented collection of the full final report.

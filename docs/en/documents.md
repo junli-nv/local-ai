@@ -2,7 +2,7 @@
 
 Run normal chat on the **BCM client**. Files must be readable by the current user on that client. The GPU host only receives model requests; files stored only on that host are not automatically visible. You may name the project directory or another local directory explicitly.
 
-This feature is included in v1.3.0. Existing installations should follow the [program update guide](update.md) and select --version v2.1.2; no model/image download is needed.
+This feature is included in v1.3.0. Existing installations should follow the [program update guide](update.md) and select --version v2.1.3; no model/image download is needed.
 
 ## Setup and use
 
@@ -103,3 +103,22 @@ The Log path printed at session start stores calls and errors. Document contents
 local-ai export includes the document tool's source, but not host-installed Poppler/LibreOffice. Provision those dependencies on the target BCM using a matching distribution/architecture repository, offline package mirror or administrator-prepared host, then run document doctor. Copying another host's /usr/bin executables is not a complete offline installation.
 
 [中文版](../documents.md)
+
+## v2.1.3: optional PDF text backend
+
+For BCM questions, prioritize version/component-matched manuals in `/cm/shared/docs` and cite actual files and PDF page numbers. The BCM template also locates nodeinstaller at `/cm/node-installer`; boot troubleshooting may inspect the associated image under `/cm/images`, without scanning all images. See [personal instructions](../../templates/opencode/en/agent-instructions.md) to apply it.
+
+The built-in reader prefers `pdftotext`, falling back to optional `pypdf` in the current Python or a private user environment. No custom Python parsing script is needed. If no text backend is available, run from the BCM installation directory:
+
+```bash
+./local-ai document setup-pdf
+# Offline alternative: replace with a local directory containing pypdf and dependency wheels
+./local-ai document setup-pdf --wheel-dir /home/alice/pdf-wheels
+./local-ai document doctor
+```
+
+The two setup commands are online/offline alternatives. The assistant may prepare this backend to complete a requested PDF read, then retry the built-in reader. Online setup uses pip; `--wheel-dir` adds `--no-index` and never queries a package index. Installation uses the current user's `~/.local/state/local-ai/document-tools/pypdf` (respecting XDG_STATE_HOME), without changing system Python. A usable existing backend is reused. Progress uses stderr, complete setup logs use sibling `document-tools/install.log`, and result JSON uses stdout. Python venv/ensurepip is required; report its actual failure rather than using system pip.
+
+Reading and doctor never install or access package indexes. Doctor reports `pdf_text_ready`, `pdf_render_ready` and `pdf_text_backend`; `pdf_ready` requires both text and rendering. Without a renderer, auto returns text with a warning that images/layout were not inspected. With only a renderer, it returns page images and a missing-text-backend warning. Explicit text/render never silently downgrade. pypdf performs no OCR; scans/charts still require Poppler rendering and an image-capable model. Empty extracted text does not establish a full read.
+
+These backend/template changes are on v2.1.3, absent from the original v2.1.2 tag. Reopen chat after updating; reapply the personal BCM template with `./local-ai install --role client --instructions bcm` and restart the client. The private venv is excluded from public exports and history migration; prepare wheels and run setup on each offline target.

@@ -5,10 +5,13 @@ import json
 import posixpath
 import shutil
 import subprocess
+import sys
 import tempfile
 import xml.etree.ElementTree as ET
 import zipfile
 from pathlib import Path
+
+from .common import client_home, private_dir, run
 
 MAX_FILE = 100 * 1024 * 1024
 MAX_XML = 32 * 1024 * 1024
@@ -52,6 +55,44 @@ TEXT = {
 }
 
 
+def pdf_python():
+    """Find an optional external pypdf backend; the application stays stdlib-only."""
+    candidates = [client_home() / "document-tools/pypdf/bin/python", Path(sys.executable)]
+    for python in dict.fromkeys(candidates):
+        if not python.is_file():
+            continue
+        try:
+            result = subprocess.run(
+                [str(python), "-I", "-c", "import pypdf"], capture_output=True, timeout=5
+            )
+            if result.returncode == 0:
+                return str(python)
+        except (OSError, subprocess.TimeoutExpired):
+            continue
+    return None
+
+
+def setup_pdf(wheel_dir=None):
+    """Explicit optional-backend installation, never called by document reads."""
+    available = pdf_python()
+    if available:
+        return {"status": "already-present", "python": available}
+    if wheel_dir is not None:
+        wheel_dir = Path(wheel_dir).expanduser().resolve(strict=True)
+        if not wheel_dir.is_dir():
+            raise ValueError("--wheel-dir must be a directory of local wheels")
+    target = private_dir(client_home() / "document-tools") / "pypdf"
+    run([sys.executable, "-m", "venv", str(target)], timeout=120)
+    python = str(target / "bin/python")
+    command = [python, "-m", "pip", "--disable-pip-version-check", "install"]
+    if wheel_dir is not None:
+        command += ["--no-index", "--find-links", str(wheel_dir)]
+    run(command + ["pypdf"], timeout=180)
+    if not pdf_python():
+        raise RuntimeError("pypdf installation did not produce a usable PDF backend")
+    return {"status": "installed", "python": python}
+
+
 def dependencies():
     tools = {
         name: shutil.which(name)
@@ -68,6 +109,8 @@ def dependencies():
                 video_errors[name] = probe.stderr.decode(errors="replace")[-2000:]
         except (OSError, subprocess.TimeoutExpired) as error:
             video_errors[name] = str(error)
+    fallback = None if tools["pdftotext"] else pdf_python()
+    text_ready = bool(tools["pdftotext"] or fallback)
     return {
         "tools": tools,
         "native": ["DOCX", "XLSX", "PPTX", "ODT", "ODS", "ODP", "UTF-8 text"],
@@ -76,9 +119,14 @@ def dependencies():
         "video_info_ready": "ffprobe" not in video_errors,
         "video_sidecar_ready": True,
         "video_tool_errors": video_errors,
-        "pdf_ready": bool(tools["pdftotext"] and tools["pdftoppm"]),
+        "pdf_ready": bool(text_ready and tools["pdftoppm"]),
+        "pdf_text_ready": text_ready,
+        "pdf_render_ready": bool(tools["pdftoppm"]),
+        "pdf_text_backend": "pdftotext" if tools["pdftotext"] else fallback,
         "office_render_ready": bool(tools["libreoffice"] and tools["pdftoppm"]),
-        "install_hint": "On the client host: sudo apt-get install poppler-utils libreoffice",
+        "install_hint": "On the client host: install poppler-utils for PDF text/images; "
+        "or local-ai document setup-pdf for optional text-only pypdf in a private venv. "
+        "Office rendering additionally needs LibreOffice.",
     }
 
 
@@ -329,20 +377,44 @@ def pdf_content(path, directory, mode, start, count):
     images = []
     if mode != "render":
         target = directory / "extracted.txt"
-        run_tool(
-            [
-                "pdftotext",
-                "-f",
-                str(start),
-                "-l",
-                str(start + count - 1),
-                "-layout",
-                "-enc",
-                "UTF-8",
-                str(path),
-                str(target),
-            ]
-        )
+        if shutil.which("pdftotext"):
+            run_tool(
+                [
+                    "pdftotext",
+                    "-f",
+                    str(start),
+                    "-l",
+                    str(start + count - 1),
+                    "-layout",
+                    "-enc",
+                    "UTF-8",
+                    str(path),
+                    str(target),
+                ]
+            )
+        else:
+            python = pdf_python()
+            if not python:
+                raise ValueError(
+                    "Missing pdftotext and optional pypdf; run local-ai document setup-pdf "
+                    "(--wheel-dir DIR offline), or install poppler-utils on this client. "
+                    "Use local-ai document doctor to inspect PDF capabilities."
+                )
+            script = (
+                "import sys\nfrom pypdf import PdfReader\n"
+                "reader=PdfReader(sys.argv[1])\n"
+                "start,count=int(sys.argv[3]),int(sys.argv[4])\n"
+                "with open(sys.argv[2],'w',encoding='utf-8') as out:\n"
+                " for index in range(start-1,min(start-1+count,len(reader.pages))):\n"
+                "  out.write((reader.pages[index].extract_text() or '')+'\\f')\n"
+            )
+            result = subprocess.run(
+                [python, "-I", "-c", script, str(path), str(target), str(start), str(count)],
+                capture_output=True,
+                timeout=90,
+            )
+            if result.returncode:
+                raise ValueError("pypdf failed: " + result.stderr.decode(errors="replace")[-2000:])
         if target.stat().st_size > MAX_XML:
             raise ValueError("Extracted page text exceeds 32 MiB; request fewer pages")
         pages = target.read_text().split("\f")
@@ -397,7 +469,25 @@ def read_document(path, mode="auto", start=1, count=3, offset=0):
             images = [image_content(path)]
         elif ext == ".pdf":
             scope = "pages"
-            sections, images = pdf_content(path, tmp, mode, start, count)
+            pdf_mode = mode
+            if mode == "auto" and not shutil.which("pdftoppm"):
+                pdf_mode = "text"
+                warnings.append(
+                    "pdftoppm is unavailable; returned PDF text only. Scans, images and layout "
+                    "were not inspected. Install poppler-utils on this client for rendering."
+                )
+            elif mode == "auto" and not shutil.which("pdftotext") and not pdf_python():
+                pdf_mode = "render"
+                warnings.append(
+                    "No PDF text backend; returned page images only. Text recognition requires "
+                    "an image-capable model. Use document setup-pdf for optional text extraction."
+                )
+            sections, images = pdf_content(path, tmp, pdf_mode, start, count)
+            if sections and not any(value.strip() for _, value in sections):
+                warnings.append(
+                    "Selected pages contain no extractable text; this may be a scanned PDF. "
+                    "Use page images with an image-capable model; pypdf does not perform OCR."
+                )
         elif ext in OFFICE:
             if mode == "render" or ext in {".doc", ".xls", ".ppt", ".rtf"}:
                 converted = office_pdf(path, tmp)

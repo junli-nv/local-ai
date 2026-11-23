@@ -4,7 +4,7 @@ v1.4.2 将本地历史与服务器、安装目录解耦，默认和临时 endpoi
 
 ## 任务诊断与工作流回归（v1.4.0）
 
-在 BCM 的 /raid/local-ai 使用 v2.1.2；这些功能自 v1.4.0 提供，更早归档不包含。
+在 BCM 的 /raid/local-ai 使用 v2.1.3；这些功能自 v1.4.0 提供，更早归档不包含。
 普通 chat 自动保存私有 run.json、events.jsonl 和 requests.jsonl；
 终端会提示本次日志目录。历史部署的旧记录不回填。
 
@@ -643,3 +643,5 @@ v2.0.0 包含 client job；[最短示例与限制](execution.md)。在执行命�
 local_ai_task 同样支持 recover，仍需原生控制权限；不解除暂停、不重置超时、不重放未知提交。backend_unverified 表示需排查连接/身份后重试。存活的控制器保留，并发恢复最多新建一个监控进程。终态输出异步收集，必要时再次 recover 补齐。
 
 chat run 支持提示词前后放选项，如 chat run --format json "任务"；未知参数、多余位置提示词仍拒绝，-- 可分隔以减号开头的提示词。个人规则安装在修改结果中报告 legacy_copies_removed；只迁移管理区块和代码示例以外、能精确匹配所选模板的副本，并生成完整私有备份。
+
+v2.1.3 提供 `document setup-pdf`：为当前用户准备可选 pypdf 文字后端，复用已有可用环境，默认在线 pip 安装到私有虚拟环境。`--wheel-dir DIR` 改用本机 wheel 目录并禁止包索引访问。结果 JSON 在 stdout，进度 stderr、日志在用户状态根 document-tools/install.log；失败退出 1。document doctor 增加 pdf_text_ready/pdf_render_ready/pdf_text_backend，读取不自动安装。用法及扫描件边界见[PDF 备用后端](documents.md#v213pdf-文字备用后端)。

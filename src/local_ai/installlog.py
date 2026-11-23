@@ -78,11 +78,16 @@ def session(options):
         or (group == "model")
         or (group == "client" and action in {"install", "export"})
         or (group == "server" and action in {"start", "warmup"})
+        or (group == "document" and action == "setup-pdf")
     )
     if not enabled:
         yield
         return
     root = getattr(options, "data_dir", None) or getattr(options, "client_dir", None)
+    if group == "document":
+        from .common import client_home
+
+        root = client_home() / "document-tools"
     if group in {"install", "export"}:
         from .paths import root as program_root
 

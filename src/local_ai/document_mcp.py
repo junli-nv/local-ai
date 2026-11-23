@@ -10,7 +10,8 @@ from .webpage import read_webpage
 TOOL = {
     "name": "read_document",
     "description": "Read local PDF, images, Word, Excel, PowerPoint, OpenDocument or text. "
-    "PDF auto returns extracted text AND page images (including scans). "
+    "PDF auto returns text AND page images; without the renderer it returns text with a warning. "
+    "Text uses pdftotext or optional pypdf; no custom Python parser is needed. "
     "Office auto returns text/cells/formulas/notes; render shows layout/charts through LibreOffice. "
     "Use start/count to select pages, sheets or slides; offset continues long text. "
     "Never use raw PDF attachments with a Chat Completions endpoint. Paths are on this client host.",
