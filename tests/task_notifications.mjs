@@ -42,7 +42,8 @@ await hooks["chat.message"]({sessionID:"ses_test"},{parts:[{type:"text",text:"co
 for (let i=0;i<8;i++) await tick();
 assert.deepEqual(errors,[]);
 assert.equal(prompts.length,1,"Already-read tasks must never reach the model again");
-assert.equal(toasts.length,5);
+assert.equal(toasts.length,6);
+assert.ok(toasts.some(t=>t.message.includes(job(5))),"Unread automatic tasks still show one toast");
 assert.equal(toasts.filter(t=>t.variant==="warning").length,1);
 assert.ok(prompts[0].parts[0].text.includes(job(3)),"Unread output still triggers automatic continuation");
 assert.ok(!prompts[0].parts[0].text.includes(job(0)));

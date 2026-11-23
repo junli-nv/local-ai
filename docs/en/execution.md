@@ -4,7 +4,7 @@ v2.0.0 includes automatic Bash backgrounding, completion messages, PTY input and
 
 ## Start here
 
-In interactive chat, ordinary Bash waits about 400 ms for short commands, then returns a job_ ID for longer commands so you can send follow-ups. You may explicitly request a background task and completion report. The assistant uses local_ai_task to manage tasks. Submission is not completion.
+In interactive chat, ordinary Bash waits about 400 ms for short commands, then returns a job_ ID for longer commands so you can send follow-ups. Automatic Bash tasks show completion in a toast without adding a chat message. The assistant can inspect state and output with local_ai_task. When you explicitly request a completion report, the assistant starts the task with local_ai_task and sets notify=true. Submission is not completion.
 
 Command-scoped Bash permission rules retain the native parser and synchronous Bash; use local_ai_task explicitly. --sync-bash also retains native Bash. Other synchronous tools can still block messages; responsiveness is not universal. [Batch pipelines](automation.md) use synchronous Bash by default to return actual results.
 
@@ -31,7 +31,7 @@ control_requested only records a pause/stop request. Query status to confirm pau
 
 Use the exact ses_ ID from job list; CLI tasks default to session=cli. pause-session gates new tools and pauses owned tasks. resume-session releases the gate and only resumes tasks paused by the session action. Individually paused tasks need individual resume. stop-session keeps the gate closed until explicit resume-session. Pausing cannot undo completed writes or sent model requests.
 
-On v2.1.3, tasks whose complete terminal output has already been returned to the model through local_ai_task only show a completion/warning toast when chat is idle. No message is inserted and the model is not awakened to repeat that results were read or already reported. Status-only and partial reads still trigger stable-ID automatic processing, allowing the assistant to inspect output, consolidate results and continue authorized work. Contiguous read cursors persist in private task state across restarts. For older jobs, actual tool outputs in the latest 100 native messages are checked; uncertain cases retain automatic processing. CLI inspection does not consume chat notices.
+When the user requests an automatic follow-up, tasks whose complete terminal output has already been returned to the model through local_ai_task only show a completion/warning toast when chat is idle. No message is inserted and the model is not awakened to repeat that results were read or already reported. Status-only and partial reads still trigger stable-ID automatic processing, allowing the assistant to inspect output, consolidate results and continue authorized work. Contiguous read cursors persist in private task state across restarts. For older jobs, actual tool outputs in the latest 100 native messages are checked; uncertain cases retain automatic processing. CLI inspection does not consume chat notices.
 
 Notices add no authorization. Busy, paused or held sessions defer delivery. --no-task-notifications disables notices for this invocation. Exiting/aborting chat does not stop tasks; resume and send a message to resume checking. No notification daemon runs outside chat. Restart/resume after updating the program; the original v2.1.2 tag does not include this change.
 

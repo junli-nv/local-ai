@@ -18,7 +18,7 @@ Prerequisites: Python 3.10+, Bash, curl, tar, sha256sum (required for transfer v
 
 Archives contain top-level local-ai/ and bundle.json checksums. They exclude dist/, instance state, logs, temporary caches, Git metadata, private histories and credentials. Docker active databases and drivers remain host-managed.
 
-Both routes below are complete and independent; follow one route from start to finish. gpu-old/bcm-old are the existing source hosts; prep-host downloads assets without starting GPUs. New targets use GPU001/bcm-headnode as in README. Source downloads pin v2.1.3; record an exact commit when using main for development.
+Both routes below are complete and independent; follow one route from start to finish. gpu-old/bcm-old are the existing source hosts; prep-host downloads assets without starting GPUs. New targets use GPU001/bcm-headnode as in README. Source downloads pin v2.1.4; record an exact commit when using main for development.
 
 ## Prepare Docker before entering the air-gapped environment
 
@@ -154,8 +154,8 @@ v2.0.0 includes prepare. Download the complete tagged source; the unpacked direc
 remains the installation root:
 
 ```bash
-local_ai_source=/tmp/local-ai-v2.1.3-source.tar.gz
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v2.1.3.tar.gz -o "$local_ai_source"
+local_ai_source=/tmp/local-ai-v2.1.4-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v2.1.4.tar.gz -o "$local_ai_source"
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
 tar -xzf "$local_ai_source" --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
@@ -259,7 +259,7 @@ Preserve custom source edits first. Obtain the complete program from GitHub and 
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v2.1.3.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v2.1.4.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ./local-ai --version
@@ -314,7 +314,7 @@ See [deployment](deployment.md), [commands](commands.md) and [validation](valida
 
 ## Managed execution files in v2.0.0
 
-execution.py and execution.mjs ship in source, wheels and program updates. Offline clients load the SDK from the archive. For older offline packages without the SDK, use the updated program on a connected preparation host to export the client again. Validate with an empty user cache and `npm_config_offline=true` in an interactive chat. A long Bash command should return a managed task ID and send a completion notification. Private state/execution commands, output, jobs and pause gates stay out of public exports. See [managed execution](execution.md).
+execution.py and execution.mjs ship in source, wheels and program updates. Offline clients load the SDK from the archive. For older offline packages without the SDK, use the updated program on a connected preparation host to export the client again. Validate with an empty user cache and `npm_config_offline=true` in an interactive chat. A long Bash command should return a managed task ID and show completion in a toast. Explicitly request a completion report to verify follow-up in chat. Private state/execution commands, output, jobs and pause gates stay out of public exports. See [managed execution](execution.md).
 
 
 ## v2.0.0 client state and delivery

@@ -1,5 +1,9 @@
 # Validation record
 
+## v2.1.4 Automatic background task toasts
+
+Regression coverage runs the plugin with Python RPC to check toast-only completion, explicit follow-up for unread results, deduplication of already-read output, and session restart. The release commit's Linux native check covers Bash backgrounding, readable output, toast acknowledgement, and explicit follow-up.
+
 ## v2.1.3 Completion notices and BCM PDFs (2026-11-23)
 
 Baseline: remote main / v2.1.2 commit 5c3018c. On macOS ARM64 / Python 3.14, 355 unittest cases completed successfully with 30 Linux-process or optional-environment skips. Ruff lint/format, whitespace and bilingual documentation contracts passed. Linux native control, permission, message and notification flows are checked separately by CI for the release commit.

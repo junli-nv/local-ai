@@ -422,6 +422,8 @@ def perform(root, action, session=None, project=None, job_id=None, offset=0, lim
         scoped(job, session, project)
         if action == "enable_notice":
             job["notify"] = True
+            if args.get("toast_only") is True:
+                job.setdefault("notification", {})["toast_only"] = True
             save(root, job)
             return view(root, job)
         if action == "notice_read":

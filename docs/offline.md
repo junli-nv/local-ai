@@ -18,7 +18,7 @@ v2.0.0 的完整导出包含 templates/，不携带个人 AGENTS.md。目标机�
 
 包内含顶层 local-ai/ 和 bundle.json 校验清单。排除 dist/、实例状态、日志、临时缓存、Git 元数据、个人历史和凭据。Docker 活动数据库及驱动由宿主机管理。
 
-下面两条路线各自完整，选择一条从头执行。gpu-old/bcm-old 是原有来源主机；prep-host 只联网准备，不启动 GPU。新目标沿用 README 的 GPU001/bcm-headnode。源码下载固定 v2.1.3；开发测试使用 main 时另行记录确切提交。
+下面两条路线各自完整，选择一条从头执行。gpu-old/bcm-old 是原有来源主机；prep-host 只联网准备，不启动 GPU。新目标沿用 README 的 GPU001/bcm-headnode。源码下载固定 v2.1.4；开发测试使用 main 时另行记录确切提交。
 
 ## 进入 airgap 环境前准备 Docker
 
@@ -151,8 +151,8 @@ Hugging Face 模型；准备阶段无需 GPU、驱动、CDI、ARM 仿真或 QEMU
 v2.0.0 已包含 prepare。下载固定标签的完整源码；解压目录仍是安装根：
 
 ```bash
-local_ai_source=/tmp/local-ai-v2.1.3-source.tar.gz
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v2.1.3.tar.gz -o "$local_ai_source"
+local_ai_source=/tmp/local-ai-v2.1.4-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v2.1.4.tar.gz -o "$local_ai_source"
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
 tar -xzf "$local_ai_source" --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
@@ -253,7 +253,7 @@ cd /raid/ai-prod
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v2.1.3.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v2.1.4.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ./local-ai --version
@@ -311,7 +311,7 @@ npm_config_offline=true ./local-ai chat --run 'Reply with exactly LOCAL_AI_OK. D
 
 ## v2.0.0 托管执行文件
 
-execution.py 和 execution.mjs 随源码、wheel 与程序更新交付。离线目标机从归档加载 SDK。遇到早期离线包缺少 SDK 的安装，可在联网准备机用新版程序重新导出客户端包。验收时用空用户缓存和 `npm_config_offline=true` 启动交互会话，确认长 Bash 命令返回托管任务 ID 并收到完成通知。用户私有 state/execution 下的命令、输出、任务与暂停门不进入公共离线包。详见[托管任务用法](execution.md)。
+execution.py 和 execution.mjs 随源码、wheel 与程序更新交付。离线目标机从归档加载 SDK。遇到早期离线包缺少 SDK 的安装，可在联网准备机用新版程序重新导出客户端包。验收时用空用户缓存和 `npm_config_offline=true` 启动交互会话，确认长 Bash 命令返回托管任务 ID，结束时只弹提示，再显式请求一次完成汇报验证对话跟进。用户私有 state/execution 下的命令、输出、任务与暂停门不进入公共离线包。详见[托管任务用法](execution.md)。
 
 
 ## v2.0.0 客户端状态与交付

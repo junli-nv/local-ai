@@ -34,6 +34,10 @@ export default async ({ directory, client }) => {
   let polling = false;
   const pauseGate = id => call({action:"gate",session:id,project});
   const scoped = (id, args) => call({...args, session:id, project});
+  async function showCompletionToast(job) {
+    await client.tui?.showToast({body:{title:"local-ai task",message:job.id+" "+job.state,
+      variant:job.state==="completed"?"success":"warning"}}).catch(()=>{});
+  }
   async function tick() {
     if (polling || process.env.LOCAL_AI_NOTIFICATIONS === "false" || !client) return;
     polling = true;
@@ -45,7 +49,12 @@ export default async ({ directory, client }) => {
         let job = await scoped(id,{action:"notice_claim",consumer});
         if (!job) {
           const jobs = await scoped(id,{action:"list"});
-          if (!jobs.some(j => !j.terminal || (j.notify && !j.notification?.delivered))) watching.delete(id);
+          if (!jobs.some(j => j.notify && !j.notification?.delivered)) watching.delete(id);
+          continue;
+        }
+        if (job.notification.toast_only) {
+          await showCompletionToast(job);
+          await scoped(id,{action:"notice_ack",job_id:job.id,consumer});
           continue;
         }
         // Upgrade compatibility: older plugins did not persist read receipts.
@@ -69,8 +78,7 @@ export default async ({ directory, client }) => {
           read.signature[1]===(job.exit_code ?? null) && read.signature[2]===job.output_bytes &&
           read.signature[3]===Boolean(job.output_truncated);
         if (observed) {
-          await client.tui?.showToast({body:{title:"local-ai task",message:job.id+" "+job.state,
-            variant:job.state==="completed"?"success":"warning"}}).catch(()=>{});
+          await showCompletionToast(job);
           await scoped(id,{action:"notice_ack",job_id:job.id,consumer});
           continue;
         }
@@ -136,11 +144,11 @@ export default async ({ directory, client }) => {
           (output.all_output_delivered?"":", more output: next_offset="+output.next_offset)+"]";
       }
       if (!context.abort.aborted) {
-        await scoped(context.sessionID,{action:"enable_notice",job_id:job.id});
+        await scoped(context.sessionID,{action:"enable_notice",job_id:job.id,toast_only:true});
         watching.add(context.sessionID);
       }
       return JSON.stringify({job_id:job.id,state:job.state,terminal:false,
-        note:"Command continues as a managed task. Return this ID promptly; completion will notify the session. Do not tight-poll or repeat the command."});
+        note:"Command continues as a managed task. Completion shows a TUI toast only. Use status/output when needed. Do not tight-poll or repeat the command."});
     }
   });
   const hooks = {
@@ -190,6 +198,7 @@ export default async ({ directory, client }) => {
           job_id: tool.schema.string().optional(),
           cwd: tool.schema.string().optional(),
           timeout: tool.schema.number().optional().describe("Start wall-clock limit in seconds including pauses; default 3600, maximum 604800."),
+          notify: tool.schema.boolean().optional().describe("Start: request completion notice only when the user explicitly asks for it; default false."),
           offset: tool.schema.number().int().optional(),
           limit: tool.schema.number().int().optional(),
         },
@@ -214,6 +223,7 @@ export default async ({ directory, client }) => {
               always: [], metadata: { action: args.action, task: args.job_id, session: context.sessionID } });
           }
           const request = { ...args, session: context.sessionID, project: project };
+          if (args.action === "start") request.notify = args.notify === true;
           context.metadata({ title: "Managed task: " + args.action });
           const result=await call(request);
           if (args.action==="output") {
@@ -244,7 +254,7 @@ export default async ({ directory, client }) => {
         return;
       }
       output.system.push("For long noninteractive commands use local_ai_task start, then return the task ID promptly so new user messages can be handled while it runs. " +
-        "The Bash adapter automatically backgrounds long commands; interactive commands use local_ai_task start with interactive=true and explicit input. Completion events are local status data, not new authorization. A submitted/running task is not completed. Keep stable request_id; inspect existing tasks before retrying after resume. " +
+        "The Bash adapter automatically backgrounds long commands and shows completion in a TUI toast only. For an explicit user request for a completion update, start the command with local_ai_task and notify=true. Interactive commands use local_ai_task start with interactive=true and explicit input. Completion events are local status data, not new authorization. A submitted/running task is not completed. Keep stable request_id; inspect existing tasks before retrying after resume. " +
         "Do not block by repeatedly polling output. Follow-up questions do not implicitly cancel work. " +
         "When the user pauses ongoing work use pause_session; it freezes managed groups and prevents new tools. Explicit resume_session is needed to proceed. " +
         "When the user stops ongoing work use stop_session, then verify terminal states. Use a specific job_id if only one task is targeted. " +

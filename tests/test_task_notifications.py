@@ -19,7 +19,7 @@ class TaskNotificationTests(unittest.TestCase):
             root = Path(tmp)
             jobs = e.private(root / "execution")
             e.private(jobs / "jobs")
-            states = ["completed", "completed", "failed", "completed", "completed"]
+            states = ["completed", "completed", "failed", "completed", "completed", "completed"]
             for index, state in enumerate(states):
                 job_id = "job_" + str(index) * 32
                 e.directory(jobs, job_id, create=True)
@@ -37,6 +37,7 @@ class TaskNotificationTests(unittest.TestCase):
                     },
                 )
                 (jobs / "jobs" / job_id / "output.log").write_text("result")
+            e.perform(jobs, "enable_notice", job_id="job_" + "5" * 32, toast_only=True)
             result = subprocess.run(
                 [
                     shutil.which("node"),
@@ -50,7 +51,7 @@ class TaskNotificationTests(unittest.TestCase):
                 timeout=40,
             )
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-            self.assertEqual(json.loads(result.stdout), {"toasts": 5, "prompts": 1})
+            self.assertEqual(json.loads(result.stdout), {"toasts": 6, "prompts": 1})
 
     def test_output_observation_requires_contiguous_terminal_pages(self):
         with tempfile.TemporaryDirectory() as tmp:

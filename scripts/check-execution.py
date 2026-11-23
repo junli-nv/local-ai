@@ -48,7 +48,7 @@ class Model(probe.Model):
         for row in reversed(payload.get("messages", [])):
             if row.get("role") == "user":
                 match = re.search(
-                    r"CONTROL_(START|PAUSE|NEW|BLOCKED|RESUME|AFTER|STOP|AUTO|POLICY|ALLOWED|READ)",
+                    r"CONTROL_(START|PAUSE|NEW|BLOCKED|RESUME|AFTER|STOP|AUTO|NOTIFY|POLICY|ALLOWED|READ)",
                     str(row.get("content")),
                 )
                 if match:
@@ -75,6 +75,17 @@ class Model(probe.Model):
             args = {
                 "command": "sleep 3; echo AUTO_FINISHED",
                 "description": "Automatic Bash background test",
+            }
+        elif marker == "NOTIFY":
+            args = {
+                "action": "start",
+                "argv": [
+                    sys.executable,
+                    "-c",
+                    "import time; time.sleep(2); print('NOTIFIED_FINISHED')",
+                ],
+                "request_id": "explicit-completion-notification",
+                "notify": True,
             }
         elif marker == "READ":
             args = {"action": "output", "job_id": self.read_job_id}
@@ -275,14 +286,10 @@ def run(assets, output, case):
                         if launched["terminal"]:
                             raise RuntimeError("Long Bash call blocked until completion")
                         wait(
-                            lambda: model.notifications > 0,
-                            "automatic completion notification to model",
-                        )
-                        wait(
                             lambda: execution.perform(task_root, "status", job_id=job_id)[
-                                "notification"
-                            ].get("delivered"),
-                            "durable notification acknowledgement",
+                                "terminal"
+                            ],
+                            "automatic task completion",
                         )
                         final = execution.perform(task_root, "status", job_id=job_id)
                         page = execution.perform(task_root, "output", job_id=job_id)
@@ -292,8 +299,33 @@ def run(assets, output, case):
                             or not page["all_output_delivered"]
                         ):
                             raise RuntimeError("Automatic Bash completion/output failed")
+                        if not final["notification"].get("toast_only"):
+                            raise RuntimeError("Automatic Bash completion was not toast-only")
+                        wait(
+                            lambda: execution.perform(task_root, "status", job_id=job_id)[
+                                "notification"
+                            ].get("delivered"),
+                            "automatic completion toast acknowledgement",
+                        )
+                        if model.notifications:
+                            raise RuntimeError("Automatic Bash completion woke the model")
+                        notified = step("NOTIFY")
+                        if notified["status"] != "completed":
+                            raise RuntimeError("Explicit notification task did not start")
+                        notified_id = json.loads(notified["output"])["id"]
+                        wait(
+                            lambda: model.notifications == 1,
+                            "explicit completion notification to model",
+                        )
+                        wait(
+                            lambda: execution.perform(task_root, "status", job_id=notified_id)[
+                                "notification"
+                            ].get("delivered"),
+                            "durable notification acknowledgement",
+                        )
                         result.update(
                             auto_bash_background=True,
+                            auto_bash_toast_only=True,
                             completion_reached_model=True,
                             output_verified=True,
                         )

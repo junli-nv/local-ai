@@ -6,7 +6,7 @@
 
 It connects a locally hosted model with tools in the terminal. Users describe a task; the assistant examines project files and actual command results, then uses tools within the scope of the user’s authorization. The project uses vLLM for inference and OpenCode for interaction and tool execution, bringing installation, connectivity, configuration and offline delivery into a reusable workflow.
 
-[Managed execution](docs/en/execution.md) supports follow-ups, pause/resume/stop, PTY input and adopting owned groups. [Batch and migration](docs/en/automation.md) provides short examples: ./local-ai chat run "Task", ./local-ai chat run --prompt-file task.txt, or ./collect.sh | ./local-ai chat run --prompt-file -. Restart chat after updating to load the new plugins. v2.1.3 deduplicates completion notices: fully read results only produce a toast; unread results still resume work automatically. The original v2.1.2 tag does not include this fix.
+[Managed execution](docs/en/execution.md) supports follow-ups, pause/resume/stop, PTY input and adopting owned groups. [Batch and migration](docs/en/automation.md) provides short examples: ./local-ai chat run "Task", ./local-ai chat run --prompt-file task.txt, or ./collect.sh | ./local-ai chat run --prompt-file -. Restart chat after updating to load the new plugins. v2.1.4 deduplicates completion notices: fully read results only produce a toast; unread results still resume work automatically. The original v2.1.2 tag does not include this fix.
 
 ## What it helps with
 
@@ -31,7 +31,7 @@ The managed server currently uses the NVIDIA toolchain. See the profile table be
 
 ## Installation and usage
 
-The current version is v2.1.3. Examples download complete source from this tag; ./local-ai --version should report 2.1.3. See the [release notes](docs/en/release-2.1.3.md) and [validation record](docs/en/validation.md) for changes and acceptance coverage.
+The current version is v2.1.4. Examples download complete source from this tag; ./local-ai --version should report 2.1.4. See the [release notes](docs/en/release-2.1.4.md) and [validation record](docs/en/validation.md) for changes and acceptance coverage.
 
 ## Example conventions and documentation
 
@@ -100,7 +100,7 @@ Download into an empty directory and check Docker, GPUs and CDI:
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v2.1.3.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v2.1.4.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ./local-ai --version
@@ -209,7 +209,7 @@ Log in as alice on bcm-headnode and use BCM's own empty directory:
 
 ```bash
 sudo install -d -o "$(id -u)" -g "$(id -g)" /raid/local-ai
-curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v2.1.3.tar.gz -o /tmp/local-ai-source.tar.gz
+curl -fL --retry 3 https://github.com/junli-nv/local-ai/archive/refs/tags/v2.1.4.tar.gz -o /tmp/local-ai-source.tar.gz
 tar -xzf /tmp/local-ai-source.tar.gz --strip-components=1 -C /raid/local-ai
 cd /raid/local-ai
 ```
